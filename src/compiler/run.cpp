@@ -1,5 +1,4 @@
 #include "run.h"
-#include "Compiler.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Token.h"
@@ -34,8 +33,6 @@ void runFile(const std::string& path)
             throw std::runtime_error("Parsing failed");
         }
 
-        Compiler compiler;
-        std::string assemblyCode = compiler.compile(expr);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }

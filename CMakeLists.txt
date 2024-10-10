@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(jecl)
+project(jaws)
 
 if(NOT APPLE)
     message(FATAL_ERROR "This project is currently only supported on macOS")
@@ -14,13 +14,13 @@ set(CMAKE_OSX_ARCHITECTURES "arm64")
 file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp")
 file(GLOB_RECURSE RUNTIME_SOURCES "${PROJECT_SOURCE_DIR}/runtime/src/*.c")
 
-add_executable(jecl ${COMPILER_SOURCES})
-target_include_directories(jecl PRIVATE
+add_executable(jaws ${COMPILER_SOURCES})
+target_include_directories(jaws PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
 )
 
-set_target_properties(jecl PROPERTIES
+set_target_properties(jaws PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
@@ -34,7 +34,7 @@ set_target_properties(runtime PROPERTIES
     C_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(jecl PRIVATE runtime)
+target_link_libraries(jaws PRIVATE runtime)
 
 find_program(AS_PATH as)
 find_program(LD_PATH ld)
@@ -43,7 +43,7 @@ if(NOT AS_PATH OR NOT LD_PATH)
     message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
 endif()
 
-target_compile_definitions(jecl PRIVATE
+target_compile_definitions(jaws PRIVATE
     AS_PATH="${AS_PATH}"
     LD_PATH="${LD_PATH}"
     RUNTIME_INCLUDE_PATH="${PROJECT_SOURCE_DIR}/include/runtime"
