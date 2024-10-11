@@ -1,39 +1,43 @@
 #include "Scanner.h"
-#include "Token.h"
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
-const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
-    { "define", Tokentype::DEFINE },
-    { "lambda", Tokentype::LAMBDA },
-    { "if", Tokentype::IF }
-};
+const std::array<Scanner::RegexInfo, Scanner::regexPatterns.size()> Scanner::compiledRegexes = []() {
+    std::array<RegexInfo, regexPatterns.size()> result;
+    for (size_t i = 0; i < regexPatterns.size(); ++i) {
+        result[i] = { std::regex(regexPatterns[i].first), regexPatterns[i].second };
+    }
+    return result;
+}();
 
-const std::vector<Scanner::RegexInfo> Scanner::regexList = {
-    { std::regex(R"(;.*)"), Tokentype::COMMENT },
-    { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
-    { std::regex(R"(\d+\.\d*)"), Tokentype::FLOAT },
-    { std::regex(R"(\d+)"), Tokentype::INTEGER },
-    { std::regex(R"('[a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::QUOTE },
-    { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::SYMBOL },
-    { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE }
-};
+std::string Scanner::getLine(int lineNumber) const
+{
+    if (lineNumber > 0 && lineNumber <= static_cast<int>(lines.size())) {
+        return lines[lineNumber - 1];
+    }
+    return "";
+}
 
-const std::vector<std::pair<std::string, Tokentype>> Scanner::operators = {
-    { "(", Tokentype::LEFT_PAREN },
-    { ")", Tokentype::RIGHT_PAREN },
-    { "+", Tokentype::PLUS },
-    { "-", Tokentype::MINUS },
-    { "*", Tokentype::MULTIPLY },
-    { "/", Tokentype::DIVIDE },
-    { "=", Tokentype::EQUAL },
-    { "<", Tokentype::LESS_THAN },
-    { ">", Tokentype::GREATER_THAN }
-};
+void Scanner::splitIntoLines(std::string_view input)
+{
+    std::istringstream stream((std::string(input)));
+    std::string line;
+    while (std::getline(stream, line)) {
+        lines.push_back(line);
+    }
+}
 
 std::vector<Token> Scanner::tokenize(const std::string& input)
 {
+    this->input = input;
+    splitIntoLines(this->input);
     std::vector<Token> allTokens;
-    auto it = input.begin();
-    const auto end = input.end();
+    auto it = this->input.begin();
+    const auto end = this->input.end();
+    line = 1;
+    row = 1;
+
     while (it != end) {
         if (auto token = matchToken(it)) {
             if (token->type != Tokentype::WHITESPACE && token->type != Tokentype::COMMENT) {
@@ -48,35 +52,37 @@ std::vector<Token> Scanner::tokenize(const std::string& input)
     return allTokens;
 }
 
-std::optional<Token> Scanner::matchToken(std::string::const_iterator& it) const
+std::optional<Token> Scanner::matchToken(std::string_view::const_iterator& it) const
 {
-    for (const auto& [op, type] : operators) {
-        if (std::string(it, std::min(it + op.length(), input.end())) == op) {
-            auto token = Token { type, op, line, row };
-            it += op.length();
-            return token;
+    for (const auto& [token, type] : specialTokens) {
+        if (std::string_view(&*it, std::min<size_t>(std::strlen(token), std::distance(it, input.end()))) == token) {
+            auto newToken = Token { type, std::string(token), line, row };
+            it += std::strlen(token);
+            return newToken;
         }
     }
 
-    // Then check regex patterns
-    for (const auto& regex_info : regexList) {
-        std::smatch match;
+    for (const auto& regex_info : compiledRegexes) {
+        std::match_results<std::string_view::const_iterator> match;
         if (std::regex_search(it, input.end(), match, regex_info.regex, std::regex_constants::match_continuous)) {
-            const std::string lexeme = match.str();
+            std::string_view lexeme(&*match[0].first, match[0].length());
             it += lexeme.length();
             Tokentype type = regex_info.type;
             if (type == Tokentype::SYMBOL) {
-                if (const auto keywordIt = keywords.find(lexeme); keywordIt != keywords.end()) {
-                    type = keywordIt->second;
+                for (const auto& [keyword, keywordType] : keywords) {
+                    if (lexeme == keyword) {
+                        type = keywordType;
+                        break;
+                    }
                 }
             }
-            return Token { type, lexeme, line, row };
+            return Token { type, std::string(lexeme), line, row };
         }
     }
     return std::nullopt;
 }
 
-void Scanner::updatePosition(const std::string& lexeme)
+void Scanner::updatePosition(std::string_view lexeme)
 {
     for (char c : lexeme) {
         if (c == '\n') {

@@ -1,82 +1,59 @@
 #include "Parser.h"
 #include "ParseError.h"
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <unordered_set>
 
-Parser::Parser(std::vector<Token> tokens)
-    : tokens(std::move(tokens))
-    , current(0)
+std::optional<std::unique_ptr<Expression>> Parser::parse()
 {
-    initRules();
-}
-
-void Parser::initRules()
-{
-    rules[Tokentype::INTEGER] = { &Parser::literal, nullptr, nullptr, Precedence::NONE };
-    rules[Tokentype::STRING] = { &Parser::literal, nullptr, nullptr, Precedence::NONE };
-}
-
-std::unique_ptr<Expression> Parser::parse()
-{
-    return parsePrecedence(Precedence::NONE);
-}
-
-std::unique_ptr<Expression> Parser::parsePrecedence(Precedence precedence)
-{
-    advance();
-    ParseFn prefixRule = getRule(previousToken().type).prefix;
-    if (prefixRule == nullptr) {
-        error("Expect expression.");
-        return nullptr;
-    }
-
-    bool canAssign = precedence <= Precedence::ASSIGNMENT;
-    auto left = (this->*prefixRule)(canAssign);
-
-    while (precedence <= getRule(peek().type).precedence) {
-        advance();
-        InfixFn infixRule = getRule(previousToken().type).infix;
-        if (infixRule != nullptr) {
-            left = (this->*infixRule)(std::move(left), canAssign);
-        } else {
-            break;
+    try {
+        if (isAtEnd()) {
+            return std::nullopt;
         }
+        return expression();
+    } catch (const ParseError& e) {
+        std::cerr << e.what() << std::endl;
+        return std::nullopt;
     }
-    if (const InfixFn postfixRule = getRule(previousToken().type).postfix; postfixRule != nullptr) {
-        left = (this->*postfixRule)(std::move(left), canAssign);
-    }
-    if (canAssign && match(Tokentype::EQUAL)) {
-        error("Invalid assignment target.");
-    }
-    return left;
 }
 
-std::unique_ptr<Expression> Parser::literal(bool canAssign)
+std::unique_ptr<Expression> Parser::expression()
 {
-    if (match(Tokentype::INTEGER) || match(Tokentype::FLOAT) || match(Tokentype::SYMBOL)) {
-        return make_expression(LiteralExpression(previousToken()), previousToken().line);
+    Token token = peek();
+    if (token.type == Tokentype::LEFT_PAREN) {
+        return list();
+    } else {
+        return atom();
     }
-    throw ParseError("Expect expression.", peek());
 }
 
-bool Parser::isValidOperator(Tokentype type) const
+std::unique_ptr<Expression> Parser::atom()
 {
-    static const std::unordered_set<Tokentype> validOperators = {
-        Tokentype::PLUS, Tokentype::MINUS, Tokentype::MULTIPLY, Tokentype::DIVIDE,
-        Tokentype::EQUAL, Tokentype::LESS_THAN, Tokentype::GREATER_THAN
-    };
-    return validOperators.find(type) != validOperators.end();
-}
-
-Parser::ParseRule Parser::getRule(Tokentype type)
-{
-    auto it = rules.find(type);
-    if (it != rules.end()) {
-        return it->second;
+    Token token = advance();
+    switch (token.type) {
+    case Tokentype::SYMBOL:
+    case Tokentype::INTEGER:
+    case Tokentype::FLOAT:
+    case Tokentype::STRING:
+        return std::make_unique<Expression>(Expression { AtomExpression { token }, token.line });
+    default:
+        throw ParseError("Unexpected token", token, scanner->getLine(token.line));
     }
-    return { nullptr, nullptr, nullptr, Precedence::NONE };
 }
+std::unique_ptr<Expression> Parser::list()
+{
+    Token leftParen = consume(Tokentype::LEFT_PAREN, "Expect '(' at start of list.");
+    std::vector<std::unique_ptr<Expression>> elements;
 
+    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+        auto expr = expression();
+        elements.push_back(std::move(expr));
+    }
+
+    Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after list.");
+    return std::make_unique<Expression>(Expression { { std::move(elements) }, leftParen.line });
+}
 Token Parser::advance()
 {
     if (!isAtEnd())
@@ -98,11 +75,12 @@ Token Parser::previousToken()
 {
     return tokens[current - 1];
 }
+
 Token Parser::consume(Tokentype type, const std::string& message)
 {
     if (check(type))
         return advance();
-    throw std::runtime_error(message);
+    throw ParseError(message, peek(), scanner->getLine(peek().line));
 }
 
 bool Parser::check(Tokentype type) const
@@ -123,7 +101,8 @@ bool Parser::match(Tokentype type)
 
 void Parser::error(const std::string& message)
 {
-    errorAt(previousToken(), message);
+    auto prev = previousToken();
+    throw ParseError(message, prev, scanner->getLine(prev.line));
 }
 
 void Parser::errorAt(const Token& token, const std::string& message)
@@ -131,15 +110,5 @@ void Parser::errorAt(const Token& token, const std::string& message)
     if (panicMode)
         return;
     panicMode = true;
-
-    std::cerr << "[line " << token.line << "] Error";
-
-    if (token.type == Tokentype::EOF_TOKEN) {
-        std::cerr << " at end";
-    } else {
-        std::cerr << " at '" << token.lexeme << "'";
-    }
-
-    std::cerr << ": " << message << std::endl;
-    hadError = true;
+    throw ParseError(message, token, scanner->getLine(token.line));
 }

@@ -1,13 +1,19 @@
 #include "run.h"
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 int main(const int argc, const char* argv[])
 {
-    if (argc == 2) {
-        runFile(argv[1]);
+    if (argc > 1) {
+        if (std::string(argv[1]) == "--script" && argc == 3) {
+            runFile(argv[2]);
+        } else {
+            std::cout << "Usage: " << argv[0] << " [--script <filename>]" << std::endl;
+            return EXIT_FAILURE;
+        }
     } else {
-        std::cout << "Usage: " << argv[0] << " [script]" << std::endl;
-        return EXIT_FAILURE;
+        runPrompt();
     }
+    return EXIT_SUCCESS;
 }

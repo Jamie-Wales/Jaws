@@ -9,35 +9,11 @@
 
 class Expression;
 
-class LiteralExpression {
+class AtomExpression {
 public:
     Token value;
-    explicit LiteralExpression(Token value)
+    AtomExpression(Token value)
         : value(std::move(value))
-    {
-    }
-};
-
-class BinaryExpression {
-public:
-    std::unique_ptr<Expression> left;
-    Token operatorToken;
-    std::unique_ptr<Expression> right;
-    BinaryExpression(std::unique_ptr<Expression> left, Token operatorToken, std::unique_ptr<Expression> right)
-        : left(std::move(left))
-        , operatorToken(std::move(operatorToken))
-        , right(std::move(right))
-    {
-    }
-};
-
-class PrefixExpression {
-public:
-    Token op;
-    std::vector<std::unique_ptr<Expression>> args;
-    PrefixExpression(Token op, std::vector<std::unique_ptr<Expression>> args)
-        : op(std::move(op))
-        , args(std::move(args))
     {
     }
 };
@@ -45,7 +21,7 @@ public:
 class ListExpression {
 public:
     std::vector<std::unique_ptr<Expression>> elements;
-    explicit ListExpression(std::vector<std::unique_ptr<Expression>> elements)
+    ListExpression(std::vector<std::unique_ptr<Expression>> elements)
         : elements(std::move(elements))
     {
     }
@@ -53,9 +29,9 @@ public:
 
 class Expression {
 public:
-    std::variant<LiteralExpression, BinaryExpression, PrefixExpression, ListExpression> as;
+    std::variant<AtomExpression, ListExpression> as;
     int line;
-    explicit Expression(std::variant<LiteralExpression, BinaryExpression, PrefixExpression, ListExpression> as, int line)
+    Expression(std::variant<AtomExpression, ListExpression> as, int line)
         : as(std::move(as))
         , line(line)
     {
@@ -65,23 +41,8 @@ public:
     {
         std::string indentation(indent * 2, ' ');
         std::visit(overloaded {
-                       [&](const LiteralExpression& e) {
+                       [&](const AtomExpression& e) {
                            std::cout << indentation << e.value.lexeme;
-                       },
-                       [&](const BinaryExpression& e) {
-                           std::cout << indentation << "(" << e.operatorToken.lexeme << " ";
-                           e.left->print(0);
-                           std::cout << " ";
-                           e.right->print(0);
-                           std::cout << ")";
-                       },
-                       [&](const PrefixExpression& e) {
-                           std::cout << indentation << "(" << e.op.lexeme;
-                           for (const auto& arg : e.args) {
-                               std::cout << " ";
-                               arg->print(0);
-                           }
-                           std::cout << ")";
                        },
                        [&](const ListExpression& e) {
                            std::cout << indentation << "(list";

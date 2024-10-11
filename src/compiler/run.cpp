@@ -1,4 +1,6 @@
 #include "run.h"
+#include "Interpreter.h"
+#include "ParseError.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Token.h"
@@ -7,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 std::string readFile(const std::string& path)
 {
@@ -22,18 +25,100 @@ std::string readFile(const std::string& path)
 void runFile(const std::string& path)
 {
     try {
-        Scanner scanner;
         std::string sourceCode = readFile(path);
+        Scanner scanner;
         std::vector<Token> tokens = scanner.tokenize(sourceCode);
+        Parser parser;
+        parser.initialize(scanner);
+        parser.load(tokens);
 
-        Parser parser(tokens);
         auto expr = parser.parse();
-
         if (!expr) {
             throw std::runtime_error("Parsing failed");
         }
 
+        Interpreter interpreter;
+        SchemeValue result = interpreter.interpret(*expr);
+        std::cout << result.toString() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
+    }
+}
+
+void printJawsLogo()
+{
+    std::cout << R"(
+        /\
+       /  \
+      /    \
+     /      \
+    /        \
+   /          \
+  /___________;
+      J.A.W.S.
+    )" << '\n';
+    std::cout << "Jaws Awesomely Wrangles Scheme v0.1\n\n";
+}
+
+void printHelp()
+{
+    std::cout << "Available commands:\n"
+              << "  exit       - Exit the Jaws REPL\n"
+              << "  help       - Display this help message\n"
+              << "\nBasic Jaws syntax:\n"
+              << "  Numbers    - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
+              << "  Strings    - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
+              << "  Lists      - Enclosed in parentheses (e.g., (+ 1 2))\n"
+              << "  Symbols    - Identifiers for variables and functions\n"
+              << "\nBuilt-in functions:\n"
+              << "  +          - Addition (e.g., (+ 1 2 3))\n"
+              << "  define     - Define variables (e.g., (define x 10))\n"
+              << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
+              << "\nEnter Scheme expressions to evaluate them.\n";
+}
+void runPrompt()
+{
+    printJawsLogo();
+    std::cout << "Welcome to the Jaws REPL!\n";
+    std::cout << "Type 'exit' to quit, 'help' for commands.\n\n";
+
+    Scanner scanner;
+    Parser parser;
+    parser.initialize(scanner);
+    Interpreter interpreter;
+
+    std::string input;
+    while (true) {
+        std::cout << "jaws> ";
+        if (!std::getline(std::cin, input)) {
+            break;
+        }
+
+        if (input == "exit") {
+            std::cout << "Fin-ishing up. Goodbye!\n";
+            break;
+        }
+
+        if (input == "help") {
+            printHelp();
+            continue;
+        }
+
+        if (input.empty())
+            continue;
+
+        try {
+            std::vector<Token> tokens = scanner.tokenize(input);
+            parser.load(tokens);
+            auto expr = parser.parse();
+            if (expr) {
+                SchemeValue result = interpreter.interpret(*expr);
+                std::cout << result.toString() << std::endl;
+            }
+        } catch (const ParseError& e) {
+            std::cerr << "Parse error: " << e.what() << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
     }
 }
