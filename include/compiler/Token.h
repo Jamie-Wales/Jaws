@@ -1,20 +1,24 @@
 #pragma once
 #include <string>
+#include <unordered_map>
 
 enum class Tokentype {
     INTEGER,
     FLOAT,
     STRING,
     SYMBOL,
-
+    QUOTE_SYMBOL,
+    IDENTIFIER,
     LEFT_PAREN,
     RIGHT_PAREN,
-
+    CONS,
+    CAR,
     PLUS,
     MINUS,
     MULTIPLY,
     DIVIDE,
-
+    TRUE,
+    FALSE,
     EQUAL,
     LESS_THAN,
     GREATER_THAN,

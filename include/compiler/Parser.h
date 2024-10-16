@@ -1,52 +1,22 @@
-// Parser.h
 #pragma once
+
 #include "Expression.h"
 #include "Scanner.h"
-#include <functional>
+#include "Token.h"
 #include <memory>
-#include <unordered_map>
+#include <optional>
 #include <vector>
 
 class Parser {
-public:
-    Parser(std::vector<Token> tokens, Scanner* scn)
-        : tokens { tokens }
-        , scanner { scn } { };
-    Parser()
-        : scanner(nullptr)
-        , current(0)
-        , hadError(false)
-        , panicMode(false)
-    {
-    }
-    void load(const std::vector<Token>& newTokens)
-    {
-        tokens = newTokens;
-        current = 0;
-        hadError = false;
-        panicMode = false;
-    }
-
-    void initialize(Scanner& scn)
-    {
-        scanner = &scn;
-        current = 0;
-        hadError = false;
-        panicMode = false;
-    }
-    std::optional<std::unique_ptr<Expression>> parse();
-    bool hadError;
-    bool panicMode;
-
 private:
-    std::unique_ptr<Expression> expression();
     std::vector<Token> tokens;
-    Scanner* scanner;
-    size_t current;
-    void error(const std::string& message);
-    std::unique_ptr<Expression> list();
+    std::shared_ptr<Scanner> scanner;
+    size_t current = 0;
+    bool panicMode = false;
 
+    std::unique_ptr<Expression> expression();
     std::unique_ptr<Expression> atom();
+    std::unique_ptr<Expression> sexpression();
     Token advance();
     bool isAtEnd() const;
     Token peek() const;
@@ -54,6 +24,12 @@ private:
     Token consume(Tokentype type, const std::string& message);
     bool check(Tokentype type) const;
     bool match(Tokentype type);
-
+    void error(const std::string& message);
     void errorAt(const Token& token, const std::string& message);
+
+public:
+    Parser() = default;
+    void initialize(Scanner& s);
+    void load(const std::vector<Token>& t);
+    std::optional<std::unique_ptr<Expression>> parse();
 };

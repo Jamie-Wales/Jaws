@@ -1,9 +1,18 @@
 #include "Parser.h"
 #include "ParseError.h"
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <unordered_set>
+#include <iostream>
+
+void Parser::initialize(Scanner& s)
+{
+    scanner = std::make_shared<Scanner>(s);
+}
+
+void Parser::load(const std::vector<Token>& t)
+{
+    tokens = t;
+    current = 0;
+    panicMode = false;
+}
 
 std::optional<std::unique_ptr<Expression>> Parser::parse()
 {
@@ -22,7 +31,7 @@ std::unique_ptr<Expression> Parser::expression()
 {
     Token token = peek();
     if (token.type == Tokentype::LEFT_PAREN) {
-        return list();
+        return sexpression();
     } else {
         return atom();
     }
@@ -33,26 +42,30 @@ std::unique_ptr<Expression> Parser::atom()
     Token token = advance();
     switch (token.type) {
     case Tokentype::SYMBOL:
+    case Tokentype::IDENTIFIER:
     case Tokentype::INTEGER:
     case Tokentype::FLOAT:
     case Tokentype::STRING:
+    case Tokentype::TRUE:
+    case Tokentype::FALSE:
+    case Tokentype::DEFINE:
+    case Tokentype::LAMBDA:
+    case Tokentype::IF:
         return std::make_unique<Expression>(Expression { AtomExpression { token }, token.line });
     default:
         throw ParseError("Unexpected token", token, scanner->getLine(token.line));
     }
 }
-std::unique_ptr<Expression> Parser::list()
+std::unique_ptr<Expression> Parser::sexpression()
 {
-    Token leftParen = consume(Tokentype::LEFT_PAREN, "Expect '(' at start of list.");
+    Token leftParen = consume(Tokentype::LEFT_PAREN, "Expect '(' at start of s-expression.");
     std::vector<std::unique_ptr<Expression>> elements;
-
+    elements.push_back(expression());
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        auto expr = expression();
-        elements.push_back(std::move(expr));
+        elements.push_back(expression());
     }
-
-    Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after list.");
-    return std::make_unique<Expression>(Expression { { std::move(elements) }, leftParen.line });
+    Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after s-expression.");
+    return std::make_unique<Expression>(Expression { sExpression { std::move(elements) }, leftParen.line });
 }
 Token Parser::advance()
 {

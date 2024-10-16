@@ -1,11 +1,9 @@
 #pragma once
 #include "Token.h"
+#include <regex>
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <regex>
-#include <optional>
-#include <array>
 
 class Scanner {
 public:
@@ -19,35 +17,16 @@ private:
         Tokentype type;
     };
 
-    static constexpr std::array<std::pair<const char*, Tokentype>, 3> keywords = {{
-        { "define", Tokentype::DEFINE },
-        { "lambda", Tokentype::LAMBDA },
-        { "if", Tokentype::IF }
-    }};
-
-    static constexpr std::array<std::pair<const char*, Tokentype>, 7> regexPatterns = {{
-        { R"(;.*)", Tokentype::COMMENT },
-        { R"("(?:[^"\\]|\\.)*")", Tokentype::STRING },
-        { R"(\d+\.\d*)", Tokentype::FLOAT },
-        { R"(\d+)", Tokentype::INTEGER },
-        { R"('[a-zA-Z_][a-zA-Z0-9_]*)", Tokentype::QUOTE },
-        { R"([a-zA-Z_+\-*/=<>][a-zA-Z0-9_+\-*/=<>]*)", Tokentype::SYMBOL },
-        { R"([ \t\n\r]+)", Tokentype::WHITESPACE }
-    }};
-
-    static constexpr std::array<std::pair<const char*, Tokentype>, 2> specialTokens = {{
-        { "(", Tokentype::LEFT_PAREN },
-        { ")", Tokentype::RIGHT_PAREN }
-    }};
-
-    static const std::array<RegexInfo, regexPatterns.size()> compiledRegexes;
+    static const std::unordered_map<std::string, Tokentype> keywords;
+    static const std::vector<RegexInfo> regexPatterns;
 
     std::vector<std::string> lines;
-    std::string_view input;
+    std::string input;
+    size_t position = 0;
     int line = 1;
-    int row = 1;
+    int column = 1;
 
-    void splitIntoLines(std::string_view input);
-    std::optional<Token> matchToken(std::string_view::const_iterator& it) const;
-    void updatePosition(std::string_view lexeme);
+    void splitIntoLines();
+    std::optional<Token> matchToken();
+    void updatePosition(const std::string& lexeme);
 };

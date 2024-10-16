@@ -3,13 +3,93 @@
 #include <stdexcept>
 #include <string>
 
-const std::array<Scanner::RegexInfo, Scanner::regexPatterns.size()> Scanner::compiledRegexes = []() {
-    std::array<RegexInfo, regexPatterns.size()> result;
-    for (size_t i = 0; i < regexPatterns.size(); ++i) {
-        result[i] = { std::regex(regexPatterns[i].first), regexPatterns[i].second };
+const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
+    { "define", Tokentype::DEFINE },
+    { "lambda", Tokentype::LAMBDA },
+    { "if", Tokentype::IF }
+};
+
+const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
+    { std::regex(R"(;.*)"), Tokentype::COMMENT },
+    { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
+    { std::regex(R"(\d+\.\d*)"), Tokentype::FLOAT },
+    { std::regex(R"(\d+)"), Tokentype::INTEGER },
+    { std::regex(R"('[a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::QUOTE },
+    { std::regex(R"('[\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::QUOTE_SYMBOL },
+    { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::IDENTIFIER },
+    { std::regex(R"([\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
+    { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE },
+    { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
+    { std::regex(R"(\))"), Tokentype::RIGHT_PAREN }
+};
+
+std::vector<Token> Scanner::tokenize(const std::string& input)
+{
+    this->input = input;
+    splitIntoLines();
+    std::vector<Token> tokens;
+    position = 0;
+    line = 1;
+    column = 1;
+
+    while (position < input.length()) {
+        if (auto token = matchToken()) {
+            if (token->type != Tokentype::WHITESPACE && token->type != Tokentype::COMMENT) {
+                tokens.push_back(*token);
+            }
+            updatePosition(token->lexeme);
+        } else {
+            throw std::runtime_error("Unexpected character at line " + std::to_string(line) + ", column " + std::to_string(column) + ": " + std::string(1, input[position]));
+        }
     }
-    return result;
-}();
+
+    tokens.emplace_back(Tokentype::EOF_TOKEN, "", line, column);
+    return tokens;
+}
+
+std::optional<Token> Scanner::matchToken()
+{
+    std::string remaining = input.substr(position);
+    for (const auto& pattern : regexPatterns) {
+        std::smatch match;
+        if (std::regex_search(remaining, match, pattern.regex, std::regex_constants::match_continuous)) {
+            std::string lexeme = match.str();
+            Tokentype type = pattern.type;
+
+            // Check for keywords
+            auto it = keywords.find(lexeme);
+            if (it != keywords.end()) {
+                type = it->second;
+            }
+
+            return Token { type, lexeme, line, column };
+        }
+    }
+    return std::nullopt;
+}
+
+void Scanner::updatePosition(const std::string& lexeme)
+{
+    for (char c : lexeme) {
+        if (c == '\n') {
+            ++line;
+            column = 1;
+        } else {
+            ++column;
+        }
+    }
+    position += lexeme.length();
+}
+
+void Scanner::splitIntoLines()
+{
+    lines.clear();
+    std::istringstream stream(input);
+    std::string line;
+    while (std::getline(stream, line)) {
+        lines.push_back(line);
+    }
+}
 
 std::string Scanner::getLine(int lineNumber) const
 {
@@ -17,79 +97,4 @@ std::string Scanner::getLine(int lineNumber) const
         return lines[lineNumber - 1];
     }
     return "";
-}
-
-void Scanner::splitIntoLines(std::string_view input)
-{
-    std::istringstream stream((std::string(input)));
-    std::string line;
-    while (std::getline(stream, line)) {
-        lines.push_back(line);
-    }
-}
-
-std::vector<Token> Scanner::tokenize(const std::string& input)
-{
-    this->input = input;
-    splitIntoLines(this->input);
-    std::vector<Token> allTokens;
-    auto it = this->input.begin();
-    const auto end = this->input.end();
-    line = 1;
-    row = 1;
-
-    while (it != end) {
-        if (auto token = matchToken(it)) {
-            if (token->type != Tokentype::WHITESPACE && token->type != Tokentype::COMMENT) {
-                allTokens.push_back(std::move(*token));
-            }
-            updatePosition(token->lexeme);
-        } else {
-            throw std::runtime_error("Unexpected character at line " + std::to_string(line) + ", column " + std::to_string(row) + ": " + std::string(1, *it));
-        }
-    }
-    allTokens.emplace_back(Tokentype::EOF_TOKEN, "", line, row);
-    return allTokens;
-}
-
-std::optional<Token> Scanner::matchToken(std::string_view::const_iterator& it) const
-{
-    for (const auto& [token, type] : specialTokens) {
-        if (std::string_view(&*it, std::min<size_t>(std::strlen(token), std::distance(it, input.end()))) == token) {
-            auto newToken = Token { type, std::string(token), line, row };
-            it += std::strlen(token);
-            return newToken;
-        }
-    }
-
-    for (const auto& regex_info : compiledRegexes) {
-        std::match_results<std::string_view::const_iterator> match;
-        if (std::regex_search(it, input.end(), match, regex_info.regex, std::regex_constants::match_continuous)) {
-            std::string_view lexeme(&*match[0].first, match[0].length());
-            it += lexeme.length();
-            Tokentype type = regex_info.type;
-            if (type == Tokentype::SYMBOL) {
-                for (const auto& [keyword, keywordType] : keywords) {
-                    if (lexeme == keyword) {
-                        type = keywordType;
-                        break;
-                    }
-                }
-            }
-            return Token { type, std::string(lexeme), line, row };
-        }
-    }
-    return std::nullopt;
-}
-
-void Scanner::updatePosition(std::string_view lexeme)
-{
-    for (char c : lexeme) {
-        if (c == '\n') {
-            ++line;
-            row = 1;
-        } else {
-            ++row;
-        }
-    }
 }
