@@ -40,8 +40,12 @@ void runFile(const std::string& path)
         }
 
         Interpreter interpreter;
-        SchemeValue result = interpreter.interpret(*expr);
-        std::cout << result.toString() << std::endl;
+        if (expr) {
+            std::optional<SchemeValue> result = interpreter.interpret(*expr);
+            if (result) {
+                std::cout << result->toString() << std::endl;
+            }
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
@@ -154,8 +158,10 @@ We're gonna need a bigger boat
             parser.load(tokens);
             auto expr = parser.parse();
             if (expr) {
-                SchemeValue result = interpreter.interpret(*expr);
-                std::cout << result.toString() << std::endl;
+                std::optional<SchemeValue> result = interpreter.interpret(*expr);
+                if (result) {
+                    std::cout << result->toString() << std::endl;
+                }
             }
         } catch (const ParseError& e) {
             std::cerr << "Parse error: " << e.what() << std::endl;

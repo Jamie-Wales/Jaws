@@ -71,7 +71,7 @@ std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& 
     throw std::runtime_error("Cannot interpret sExpression");
 }
 
-std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
+SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.empty())
         return SchemeValue(0);
@@ -82,7 +82,7 @@ std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<Sch
     return result;
 }
 
-std::optional<SchemeValue> Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& args)
+SchemeValue Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.empty())
         throw std::runtime_error("'-' requires at least one argument");
@@ -95,27 +95,32 @@ std::optional<SchemeValue> Interpreter::minus(Interpreter&, const std::vector<Sc
     return result;
 }
 
-std::optional<SchemeValue> Interpreter::define(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::define(const DefineExpression& de)
 {
-    if (args.size() != 2) {
-        throw std::runtime_error("Define requires exactly two arguments");
+    std::optional<SchemeValue> expr = interpret(de.value);
+    if (expr) {
+        environment[de.name.lexeme] = *expr;
+        return std::nullopt;
     }
-    if (!args[0].isSymbol()) {
-        throw std::runtime_error("First argument to define must be a symbol");
-    }
-    std::string name = args[0].asSymbol();
-    SchemeValue value = args[1];
-    interp.environment[name] = value;
-    return std::nullopt;
+    throw std::runtime_error("Cannot interpret define with name " + de.name.lexeme);
 }
 
-SchemeValue Interpreter::interpret(const std::unique_ptr<Expression>& e)
+std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expression>& e)
 {
     return std::visit(overloaded {
                           [this](const AtomExpression& a) { return interpretAtom(a); },
                           [this](const ListExpression& l) { return interpretList(l); },
                           [this](const sExpression& se) { return interpretSExpression(se); },
-                          [](const auto&) -> SchemeValue {
+                          [this](const DefineExpression& de) { return define(de); },
+                          [this](const DefineProcedure& dp) -> std::optional<SchemeValue> {
+                              /** ----
+                               * :TODO DO THIS
+                               *
+                               * return defineProcedure(dp);
+                               * **/
+                              return std::nullopt;
+                          },
+                          [](const auto&) -> std::optional<SchemeValue> {
                               throw std::runtime_error("Unknown expression type");
                           } },
         e->as);

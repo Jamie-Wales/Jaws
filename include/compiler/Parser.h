@@ -26,6 +26,7 @@ private:
     bool match(Tokentype type);
     void error(const std::string& message);
     void errorAt(const Token& token, const std::string& message);
+    std::unique_ptr<Expression> defineExpression();
 
 public:
     Parser() = default;

@@ -1,9 +1,8 @@
 #pragma once
-#include <functional>
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
-#include <memory>
 
 class Interpreter;
 
@@ -17,7 +16,10 @@ public:
 
     struct Symbol {
         std::string name;
-        explicit Symbol(std::string n) : name(std::move(n)) {}
+        explicit Symbol(std::string n)
+            : name(std::move(n))
+        {
+        }
     };
 
     using Value = std::variant<
@@ -27,14 +29,13 @@ public:
         std::string,
         Symbol,
         std::vector<SchemeValue>,
-        std::shared_ptr<Procedure>
-    >;
+        std::shared_ptr<Procedure>>;
 
     Value value;
 
     SchemeValue();
     SchemeValue(Value v);
-    
+
     bool isProc() const;
     bool isSymbol() const;
     SchemeValue call(Interpreter& interp, const std::vector<SchemeValue>& args) const;
@@ -44,7 +45,8 @@ public:
     std::string asSymbol() const;
 
     template <typename T>
-    T as() const {
+    T as() const
+    {
         if (std::holds_alternative<T>(value)) {
             return std::get<T>(value);
         }

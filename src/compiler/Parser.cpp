@@ -31,9 +31,35 @@ std::unique_ptr<Expression> Parser::expression()
 {
     Token token = peek();
     if (token.type == Tokentype::LEFT_PAREN) {
-        return sexpression();
+        advance();
+        if (match(Tokentype::DEFINE)) {
+            return defineExpression();
+        } else {
+            return sexpression();
+        }
     } else {
         return atom();
+    }
+}
+
+std::unique_ptr<Expression> Parser::defineExpression()
+{
+    Token name = advance();
+    if (match(Tokentype::LEFT_PAREN)) {
+        size_t count = 0;
+        while (!match(Tokentype::RIGHT_PAREN)) {
+            count++;
+        }
+        std::unique_ptr<Expression> body = expression();
+        return std::make_unique<Expression>(Expression {
+            DefineProcedure { name, count, std::move(body) },
+            name.line });
+    } else {
+        std::unique_ptr<Expression> value = expression();
+        consume(Tokentype::RIGHT_PAREN, "Expect ')' after define expression.");
+        return std::make_unique<Expression>(Expression {
+            DefineExpression { std::move(name), std::move(value) },
+            name.line });
     }
 }
 
@@ -48,7 +74,6 @@ std::unique_ptr<Expression> Parser::atom()
     case Tokentype::STRING:
     case Tokentype::TRUE:
     case Tokentype::FALSE:
-    case Tokentype::DEFINE:
     case Tokentype::LAMBDA:
     case Tokentype::IF:
         return std::make_unique<Expression>(Expression { AtomExpression { token }, token.line });
@@ -58,14 +83,13 @@ std::unique_ptr<Expression> Parser::atom()
 }
 std::unique_ptr<Expression> Parser::sexpression()
 {
-    Token leftParen = consume(Tokentype::LEFT_PAREN, "Expect '(' at start of s-expression.");
     std::vector<std::unique_ptr<Expression>> elements;
     elements.push_back(expression());
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         elements.push_back(expression());
     }
     Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after s-expression.");
-    return std::make_unique<Expression>(Expression { sExpression { std::move(elements) }, leftParen.line });
+    return std::make_unique<Expression>(Expression { sExpression { std::move(elements) }, rightParen.line });
 }
 Token Parser::advance()
 {
