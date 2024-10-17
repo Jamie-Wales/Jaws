@@ -1,17 +1,14 @@
 #include "Interpreter.h"
-#include <stdexcept>
 #include <iostream>
-
-std::unordered_map<std::string, SchemeValue> Interpreter::environment;
+#include <stdexcept>
 
 Interpreter::Interpreter()
 {
     environment["+"] = SchemeValue(std::make_shared<BuiltInProcedure>(plus));
     environment["-"] = SchemeValue(std::make_shared<BuiltInProcedure>(minus));
-    environment["define"] = SchemeValue(std::make_shared<BuiltInProcedure>(define));
 }
 
-SchemeValue Interpreter::interpretAtom(const AtomExpression& atom)
+std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom)
 {
     const Token& token = atom.value;
     switch (token.type) {
@@ -20,49 +17,61 @@ SchemeValue Interpreter::interpretAtom(const AtomExpression& atom)
     case Tokentype::FLOAT:
         return SchemeValue(std::stod(token.lexeme));
     case Tokentype::STRING:
-        return SchemeValue(token.lexeme.substr(1, token.lexeme.length() - 2)); // Remove quotes
+        return SchemeValue(token.lexeme.substr(1, token.lexeme.length() - 2));
     case Tokentype::TRUE:
         return SchemeValue(true);
     case Tokentype::FALSE:
         return SchemeValue(false);
     case Tokentype::SYMBOL:
     case Tokentype::IDENTIFIER:
-    case Tokentype::DEFINE:
         if (auto it = environment.find(token.lexeme); it != environment.end()) {
             return it->second;
         }
-        // Return a symbol instead of throwing an error
         return SchemeValue(SchemeValue::Symbol(token.lexeme));
     default:
         throw std::runtime_error("Unexpected token type in atom");
     }
 }
 
-SchemeValue Interpreter::interpretList(const ListExpression& list)
+std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list)
 {
     std::vector<SchemeValue> elements;
     elements.reserve(list.elements.size());
     for (const auto& ele : list.elements) {
-        elements.push_back(interpret(ele));
+        std::optional<SchemeValue> item = interpret(ele);
+        if (item) {
+            elements.push_back(*item);
+            return SchemeValue(std::move(elements));
+        }
     }
-    return SchemeValue(std::move(elements));
+
+    throw std::runtime_error("Cannot interpert list");
 }
 
-SchemeValue Interpreter::interpretSExpression(const sExpression& se)
+std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& se)
 {
     if (se.elements.empty()) {
         throw std::runtime_error("Empty procedure call");
     }
-    SchemeValue proc = interpret(se.elements[0]);
-    std::vector<SchemeValue> args;
-    args.reserve(se.elements.size() - 1);
-    for (size_t i = 1; i < se.elements.size(); ++i) {
-        args.push_back(interpret(se.elements[i]));
+    std::optional<SchemeValue> proc = interpret(se.elements[0]);
+    if (proc) {
+        std::vector<SchemeValue> args;
+        args.reserve(se.elements.size() - 1);
+        for (size_t i = 1; i < se.elements.size(); ++i) {
+            auto ele = interpret(se.elements[i]);
+            if (ele) {
+                args.push_back(*ele);
+            } else {
+                return std::nullopt;
+            }
+        }
+        return proc->call(*this, args);
     }
-    return proc.call(*this, args);
+
+    throw std::runtime_error("Cannot interpret sExpression");
 }
 
-SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.empty())
         return SchemeValue(0);
@@ -73,7 +82,7 @@ SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args
     return result;
 }
 
-SchemeValue Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.empty())
         throw std::runtime_error("'-' requires at least one argument");
@@ -86,7 +95,7 @@ SchemeValue Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& arg
     return result;
 }
 
-SchemeValue Interpreter::define(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::define(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw std::runtime_error("Define requires exactly two arguments");
@@ -97,20 +106,19 @@ SchemeValue Interpreter::define(Interpreter& interp, const std::vector<SchemeVal
     std::string name = args[0].asSymbol();
     SchemeValue value = args[1];
     interp.environment[name] = value;
-    std::cout << "Defined: " << name << " = " << value.toString() << std::endl;
-    return value;
+    return std::nullopt;
 }
 
 SchemeValue Interpreter::interpret(const std::unique_ptr<Expression>& e)
 {
     return std::visit(overloaded {
-        [this](const AtomExpression& a) { return interpretAtom(a); },
-        [this](const ListExpression& l) { return interpretList(l); },
-        [this](const sExpression& se) { return interpretSExpression(se); },
-        [](const auto&) -> SchemeValue {
-            throw std::runtime_error("Unknown expression type");
-        }
-    }, e->as);
+                          [this](const AtomExpression& a) { return interpretAtom(a); },
+                          [this](const ListExpression& l) { return interpretList(l); },
+                          [this](const sExpression& se) { return interpretSExpression(se); },
+                          [](const auto&) -> SchemeValue {
+                              throw std::runtime_error("Unknown expression type");
+                          } },
+        e->as);
 }
 
 SchemeValue Interpreter::lookupVariable(const std::string& name) const
