@@ -30,6 +30,15 @@ SchemeValue SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue
     throw std::runtime_error("Attempt to call non-procedure value");
 }
 
+bool SchemeValue::boolean() const
+{
+    if (std::holds_alternative<bool>(value)) {
+        return std::get<bool>(value);
+    } else {
+        return true;
+    }
+}
+
 bool SchemeValue::isTrue() const
 {
     return std::visit(overloaded {

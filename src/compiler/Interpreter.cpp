@@ -1,11 +1,11 @@
 #include "Interpreter.h"
-#include <iostream>
 #include <stdexcept>
 
 Interpreter::Interpreter()
 {
     environment["+"] = SchemeValue(std::make_shared<BuiltInProcedure>(plus));
     environment["-"] = SchemeValue(std::make_shared<BuiltInProcedure>(minus));
+    environment["boolean?"] = SchemeValue(std::make_shared<BuiltInProcedure>(isBooleanProc));
 }
 
 std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom)
@@ -69,30 +69,6 @@ std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& 
     }
 
     throw std::runtime_error("Cannot interpret sExpression");
-}
-
-SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.empty())
-        return SchemeValue(0);
-    SchemeValue result = args[0];
-    for (size_t i = 1; i < args.size(); ++i) {
-        result = result + args[i];
-    }
-    return result;
-}
-
-SchemeValue Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.empty())
-        throw std::runtime_error("'-' requires at least one argument");
-    if (args.size() == 1)
-        return SchemeValue(-args[0].as<int>());
-    SchemeValue result = args[0];
-    for (size_t i = 1; i < args.size(); ++i) {
-        result = result + SchemeValue(-args[i].as<int>());
-    }
-    return result;
 }
 
 std::optional<SchemeValue> Interpreter::define(const DefineExpression& de)

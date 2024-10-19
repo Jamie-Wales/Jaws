@@ -35,6 +35,7 @@ private:
     std::optional<SchemeValue> defineProcedure(const DefineProcedure& se);
     static SchemeValue plus(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue minus(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
 
 public:
     Interpreter();

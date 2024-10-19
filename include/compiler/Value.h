@@ -36,6 +36,7 @@ public:
     SchemeValue();
     SchemeValue(Value v);
 
+    bool boolean() const;
     bool isProc() const;
     bool isSymbol() const;
     SchemeValue call(Interpreter& interp, const std::vector<SchemeValue>& args) const;

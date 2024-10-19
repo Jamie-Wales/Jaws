@@ -6,23 +6,46 @@
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
-    { "if", Tokentype::IF }
+    { "if", Tokentype::IF },
+    { "boolean?", Tokentype::IDENTIFIER }
 };
-
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(;.*)"), Tokentype::COMMENT },
     { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
     { std::regex(R"(\d+\.\d*)"), Tokentype::FLOAT },
     { std::regex(R"(\d+)"), Tokentype::INTEGER },
-    { std::regex(R"('[a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::QUOTE },
-    { std::regex(R"('[\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::QUOTE_SYMBOL },
-    { std::regex(R"([a-zA-Z_][a-zA-Z0-9_]*)"), Tokentype::IDENTIFIER },
     { std::regex(R"([\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
+    { std::regex(R"(#t|#true)"), Tokentype::TRUE },
+    { std::regex(R"(#f|#false)"), Tokentype::FALSE },
+    { std::regex(R"([a-zA-Z_][a-zA-Z0-9_+\-?!]*)"), Tokentype::IDENTIFIER },
+    { std::regex(R"(')"), Tokentype::QUOTE },
     { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE },
     { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
     { std::regex(R"(\))"), Tokentype::RIGHT_PAREN }
 };
 
+std::optional<Token> Scanner::matchToken()
+{
+    std::string remaining = input.substr(position);
+
+    for (const auto& pattern : regexPatterns) {
+        std::smatch match;
+        if (std::regex_search(remaining, match, pattern.regex, std::regex_constants::match_continuous)) {
+            std::string lexeme = match.str();
+            Tokentype type = pattern.type;
+
+            if (type == Tokentype::IDENTIFIER) {
+                auto it = keywords.find(lexeme);
+                if (it != keywords.end()) {
+                    type = it->second;
+                }
+            }
+            return Token { type, lexeme, line, column };
+        }
+    }
+
+    return std::nullopt;
+}
 std::vector<Token> Scanner::tokenize(const std::string& input)
 {
     this->input = input;
@@ -45,27 +68,6 @@ std::vector<Token> Scanner::tokenize(const std::string& input)
 
     tokens.emplace_back(Tokentype::EOF_TOKEN, "", line, column);
     return tokens;
-}
-
-std::optional<Token> Scanner::matchToken()
-{
-    std::string remaining = input.substr(position);
-    for (const auto& pattern : regexPatterns) {
-        std::smatch match;
-        if (std::regex_search(remaining, match, pattern.regex, std::regex_constants::match_continuous)) {
-            std::string lexeme = match.str();
-            Tokentype type = pattern.type;
-
-            // Check for keywords
-            auto it = keywords.find(lexeme);
-            if (it != keywords.end()) {
-                type = it->second;
-            }
-
-            return Token { type, lexeme, line, column };
-        }
-    }
-    return std::nullopt;
 }
 
 void Scanner::updatePosition(const std::string& lexeme)

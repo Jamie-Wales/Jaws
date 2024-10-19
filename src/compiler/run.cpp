@@ -102,7 +102,7 @@ void runPrompt()
 
     std::string input;
     while (true) {
-        std::cout << "jaws |>";
+        std::cout << "jaws: |> ";
         if (!std::getline(std::cin, input)) {
             break;
         }
