@@ -1,4 +1,5 @@
 #pragma once
+#include "Number.h"
 #include <memory>
 #include <string>
 #include <variant>
@@ -22,28 +23,26 @@ public:
         }
     };
 
-    using Value = std::variant<
-        int,
-        double,
-        bool,
-        std::string,
-        Symbol,
-        std::vector<SchemeValue>,
-        std::shared_ptr<Procedure>>;
+    using Value = std::variant<Number, std::string, bool, Symbol, std::vector<SchemeValue>, std::shared_ptr<Procedure>>;
 
     Value value;
 
     SchemeValue();
     SchemeValue(Value v);
 
-    bool boolean() const;
     bool isProc() const;
     bool isSymbol() const;
-    SchemeValue call(Interpreter& interp, const std::vector<SchemeValue>& args) const;
+    bool isNumber() const;
     bool isTrue() const;
+    SchemeValue call(Interpreter& interp, const std::vector<SchemeValue>& args) const;
     std::string toString() const;
-    SchemeValue operator+(const SchemeValue& other) const;
     std::string asSymbol() const;
+
+    SchemeValue operator+(const SchemeValue& other) const;
+    SchemeValue operator-(const SchemeValue& other) const;
+    SchemeValue operator*(const SchemeValue& other) const;
+    SchemeValue operator/(const SchemeValue& other) const;
+    SchemeValue operator-() const;
 
     template <typename T>
     T as() const
@@ -53,4 +52,5 @@ public:
         }
         throw std::runtime_error("Type mismatch in SchemeValue");
     }
+    const Value& getValue() const { return value; }
 };

@@ -12,8 +12,10 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(;.*)"), Tokentype::COMMENT },
     { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
-    { std::regex(R"(\d+\.\d*)"), Tokentype::FLOAT },
-    { std::regex(R"(\d+)"), Tokentype::INTEGER },
+    { std::regex(R"(([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?i)"), Tokentype::COMPLEX },
+    { std::regex(R"([+-]?\d+/\d+)"), Tokentype::RATIONAL },
+    { std::regex(R"([+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?)"), Tokentype::FLOAT },
+    { std::regex(R"([+-]?\d+)"), Tokentype::INTEGER },
     { std::regex(R"([\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
     { std::regex(R"(#t|#true)"), Tokentype::TRUE },
     { std::regex(R"(#f|#false)"), Tokentype::FALSE },

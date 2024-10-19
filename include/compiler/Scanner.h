@@ -2,8 +2,8 @@
 #include "Token.h"
 #include <regex>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 class Scanner {
 public:

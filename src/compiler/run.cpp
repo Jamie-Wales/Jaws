@@ -87,7 +87,7 @@ void printHelp()
               << "  +          - Addition (e.g., (+ 1 2 3))\n"
               << "  define     - Define variables (e.g., (define x 10))\n"
               << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
-              << "\nEnter Scheme expressions to evaluate them.\n";
+              << "\nEnter Scheme expressions to evaluate them" << std::endl;
 }
 void runPrompt()
 {
@@ -121,12 +121,11 @@ void runPrompt()
             std::cout <<
                 R"(
 We're gonna need a bigger boat
-
+------------------------------
 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠓⠦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⢀⡠⢤⣤⣀⣀⣤⣄⣠⣼⣧⣶⠆⠀⠀⠀⡀⠀⠀⣀⠀⠀
 ⠀⠀⠀⠀⠀⠉⠉⠉⠛⠛⠛⠉⠭⠙⠛⠋⠛⠒⠒⠒⠋⠀⠂⠒⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -145,7 +144,6 @@ We're gonna need a bigger boat
 ⣿⠇⠀⠀⠀⠀⠀⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⡇
 ⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡗
 ⠈⠳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠀
-
                 )" << std::endl;
             continue;
         }

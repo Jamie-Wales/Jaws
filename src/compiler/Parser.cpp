@@ -1,5 +1,7 @@
 #include "Parser.h"
+#include "Number.h"
 #include "ParseError.h"
+#include <complex>
 #include <iostream>
 
 void Parser::initialize(Scanner& s)
@@ -71,6 +73,8 @@ std::unique_ptr<Expression> Parser::atom()
     case Tokentype::IDENTIFIER:
     case Tokentype::INTEGER:
     case Tokentype::FLOAT:
+    case Tokentype::COMPLEX:
+    case Tokentype::RATIONAL:
     case Tokentype::STRING:
     case Tokentype::TRUE:
     case Tokentype::FALSE:
@@ -81,6 +85,7 @@ std::unique_ptr<Expression> Parser::atom()
         throw ParseError("Unexpected token", token, scanner->getLine(token.line));
     }
 }
+
 std::unique_ptr<Expression> Parser::sexpression()
 {
     std::vector<std::unique_ptr<Expression>> elements;

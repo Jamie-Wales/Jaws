@@ -22,11 +22,11 @@ enum class Tokentype {
     EQUAL,
     LESS_THAN,
     GREATER_THAN,
-
     DEFINE,
     LAMBDA,
     IF,
-
+    RATIONAL,
+    COMPLEX,
     QUOTE,
     WHITESPACE,
     COMMENT,

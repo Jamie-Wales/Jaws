@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 SchemeValue::SchemeValue()
-    : value(0)
+    : value(Number(0))
 {
 }
 
@@ -22,6 +22,11 @@ bool SchemeValue::isSymbol() const
     return std::holds_alternative<Symbol>(value);
 }
 
+bool SchemeValue::isNumber() const
+{
+    return std::holds_alternative<Number>(value);
+}
+
 SchemeValue SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue>& args) const
 {
     if (isProc()) {
@@ -30,22 +35,12 @@ SchemeValue SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue
     throw std::runtime_error("Attempt to call non-procedure value");
 }
 
-bool SchemeValue::boolean() const
-{
-    if (std::holds_alternative<bool>(value)) {
-        return std::get<bool>(value);
-    } else {
-        return true;
-    }
-}
-
 bool SchemeValue::isTrue() const
 {
     return std::visit(overloaded {
-                          [](int arg) { return arg != 0; },
-                          [](double arg) { return arg != 0.0; },
-                          [](bool arg) { return arg; },
+                          [](const Number& arg) { return !arg.isZero(); },
                           [](const std::string& arg) { return !arg.empty(); },
+                          [](bool arg) { return arg; },
                           [](const Symbol& arg) { return true; },
                           [](const std::vector<SchemeValue>& arg) { return !arg.empty(); },
                           [](const std::shared_ptr<Procedure>&) { return true; } },
@@ -55,10 +50,9 @@ bool SchemeValue::isTrue() const
 std::string SchemeValue::toString() const
 {
     return std::visit(overloaded {
-                          [](int arg) { return std::to_string(arg); },
-                          [](double arg) { return std::to_string(arg); },
-                          [](bool arg) { return arg ? std::string("#t") : "#f"; },
+                          [](const Number& arg) { return arg.toString(); },
                           [](const std::string& arg) { return std::string("\"" + arg + "\""); },
+                          [](bool arg) { return arg ? std::string("#t") : "#f"; },
                           [](const Symbol& arg) { return arg.name; },
                           [](const std::vector<SchemeValue>& arg) {
                               std::string result = "(";
@@ -77,13 +71,53 @@ std::string SchemeValue::toString() const
 SchemeValue SchemeValue::operator+(const SchemeValue& other) const
 {
     return std::visit(overloaded {
-                          [](int a, int b) { return SchemeValue(a + b); },
-                          [](int a, double b) { return SchemeValue(static_cast<double>(a) + b); },
-                          [](double a, int b) { return SchemeValue(a + static_cast<double>(b)); },
-                          [](double a, double b) { return SchemeValue(a + b); },
-                          [](const std::string& a, const std::string& b) { return SchemeValue(a + b); },
+                          [](const Number& a, const Number& b) {
+                              return SchemeValue(a + b);
+                          },
+                          [](const std::string& a, const std::string& b) {
+                              return SchemeValue(a + b);
+                          },
                           [](const auto&, const auto&) -> SchemeValue {
                               throw std::runtime_error("Invalid types for addition");
+                          } },
+        value, other.value);
+}
+
+SchemeValue SchemeValue::operator-(const SchemeValue& other) const
+{
+    return std::visit(overloaded {
+                          [](const Number& a, const Number& b) {
+                              return SchemeValue(a - b);
+                          },
+                          [](const auto&, const auto&) -> SchemeValue {
+                              throw std::runtime_error("Invalid types for subtraction");
+                          } },
+        value, other.value);
+}
+
+SchemeValue SchemeValue::operator*(const SchemeValue& other) const
+{
+    return std::visit(overloaded {
+                          [](const Number& a, const Number& b) {
+                              return SchemeValue(a * b);
+                          },
+                          [](const auto&, const auto&) -> SchemeValue {
+                              throw std::runtime_error("Invalid types for multiplication");
+                          } },
+        value, other.value);
+}
+
+SchemeValue SchemeValue::operator/(const SchemeValue& other) const
+{
+    return std::visit(overloaded {
+                          [](const Number& a, const Number& b) {
+                              if (b.isZero()) {
+                                  throw std::runtime_error("Division by zero");
+                              }
+                              return SchemeValue(a / b);
+                          },
+                          [](const auto&, const auto&) -> SchemeValue {
+                              throw std::runtime_error("Invalid types for division");
                           } },
         value, other.value);
 }
@@ -94,4 +128,14 @@ std::string SchemeValue::asSymbol() const
         return sym->name;
     }
     throw std::runtime_error("Value is not a symbol");
+}
+
+SchemeValue SchemeValue::operator-() const
+{
+    return std::visit(overloaded {
+                          [](const Number& n) { return SchemeValue(-n); },
+                          [](const auto&) -> SchemeValue {
+                              throw std::runtime_error("Unary minus not supported for this type");
+                          } },
+        value);
 }

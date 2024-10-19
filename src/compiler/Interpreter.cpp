@@ -13,9 +13,32 @@ std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom
     const Token& token = atom.value;
     switch (token.type) {
     case Tokentype::INTEGER:
-        return SchemeValue(std::stoi(token.lexeme));
+        return SchemeValue(Number(std::stoi(token.lexeme)));
     case Tokentype::FLOAT:
-        return SchemeValue(std::stod(token.lexeme));
+        return SchemeValue(Number(std::stod(token.lexeme)));
+    case Tokentype::COMPLEX: {
+        std::string complexStr = token.lexeme.substr(0, token.lexeme.length() - 1);
+        size_t plusPos = complexStr.find('+', 1);
+        size_t minusPos = complexStr.find('-', 1);
+        size_t separatorPos = std::min(plusPos, minusPos);
+
+        if (separatorPos == std::string::npos) {
+            return SchemeValue(Number(std::complex<double>(0, std::stod(complexStr))));
+        } else {
+            double real = std::stod(complexStr.substr(0, separatorPos));
+            double imag = std::stod(complexStr.substr(separatorPos));
+            return SchemeValue(Number(std::complex<double>(real, imag)));
+        }
+    }
+    case Tokentype::RATIONAL: {
+        size_t slashPos = token.lexeme.find('/');
+        if (slashPos != std::string::npos) {
+            int numerator = std::stoi(token.lexeme.substr(0, slashPos));
+            int denominator = std::stoi(token.lexeme.substr(slashPos + 1));
+            return SchemeValue(Number(Number::Rational(numerator, denominator)));
+        }
+        throw std::runtime_error("Invalid rational number format");
+    }
     case Tokentype::STRING:
         return SchemeValue(token.lexeme.substr(1, token.lexeme.length() - 2));
     case Tokentype::TRUE:
