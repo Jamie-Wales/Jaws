@@ -1,7 +1,5 @@
 #include "Number.h"
-#include <cmath>
 #include <gtest/gtest.h>
-#include <limits>
 
 TEST(NumberTest, ConstructorsAndTypeChecks)
 {
