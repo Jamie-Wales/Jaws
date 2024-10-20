@@ -1,6 +1,6 @@
 #include "Interpreter.h"
 #include <stdexcept>
-
+#include "Error.h"
 Interpreter::Interpreter()
 {
     environment["+"] = SchemeValue(std::make_shared<BuiltInProcedure>(plus));
@@ -8,55 +8,59 @@ Interpreter::Interpreter()
     environment["boolean?"] = SchemeValue(std::make_shared<BuiltInProcedure>(isBooleanProc));
 }
 
-std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom)
+std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom, const Expression& expr)
 {
     const Token& token = atom.value;
-    switch (token.type) {
-    case Tokentype::INTEGER:
-        return SchemeValue(Number(std::stoi(token.lexeme)));
-    case Tokentype::FLOAT:
-        return SchemeValue(Number(std::stod(token.lexeme)));
-    case Tokentype::COMPLEX: {
-        std::string complexStr = token.lexeme.substr(0, token.lexeme.length() - 1);
-        size_t plusPos = complexStr.find('+', 1);
-        size_t minusPos = complexStr.find('-', 1);
-        size_t separatorPos = std::min(plusPos, minusPos);
+    try {
+        switch (token.type) {
+        case Tokentype::INTEGER:
+            return SchemeValue(Number(std::stoi(token.lexeme)));
+        case Tokentype::FLOAT:
+            return SchemeValue(Number(std::stod(token.lexeme)));
+        case Tokentype::COMPLEX: {
+            std::string complexStr = token.lexeme.substr(0, token.lexeme.length() - 1);
+            size_t plusPos = complexStr.find('+', 1);
+            size_t minusPos = complexStr.find('-', 1);
+            size_t separatorPos = std::min(plusPos, minusPos);
 
-        if (separatorPos == std::string::npos) {
-            return SchemeValue(Number(std::complex<double>(0, std::stod(complexStr))));
-        } else {
-            double real = std::stod(complexStr.substr(0, separatorPos));
-            double imag = std::stod(complexStr.substr(separatorPos));
-            return SchemeValue(Number(std::complex<double>(real, imag)));
+            if (separatorPos == std::string::npos) {
+                return SchemeValue(Number(std::complex<double>(0, std::stod(complexStr))));
+            } else {
+                double real = std::stod(complexStr.substr(0, separatorPos));
+                double imag = std::stod(complexStr.substr(separatorPos));
+                return SchemeValue(Number(std::complex<double>(real, imag)));
+            }
         }
-    }
-    case Tokentype::RATIONAL: {
-        size_t slashPos = token.lexeme.find('/');
-        if (slashPos != std::string::npos) {
-            int numerator = std::stoi(token.lexeme.substr(0, slashPos));
-            int denominator = std::stoi(token.lexeme.substr(slashPos + 1));
-            return SchemeValue(Number(Number::Rational(numerator, denominator)));
+        case Tokentype::RATIONAL: {
+            size_t slashPos = token.lexeme.find('/');
+            if (slashPos != std::string::npos) {
+                int numerator = std::stoi(token.lexeme.substr(0, slashPos));
+                int denominator = std::stoi(token.lexeme.substr(slashPos + 1));
+                return SchemeValue(Number(Number::Rational(numerator, denominator)));
+            }
+            throw InterpreterError("Invalid rational number format", expr);
         }
-        throw std::runtime_error("Invalid rational number format");
-    }
-    case Tokentype::STRING:
-        return SchemeValue(token.lexeme.substr(1, token.lexeme.length() - 2));
-    case Tokentype::TRUE:
-        return SchemeValue(true);
-    case Tokentype::FALSE:
-        return SchemeValue(false);
-    case Tokentype::SYMBOL:
-    case Tokentype::IDENTIFIER:
-        if (auto it = environment.find(token.lexeme); it != environment.end()) {
-            return it->second;
+        case Tokentype::STRING:
+            return SchemeValue(token.lexeme.substr(1, token.lexeme.length() - 2));
+        case Tokentype::TRUE:
+            return SchemeValue(true);
+        case Tokentype::FALSE:
+            return SchemeValue(false);
+        case Tokentype::SYMBOL:
+        case Tokentype::IDENTIFIER:
+            if (auto it = environment.find(token.lexeme); it != environment.end()) {
+                return it->second;
+            }
+            return SchemeValue(SchemeValue::Symbol(token.lexeme));
+        default:
+            throw InterpreterError("Unexpected token type in atom", expr);
         }
-        return SchemeValue(SchemeValue::Symbol(token.lexeme));
-    default:
-        throw std::runtime_error("Unexpected token type in atom");
+    } catch (const std::exception& e) {
+        throw InterpreterError(e.what(), expr);
     }
 }
 
-std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list)
+std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list, const Expression& expr)
 {
     std::vector<SchemeValue> elements;
     elements.reserve(list.elements.size());
@@ -68,13 +72,13 @@ std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list
         }
     }
 
-    throw std::runtime_error("Cannot interpert list");
+    throw InterpreterError("Cannot interpret list", expr);
 }
 
-std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& se)
+std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& se, const Expression& expr)
 {
     if (se.elements.empty()) {
-        throw std::runtime_error("Empty procedure call");
+        throw InterpreterError("Empty procedure call", expr);
     }
     std::optional<SchemeValue> proc = interpret(se.elements[0]);
     if (proc) {
@@ -91,36 +95,36 @@ std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& 
         return proc->call(*this, args);
     }
 
-    throw std::runtime_error("Cannot interpret sExpression");
+    throw InterpreterError("Cannot interpret sExpression", expr);
 }
 
-std::optional<SchemeValue> Interpreter::define(const DefineExpression& de)
+std::optional<SchemeValue> Interpreter::define(const DefineExpression& de, const Expression& expr)
 {
-    std::optional<SchemeValue> expr = interpret(de.value);
-    if (expr) {
-        environment[de.name.lexeme] = *expr;
+    std::optional<SchemeValue> exprValue = interpret(de.value);
+    if (exprValue) {
+        environment[de.name.lexeme] = *exprValue;
         return std::nullopt;
     }
-    throw std::runtime_error("Cannot interpret define with name " + de.name.lexeme);
+    throw InterpreterError("Cannot interpret define with name " + de.name.lexeme, expr);
 }
 
 std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expression>& e)
 {
     return std::visit(overloaded {
-                          [this](const AtomExpression& a) { return interpretAtom(a); },
-                          [this](const ListExpression& l) { return interpretList(l); },
-                          [this](const sExpression& se) { return interpretSExpression(se); },
-                          [this](const DefineExpression& de) { return define(de); },
-                          [this](const DefineProcedure& dp) -> std::optional<SchemeValue> {
+                          [this, &e](const AtomExpression& a) { return interpretAtom(a, *e); },
+                          [this, &e](const ListExpression& l) { return interpretList(l, *e); },
+                          [this, &e](const sExpression& se) { return interpretSExpression(se, *e); },
+                          [this, &e](const DefineExpression& de) { return define(de, *e); },
+                          [this, &e](const DefineProcedure& dp) -> std::optional<SchemeValue> {
                               /** ----
                                * :TODO DO THIS
                                *
                                * return defineProcedure(dp);
                                * **/
-                              return std::nullopt;
+                              throw InterpreterError("DefineProcedure not implemented", *e);
                           },
-                          [](const auto&) -> std::optional<SchemeValue> {
-                              throw std::runtime_error("Unknown expression type");
+                          [&e](const auto&) -> std::optional<SchemeValue> {
+                              throw InterpreterError("Unknown expression type", *e);
                           } },
         e->as);
 }
@@ -131,5 +135,5 @@ SchemeValue Interpreter::lookupVariable(const std::string& name) const
     if (it != environment.end()) {
         return it->second;
     }
-    throw std::runtime_error("Undefined variable: " + name);
+    throw InterpreterError("Undefined variable: " + name);
 }

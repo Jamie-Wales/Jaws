@@ -1,6 +1,8 @@
+#include "Error.h"
 #include "Interpreter.h"
-#include <stdexcept>
 #include <format>
+#include <optional>
+#include <stdexcept>
 
 SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {
@@ -16,7 +18,7 @@ SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args
 SchemeValue Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.empty())
-        throw std::runtime_error("'-' requires at least one argument");
+        throw InterpreterError("Cannot call procedure - on empty list", std::nullopt);
     if (args.size() == 1)
         return -args[0];
     SchemeValue result = args[0];
@@ -29,6 +31,6 @@ SchemeValue Interpreter::minus(Interpreter&, const std::vector<SchemeValue>& arg
 SchemeValue Interpreter::isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1)
-        throw std::runtime_error(std::format("boolean? procedure expects one argument, you provided {}", args.size()));
+        throw InterpreterError("Cannot call boolean on multiple arguments", std::nullopt);
     return SchemeValue(std::holds_alternative<bool>(args[0].getValue()));
 }

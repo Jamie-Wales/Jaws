@@ -1,12 +1,10 @@
 #include "Parser.h"
-#include "Number.h"
-#include "ParseError.h"
-#include <complex>
+#include "Error.h"
 #include <iostream>
 
-void Parser::initialize(Scanner& s)
+void Parser::initialize(std::shared_ptr<Scanner> s)
 {
-    scanner = std::make_shared<Scanner>(s);
+    scanner = s;
 }
 
 void Parser::load(const std::vector<Token>& t)
@@ -24,7 +22,7 @@ std::optional<std::unique_ptr<Expression>> Parser::parse()
         }
         return expression();
     } catch (const ParseError& e) {
-        std::cerr << e.what() << std::endl;
+        e.printFormattedError();
         return std::nullopt;
     }
 }

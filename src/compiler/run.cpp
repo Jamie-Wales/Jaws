@@ -1,6 +1,6 @@
 #include "run.h"
+#include "Error.h"
 #include "Interpreter.h"
-#include "ParseError.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Token.h"
@@ -28,8 +28,8 @@ void runFile(const std::string& path)
 {
     try {
         std::string sourceCode = readFile(path);
-        Scanner scanner;
-        std::vector<Token> tokens = scanner.tokenize(sourceCode);
+        auto scanner = std::make_shared<Scanner>();
+        std::vector<Token> tokens = scanner->tokenize(sourceCode);
         Parser parser;
         parser.initialize(scanner);
         parser.load(tokens);
@@ -46,8 +46,8 @@ void runFile(const std::string& path)
                 std::cout << result->toString() << std::endl;
             }
         }
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+    } catch (const InterpreterError& e) {
+        e.printFormattedError();
     }
 }
 
@@ -95,7 +95,7 @@ void runPrompt()
     std::cout << "Welcome to the Jaws REPL!\n";
     std::cout << "Type 'exit' to quit, 'help' for commands.\n\n";
 
-    Scanner scanner;
+    auto scanner = std::make_shared<Scanner>();
     Parser parser;
     parser.initialize(scanner);
     Interpreter interpreter;
@@ -152,7 +152,7 @@ We're gonna need a bigger boat
             continue;
 
         try {
-            std::vector<Token> tokens = scanner.tokenize(input);
+            std::vector<Token> tokens = scanner->tokenize(input);
             parser.load(tokens);
             auto expr = parser.parse();
             if (expr) {
@@ -162,9 +162,9 @@ We're gonna need a bigger boat
                 }
             }
         } catch (const ParseError& e) {
-            std::cerr << "Parse error: " << e.what() << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << std::endl;
+            e.printFormattedError();
+        } catch (const InterpreterError& e) {
+            e.printFormattedError();
         }
     }
 }

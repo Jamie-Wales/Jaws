@@ -1,9 +1,11 @@
 #pragma once
-#include "Token.h"
-#include <regex>
+
 #include <string>
-#include <unordered_map>
 #include <vector>
+#include <regex>
+#include <optional>
+#include <unordered_map>
+#include "Token.h"
 
 class Scanner {
 public:
@@ -17,16 +19,16 @@ private:
         Tokentype type;
     };
 
+    std::string input;
+    std::vector<std::string> lines;
+    size_t position = 0;
+    int currentLine = 1;
+    int column = 1;
+
     static const std::unordered_map<std::string, Tokentype> keywords;
     static const std::vector<RegexInfo> regexPatterns;
 
-    std::vector<std::string> lines;
-    std::string input;
-    size_t position = 0;
-    int line = 1;
-    int column = 1;
-
-    void splitIntoLines();
+    std::vector<Token> generateTokens();
     std::optional<Token> matchToken();
     void updatePosition(const std::string& lexeme);
 };

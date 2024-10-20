@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 project(jaws)
 
 if(NOT APPLE)
@@ -8,23 +8,40 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
-
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 
+# Enable testing
+include(CTest)
+enable_testing()
+
+include(FetchContent)
+fetchcontent_declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
+)
+set(gtest_force_shared_crt on cache bool "" force)
+FetchContent_MakeAvailable(googletest)
+
+# Collect source files
 file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp")
 file(GLOB_RECURSE RUNTIME_SOURCES "${PROJECT_SOURCE_DIR}/runtime/src/*.c")
+file(GLOB_RECURSE TEST_SOURCES "${PROJECT_SOURCE_DIR}/tests/*.cpp")
 
-add_executable(jaws ${COMPILER_SOURCES})
-target_include_directories(jaws PRIVATE
+# Exclude main.cpp from compiler sources
+list(FILTER COMPILER_SOURCES EXCLUDE REGEX "main\\.cpp$")
+
+# Create the compiler library
+add_library(compiler_lib STATIC ${COMPILER_SOURCES})
+target_include_directories(compiler_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
 )
-
-set_target_properties(jaws PROPERTIES
+set_target_properties(compiler_lib PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
 
+# Create the runtime library
 add_library(runtime STATIC ${RUNTIME_SOURCES})
 target_include_directories(runtime PUBLIC
     ${PROJECT_SOURCE_DIR}/include/runtime
@@ -34,8 +51,19 @@ set_target_properties(runtime PROPERTIES
     C_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(jaws PRIVATE runtime)
+# Create the jaws executable
+add_executable(jaws src/compiler/main.cpp)
+target_link_libraries(jaws PRIVATE compiler_lib runtime)
+target_include_directories(jaws PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/compiler
+)
+set_target_properties(jaws PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
 
+# Find assembler and linker
 find_program(AS_PATH as)
 find_program(LD_PATH ld)
 
@@ -48,11 +76,21 @@ target_compile_definitions(jaws PRIVATE
     LD_PATH="${LD_PATH}"
     RUNTIME_INCLUDE_PATH="${PROJECT_SOURCE_DIR}/include/runtime"
 )
-
-get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-foreach(dir ${dirs})
-    message(STATUS "Include dir='${dir}'")
-endforeach()
-
 message(STATUS "Compiler sources: ${COMPILER_SOURCES}")
 message(STATUS "Runtime sources: ${RUNTIME_SOURCES}")
+
+# Create the test executable
+add_executable(tests ${TEST_SOURCES})
+target_include_directories(tests PRIVATE
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/compiler
+    ${gtest_SOURCE_DIR}/include
+)
+set_target_properties(tests PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
+
+target_link_libraries(tests PRIVATE compiler_lib runtime gtest_main)
+
+add_test(NAME AllTests COMMAND tests)
