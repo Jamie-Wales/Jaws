@@ -1,8 +1,6 @@
 #include "Error.h"
 #include "Interpreter.h"
-#include <format>
 #include <optional>
-#include <stdexcept>
 
 SchemeValue Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {
