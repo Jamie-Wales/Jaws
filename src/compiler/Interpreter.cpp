@@ -1,11 +1,13 @@
 #include "Interpreter.h"
-#include <stdexcept>
 #include "Error.h"
+#include <stdexcept>
+
 Interpreter::Interpreter()
 {
     environment["+"] = SchemeValue(std::make_shared<BuiltInProcedure>(plus));
     environment["-"] = SchemeValue(std::make_shared<BuiltInProcedure>(minus));
     environment["boolean?"] = SchemeValue(std::make_shared<BuiltInProcedure>(isBooleanProc));
+    environment["list"] = SchemeValue(std::make_shared<BuiltInProcedure>(listProcedure));
 }
 
 std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom, const Expression& expr)

@@ -1,3 +1,4 @@
+#include "Error.h"
 #include "Scanner.h"
 #include "gtest/gtest.h"
 
@@ -93,10 +94,10 @@ TEST(ScannerTest, HandlesUnknownCharacters)
     std::string input = "@";
     try {
         auto tokens = scanner.tokenize(input);
-        FAIL() << "Expected std::runtime_error";
-    } catch (const std::runtime_error& e) {
-        EXPECT_STREQ(e.what(), "Unexpected character at line 1, column 1: @");
+        FAIL() << "Expected ParseError";
+    } catch (const ParseError& e) {
+        e.printFormattedError();
     } catch (...) {
-        FAIL() << "Expected std::runtime_error";
+        FAIL() << "Expected ParseError";
     }
 }

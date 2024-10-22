@@ -32,3 +32,8 @@ SchemeValue Interpreter::isBooleanProc(Interpreter&, const std::vector<SchemeVal
         throw InterpreterError("Cannot call boolean on multiple arguments", std::nullopt);
     return SchemeValue(std::holds_alternative<bool>(args[0].getValue()));
 }
+
+SchemeValue Interpreter::listProcedure(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    return SchemeValue(args);
+}

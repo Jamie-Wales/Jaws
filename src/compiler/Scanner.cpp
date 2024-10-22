@@ -3,44 +3,47 @@
 #include <sstream>
 
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
-        { "define", Tokentype::DEFINE },
-        { "lambda", Tokentype::LAMBDA },
-        { "if", Tokentype::IF },
-        { "boolean?", Tokentype::IDENTIFIER }
+    { "define", Tokentype::DEFINE },
+    { "lambda", Tokentype::LAMBDA },
+    { "if", Tokentype::IF },
+    { "boolean?", Tokentype::IDENTIFIER }
 };
 
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
-        { std::regex(R"(;.*)"), Tokentype::COMMENT },
-        { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
-        { std::regex(R"(([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?i)"), Tokentype::COMPLEX },
-        { std::regex(R"([+-]?\d+/\d+)"), Tokentype::RATIONAL },
-        { std::regex(R"([+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?)"), Tokentype::FLOAT },
-        { std::regex(R"([+-]?\d+)"), Tokentype::INTEGER },
-        { std::regex(R"([\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
-        { std::regex(R"(#t|#true)"), Tokentype::TRUE },
-        { std::regex(R"(#f|#false)"), Tokentype::FALSE },
-        { std::regex(R"([a-zA-Z_][a-zA-Z0-9_+\-?!]*)"), Tokentype::IDENTIFIER },
-        { std::regex(R"(')"), Tokentype::QUOTE },
-        { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE },
-        { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
-        { std::regex(R"(\))"), Tokentype::RIGHT_PAREN }
+    { std::regex(R"(;.*)"), Tokentype::COMMENT },
+    { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
+    { std::regex(R"(([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?i)"), Tokentype::COMPLEX },
+    { std::regex(R"([+-]?\d+/\d+)"), Tokentype::RATIONAL },
+    { std::regex(R"([+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?)"), Tokentype::FLOAT },
+    { std::regex(R"([+-]?\d+)"), Tokentype::INTEGER },
+    { std::regex(R"([\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
+    { std::regex(R"(#t|#true)"), Tokentype::TRUE },
+    { std::regex(R"(#f|#false)"), Tokentype::FALSE },
+    { std::regex(R"([a-zA-Z_][a-zA-Z0-9_+\-?!]*)"), Tokentype::IDENTIFIER },
+    { std::regex(R"(')"), Tokentype::QUOTE },
+    { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE },
+    { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
+    { std::regex(R"(\))"), Tokentype::RIGHT_PAREN }
 };
 
-std::vector<Token> Scanner::tokenize(const std::string& input) {
+std::vector<Token> Scanner::tokenize(const std::string& input)
+{
     this->input = input;
     this->lines.clear();
     this->lines.push_back("");
     return generateTokens();
 }
 
-std::string Scanner::getLine(int lineNumber) const {
+std::string Scanner::getLine(int lineNumber) const
+{
     if (lineNumber > 0 && lineNumber <= static_cast<int>(lines.size())) {
         return lines[lineNumber - 1];
     }
     return "";
 }
 
-std::vector<Token> Scanner::generateTokens() {
+std::vector<Token> Scanner::generateTokens()
+{
     std::vector<Token> tokens;
     position = 0;
     currentLine = 1;
@@ -54,15 +57,16 @@ std::vector<Token> Scanner::generateTokens() {
             updatePosition(token->lexeme);
         } else {
             throw ParseError("Unexpected character",
-                             Token{Tokentype::ERROR, std::string(1, input[position]), currentLine, column},
-                             lines[currentLine - 1]);
+                Token { Tokentype::ERROR, std::string(1, input[position]), currentLine, column },
+                lines[currentLine - 1]);
         }
     }
     tokens.emplace_back(Tokentype::EOF_TOKEN, "", currentLine, column);
     return tokens;
 }
 
-std::optional<Token> Scanner::matchToken() {
+std::optional<Token> Scanner::matchToken()
+{
     std::string remaining = input.substr(position);
     for (const auto& pattern : regexPatterns) {
         std::smatch match;
@@ -81,7 +85,8 @@ std::optional<Token> Scanner::matchToken() {
     return std::nullopt;
 }
 
-void Scanner::updatePosition(const std::string& lexeme) {
+void Scanner::updatePosition(const std::string& lexeme)
+{
     for (char c : lexeme) {
         if (c == '\n') {
             ++currentLine;

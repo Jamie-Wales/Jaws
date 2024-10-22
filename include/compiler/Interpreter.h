@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-class InterpreterError;  // Forward declaration
+class InterpreterError; // Forward declaration
 
 class Interpreter {
 private:
@@ -36,6 +36,7 @@ private:
     static SchemeValue plus(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue minus(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue listProcedure(Interpreter&, const std::vector<SchemeValue>& args);
 
 public:
     Interpreter();
