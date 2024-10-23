@@ -6,7 +6,12 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
-    { "boolean?", Tokentype::IDENTIFIER }
+    { "boolean?", Tokentype::IDENTIFIER },
+    { "list", Tokentype::IDENTIFIER },
+    { "car", Tokentype::IDENTIFIER },
+    { "cdr", Tokentype::IDENTIFIER },
+    { "cadr", Tokentype::IDENTIFIER },
+    { "eq?", Tokentype::IDENTIFIER },
 };
 
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {

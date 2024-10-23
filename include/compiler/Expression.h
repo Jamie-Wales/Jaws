@@ -4,10 +4,10 @@
 #include <format>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
-
 class Expression;
 
 class AtomExpression {
@@ -50,12 +50,12 @@ public:
 class DefineProcedure {
 public:
     Token name;
-    size_t arity;
+    std::vector<Token> parameters;
     std::unique_ptr<Expression> body;
 
-    DefineProcedure(Token name, size_t arity, std::unique_ptr<Expression> body)
+    DefineProcedure(Token name, std::vector<Token> parameters, std::unique_ptr<Expression> body)
         : name(name)
-        , arity(arity)
+        , parameters(std::move(parameters))
         , body(std::move(body))
     {
     }
@@ -106,4 +106,38 @@ public:
                    },
             as);
     }
+    std::unique_ptr<Expression> clone() const
+    {
+        return std::visit(overloaded {
+                              [&](const AtomExpression& e) -> std::unique_ptr<Expression> {
+                                  return std::make_unique<Expression>(AtomExpression { e.value }, line);
+                              },
+                              [&](const ListExpression& e) -> std::unique_ptr<Expression> {
+                                  std::vector<std::unique_ptr<Expression>> clonedElements;
+                                  clonedElements.reserve(e.elements.size());
+                                  for (const auto& elem : e.elements) {
+                                      clonedElements.push_back(elem->clone());
+                                  }
+                                  return std::make_unique<Expression>(ListExpression { std::move(clonedElements) }, line);
+                              },
+                              [&](const sExpression& e) -> std::unique_ptr<Expression> {
+                                  std::vector<std::unique_ptr<Expression>> clonedElements;
+                                  clonedElements.reserve(e.elements.size());
+                                  for (const auto& elem : e.elements) {
+                                      clonedElements.push_back(elem->clone());
+                                  }
+                                  return std::make_unique<Expression>(sExpression { std::move(clonedElements) }, line);
+                              },
+                              [&](const DefineExpression& e) -> std::unique_ptr<Expression> {
+                                  return std::make_unique<Expression>(
+                                      DefineExpression { e.name, e.value->clone() },
+                                      line);
+                              },
+                              [&](const DefineProcedure& e) -> std::unique_ptr<Expression> {
+                                  return std::make_unique<Expression>(
+                                      DefineProcedure { e.name, e.parameters, e.body->clone() },
+                                      line);
+                              } },
+            as);
+    };
 };

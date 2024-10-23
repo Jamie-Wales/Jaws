@@ -1,7 +1,10 @@
+// Number.h
 #pragma once
 #include <complex>
 #include <string>
 #include <variant>
+#include <compare>
+
 class Number {
 public:
     struct Rational {
@@ -10,7 +13,9 @@ public:
         Rational(int n, int d);
         void simplify();
     };
+
     using ComplexType = std::complex<double>;
+    
     std::variant<int, Rational, double, ComplexType> value;
 
     Number(int i);
@@ -24,11 +29,15 @@ public:
     bool isReal() const;
     bool isRational() const;
     bool isInteger() const;
+
     std::string toString() const;
 
     Number operator+(const Number& other) const;
     Number operator-(const Number& other) const;
-    Number operator-() const;
+    Number operator-() const;  
     Number operator*(const Number& other) const;
     Number operator/(const Number& other) const;
+
+    std::partial_ordering operator<=>(const Number& other) const;
+    bool operator==(const Number& other) const;
 };

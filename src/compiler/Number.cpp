@@ -1,6 +1,7 @@
 #include "Number.h"
 #include "Visit.h"
 #include <cmath>
+#include <compare>
 #include <format>
 #include <limits>
 #include <numeric>
@@ -67,7 +68,9 @@ bool Number::isRational() const
                           [](int) { return true; },
                           [](const Rational&) { return true; },
                           [](double d) { return std::floor(d) == d; },
-                          [](const ComplexType&) { return false; } },
+                          [](const ComplexType& c) {
+                              return c.imag() == 0 && std::floor(c.real()) == c.real();
+                          } },
         value);
 }
 
@@ -77,7 +80,9 @@ bool Number::isInteger() const
                           [](int) { return true; },
                           [](double d) { return std::floor(d) == d; },
                           [](const Rational& r) { return r.numerator % r.denominator == 0; },
-                          [](const ComplexType& c) { return c.imag() == 0 && std::floor(c.real()) == c.real(); } },
+                          [](const ComplexType& c) {
+                              return c.imag() == 0 && std::floor(c.real()) == c.real();
+                          } },
         value);
 }
 
@@ -90,25 +95,110 @@ bool Number::isZero() const
                           [](const ComplexType& c) { return c.real() == 0 && c.imag() == 0; } },
         value);
 }
-std::string Number::toString() const
+
+std::partial_ordering Number::operator<=>(const Number& other) const
 {
     return std::visit(overloaded {
-                          [](int i) { return std::format("{}", i); },
-                          [](double d) { return std::format("{:.6g}", d); },
-                          [](const Rational& r) { return std::format("{}/{}", r.numerator, r.denominator); },
-                          [](const ComplexType& c) {
-                              if (c.imag() == 0) {
-                                  return std::format("{:.6g}", c.real());
-                              } else if (c.real() == 0) {
-                                  return std::format("{:.6g}i", c.imag());
-                              } else if (c.imag() < 0) {
-                                  return std::format("{:.6g}{:.6g}i", c.real(), c.imag());
-                              } else {
-                                  return std::format("{:.6g}+{:.6g}i", c.real(), c.imag());
-                              }
+                          [](int a, int b) -> std::partial_ordering { return a <=> b; },
+
+                          [](const Rational& a, const Rational& b) -> std::partial_ordering {
+                              return (static_cast<long long>(a.numerator) * b.denominator) <=> (static_cast<long long>(b.numerator) * a.denominator);
+                          },
+                          [](const Rational& a, int b) -> std::partial_ordering {
+                              return a.numerator <=> (static_cast<long long>(b) * a.denominator);
+                          },
+                          [](int a, const Rational& b) -> std::partial_ordering {
+                              return (static_cast<long long>(a) * b.denominator) <=> b.numerator;
+                          },
+
+                          [](double a, double b) -> std::partial_ordering {
+                              if (std::isnan(a) || std::isnan(b))
+                                  return std::partial_ordering::unordered;
+                              return a <=> b;
+                          },
+                          [](double a, int b) -> std::partial_ordering { return a <=> static_cast<double>(b); },
+                          [](int a, double b) -> std::partial_ordering { return static_cast<double>(a) <=> b; },
+                          [](double a, const Rational& b) -> std::partial_ordering {
+                              return a <=> (static_cast<double>(b.numerator) / b.denominator);
+                          },
+                          [](const Rational& a, double b) -> std::partial_ordering {
+                              return (static_cast<double>(a.numerator) / a.denominator) <=> b;
+                          },
+
+                          [](const ComplexType&, const ComplexType&) -> std::partial_ordering {
+                              throw std::runtime_error("Complex numbers cannot be ordered");
+                          },
+                          [](const ComplexType&, const auto&) -> std::partial_ordering {
+                              throw std::runtime_error("Complex numbers cannot be ordered");
+                          },
+                          [](const auto&, const ComplexType&) -> std::partial_ordering {
+                              throw std::runtime_error("Complex numbers cannot be ordered");
+                          },
+
+                          [](const auto&, const auto&) -> std::partial_ordering {
+                              throw std::runtime_error("Invalid numeric comparison");
                           } },
-        value);
+        value, other.value);
 }
+
+bool Number::operator==(const Number& other) const
+{
+    return std::visit(overloaded {
+                          [](int a, int b) { return a == b; },
+
+                          [](const Rational& a, const Rational& b) {
+                              return a.numerator * b.denominator == b.numerator * a.denominator;
+                          },
+                          [](const Rational& a, int b) {
+                              return a.numerator == b * a.denominator;
+                          },
+                          [](int a, const Rational& b) {
+                              return a * b.denominator == b.numerator;
+                          },
+
+                          // Double equality
+                          [](double a, double b) {
+                              if (std::isnan(a) || std::isnan(b))
+                                  return false;
+                              return a == b;
+                          },
+                          [](double a, int b) { return a == static_cast<double>(b); },
+                          [](int a, double b) { return static_cast<double>(a) == b; },
+                          [](double a, const Rational& b) {
+                              return a == static_cast<double>(b.numerator) / b.denominator;
+                          },
+                          [](const Rational& a, double b) {
+                              return static_cast<double>(a.numerator) / a.denominator == b;
+                          },
+
+                          [](const ComplexType& a, const ComplexType& b) {
+                              return a.real() == b.real() && a.imag() == b.imag();
+                          },
+                          [](const ComplexType& a, int b) {
+                              return a.imag() == 0 && a.real() == static_cast<double>(b);
+                          },
+                          [](int a, const ComplexType& b) {
+                              return b.imag() == 0 && static_cast<double>(a) == b.real();
+                          },
+                          [](const ComplexType& a, double b) {
+                              return a.imag() == 0 && a.real() == b;
+                          },
+                          [](double a, const ComplexType& b) {
+                              return b.imag() == 0 && a == b.real();
+                          },
+                          [](const ComplexType& a, const Rational& b) {
+                              return a.imag() == 0 && a.real() == static_cast<double>(b.numerator) / b.denominator;
+                          },
+                          [](const Rational& a, const ComplexType& b) {
+                              return b.imag() == 0 && static_cast<double>(a.numerator) / a.denominator == b.real();
+                          },
+
+                          [](const auto&, const auto&) {
+                              return false;
+                          } },
+        value, other.value);
+}
+
 Number Number::operator+(const Number& other) const
 {
     return std::visit(overloaded {
@@ -122,42 +212,56 @@ Number Number::operator+(const Number& other) const
                           [](int a, const Rational& b) -> Number {
                               return Rational(a * b.denominator + b.numerator, b.denominator);
                           },
-                          [](int a, double b) -> Number { return static_cast<double>(a) + b; },
-                          [](int a, const ComplexType& b) -> Number { return ComplexType(a + b.real(), b.imag()); },
+                          [](int a, double b) -> Number {
+                              return static_cast<double>(a) + b;
+                          },
+                          [](int a, const ComplexType& b) -> Number {
+                              return ComplexType(a + b.real(), b.imag());
+                          },
 
-                          // Rational combinations
                           [](const Rational& a, int b) -> Number {
                               return Rational(a.numerator + b * a.denominator, a.denominator);
                           },
                           [](const Rational& a, const Rational& b) -> Number {
-                              return Rational(a.numerator * b.denominator + b.numerator * a.denominator,
+                              return Rational(
+                                  a.numerator * b.denominator + b.numerator * a.denominator,
                                   a.denominator * b.denominator);
                           },
                           [](const Rational& a, double b) -> Number {
                               return static_cast<double>(a.numerator) / a.denominator + b;
                           },
                           [](const Rational& a, const ComplexType& b) -> Number {
-                              return ComplexType(static_cast<double>(a.numerator) / a.denominator + b.real(), b.imag());
+                              double aVal = static_cast<double>(a.numerator) / a.denominator;
+                              return ComplexType(aVal + b.real(), b.imag());
                           },
 
-                          // Double combinations
-                          [](double a, int b) -> Number { return a + static_cast<double>(b); },
+                          [](double a, int b) -> Number {
+                              return a + static_cast<double>(b);
+                          },
                           [](double a, const Rational& b) -> Number {
                               return a + static_cast<double>(b.numerator) / b.denominator;
                           },
-                          [](double a, double b) -> Number { return a + b; },
-                          [](double a, const ComplexType& b) -> Number { return ComplexType(a + b.real(), b.imag()); },
+                          [](double a, double b) -> Number {
+                              return a + b;
+                          },
+                          [](double a, const ComplexType& b) -> Number {
+                              return ComplexType(a + b.real(), b.imag());
+                          },
 
                           // Complex combinations
-                          [](const ComplexType& a, int b) -> Number { return ComplexType(a.real() + b, a.imag()); },
-                          [](const ComplexType& a, const Rational& b) -> Number {
-                              return ComplexType(a.real() + static_cast<double>(b.numerator) / b.denominator, a.imag());
+                          [](const ComplexType& a, int b) -> Number {
+                              return ComplexType(a.real() + b, a.imag());
                           },
-                          [](const ComplexType& a, double b) -> Number { return ComplexType(a.real() + b, a.imag()); },
-                          [](const ComplexType& a, const ComplexType& b) -> Number { return a + b; },
-
-                          [](const auto& a, const auto& b) -> Number {
-                              throw std::runtime_error("Unsupported types for addition");
+                          [](const ComplexType& a, const Rational& b) -> Number {
+                              return ComplexType(
+                                  a.real() + static_cast<double>(b.numerator) / b.denominator,
+                                  a.imag());
+                          },
+                          [](const ComplexType& a, double b) -> Number {
+                              return ComplexType(a.real() + b, a.imag());
+                          },
+                          [](const ComplexType& a, const ComplexType& b) -> Number {
+                              return a + b;
                           } },
         value, other.value);
 }
@@ -176,39 +280,58 @@ Number Number::operator-(const Number& other) const
                           [](int a, const Rational& b) -> Number {
                               return Rational(a * b.denominator - b.numerator, b.denominator);
                           },
-                          [](int a, double b) -> Number { return static_cast<double>(a) - b; },
-                          [](int a, const ComplexType& b) -> Number { return ComplexType(a - b.real(), -b.imag()); },
+                          [](int a, double b) -> Number {
+                              return static_cast<double>(a) - b;
+                          },
+                          [](int a, const ComplexType& b) -> Number {
+                              return ComplexType(a - b.real(), -b.imag());
+                          },
 
+                          // Rational combinations
                           [](const Rational& a, int b) -> Number {
                               return Rational(a.numerator - b * a.denominator, a.denominator);
                           },
                           [](const Rational& a, const Rational& b) -> Number {
-                              return Rational(a.numerator * b.denominator - b.numerator * a.denominator,
+                              return Rational(
+                                  a.numerator * b.denominator - b.numerator * a.denominator,
                                   a.denominator * b.denominator);
                           },
                           [](const Rational& a, double b) -> Number {
                               return static_cast<double>(a.numerator) / a.denominator - b;
                           },
                           [](const Rational& a, const ComplexType& b) -> Number {
-                              return ComplexType(static_cast<double>(a.numerator) / a.denominator - b.real(), -b.imag());
+                              double aVal = static_cast<double>(a.numerator) / a.denominator;
+                              return ComplexType(aVal - b.real(), -b.imag());
                           },
 
-                          [](double a, int b) -> Number { return a - static_cast<double>(b); },
+                          // Double combinations
+                          [](double a, int b) -> Number {
+                              return a - static_cast<double>(b);
+                          },
                           [](double a, const Rational& b) -> Number {
                               return a - static_cast<double>(b.numerator) / b.denominator;
                           },
-                          [](double a, double b) -> Number { return a - b; },
-                          [](double a, const ComplexType& b) -> Number { return ComplexType(a - b.real(), -b.imag()); },
-
-                          [](const ComplexType& a, int b) -> Number { return ComplexType(a.real() - b, a.imag()); },
-                          [](const ComplexType& a, const Rational& b) -> Number {
-                              return ComplexType(a.real() - static_cast<double>(b.numerator) / b.denominator, a.imag());
+                          [](double a, double b) -> Number {
+                              return a - b;
                           },
-                          [](const ComplexType& a, double b) -> Number { return ComplexType(a.real() - b, a.imag()); },
-                          [](const ComplexType& a, const ComplexType& b) -> Number { return a - b; },
+                          [](double a, const ComplexType& b) -> Number {
+                              return ComplexType(a - b.real(), -b.imag());
+                          },
 
-                          [](const auto& a, const auto& b) -> Number {
-                              throw std::runtime_error("Unsupported types for subtraction");
+                          // Complex combinations
+                          [](const ComplexType& a, int b) -> Number {
+                              return ComplexType(a.real() - b, a.imag());
+                          },
+                          [](const ComplexType& a, const Rational& b) -> Number {
+                              return ComplexType(
+                                  a.real() - static_cast<double>(b.numerator) / b.denominator,
+                                  a.imag());
+                          },
+                          [](const ComplexType& a, double b) -> Number {
+                              return ComplexType(a.real() - b, a.imag());
+                          },
+                          [](const ComplexType& a, const ComplexType& b) -> Number {
+                              return a - b;
                           } },
         value, other.value);
 }
@@ -216,6 +339,7 @@ Number Number::operator-(const Number& other) const
 Number Number::operator*(const Number& other) const
 {
     return std::visit(overloaded {
+                          // Integer combinations
                           [](int a, int b) -> Number {
                               long long result = static_cast<long long>(a) * b;
                               if (result > std::numeric_limits<int>::max() || result < std::numeric_limits<int>::min()) {
@@ -226,8 +350,12 @@ Number Number::operator*(const Number& other) const
                           [](int a, const Rational& b) -> Number {
                               return Rational(a * b.numerator, b.denominator);
                           },
-                          [](int a, double b) -> Number { return static_cast<double>(a) * b; },
-                          [](int a, const ComplexType& b) -> Number { return ComplexType(a * b.real(), a * b.imag()); },
+                          [](int a, double b) -> Number {
+                              return static_cast<double>(a) * b;
+                          },
+                          [](int a, const ComplexType& b) -> Number {
+                              return ComplexType(a * b.real(), a * b.imag());
+                          },
 
                           [](const Rational& a, int b) -> Number {
                               return Rational(a.numerator * b, a.denominator);
@@ -239,33 +367,44 @@ Number Number::operator*(const Number& other) const
                               return static_cast<double>(a.numerator) / a.denominator * b;
                           },
                           [](const Rational& a, const ComplexType& b) -> Number {
-                              double aValue = static_cast<double>(a.numerator) / a.denominator;
-                              return ComplexType(aValue * b.real(), aValue * b.imag());
+                              double aVal = static_cast<double>(a.numerator) / a.denominator;
+                              return ComplexType(aVal * b.real(), aVal * b.imag());
                           },
 
-                          [](double a, int b) -> Number { return a * static_cast<double>(b); },
+                          [](double a, int b) -> Number {
+                              return a * static_cast<double>(b);
+                          },
                           [](double a, const Rational& b) -> Number {
                               return a * static_cast<double>(b.numerator) / b.denominator;
                           },
-                          [](double a, double b) -> Number { return a * b; },
-                          [](double a, const ComplexType& b) -> Number { return ComplexType(a * b.real(), a * b.imag()); },
-
-                          [](const ComplexType& a, int b) -> Number { return ComplexType(a.real() * b, a.imag() * b); },
-                          [](const ComplexType& a, const Rational& b) -> Number {
-                              double bValue = static_cast<double>(b.numerator) / b.denominator;
-                              return ComplexType(a.real() * bValue, a.imag() * bValue);
+                          [](double a, double b) -> Number {
+                              return a * b;
                           },
-                          [](const ComplexType& a, double b) -> Number { return ComplexType(a.real() * b, a.imag() * b); },
-                          [](const ComplexType& a, const ComplexType& b) -> Number { return a * b; },
-
-                          [](const auto& a, const auto& b) -> Number {
-                              throw std::runtime_error("Unsupported types for multiplication");
+                          [](double a, const ComplexType& b) -> Number {
+                              return ComplexType(a * b.real(), a * b.imag());
+                          },
+                          [](const ComplexType& a, int b) -> Number {
+                              return ComplexType(a.real() * b, a.imag() * b);
+                          },
+                          [](const ComplexType& a, const Rational& b) -> Number {
+                              double bVal = static_cast<double>(b.numerator) / b.denominator;
+                              return ComplexType(a.real() * bVal, a.imag() * bVal);
+                          },
+                          [](const ComplexType& a, double b) -> Number {
+                              return ComplexType(a.real() * b, a.imag() * b);
+                          },
+                          [](const ComplexType& a, const ComplexType& b) -> Number {
+                              return a * b;
                           } },
         value, other.value);
 }
 
 Number Number::operator/(const Number& other) const
 {
+    if (other.isZero()) {
+        throw std::runtime_error("Division by zero");
+    }
+
     return std::visit(overloaded {
                           // Integer combinations
                           [](int a, int b) -> Number {
@@ -281,14 +420,13 @@ Number Number::operator/(const Number& other) const
                               return Rational(a * b.denominator, b.numerator);
                           },
                           [](int a, double b) -> Number {
-                              if (b == 0)
-                                  throw std::runtime_error("Division by zero");
                               return static_cast<double>(a) / b;
                           },
                           [](int a, const ComplexType& b) -> Number {
-                              if (b == ComplexType(0, 0))
-                                  throw std::runtime_error("Division by zero");
-                              return ComplexType(a) / b;
+                              double denominator = b.real() * b.real() + b.imag() * b.imag();
+                              return ComplexType(
+                                  (a * b.real()) / denominator,
+                                  (-a * b.imag()) / denominator);
                           },
 
                           // Rational combinations
@@ -300,90 +438,101 @@ Number Number::operator/(const Number& other) const
                           [](const Rational& a, const Rational& b) -> Number {
                               if (b.numerator == 0)
                                   throw std::runtime_error("Division by zero");
-                              return Rational(a.numerator * b.denominator, a.denominator * b.numerator);
+                              return Rational(
+                                  a.numerator * b.denominator,
+                                  a.denominator * b.numerator);
                           },
                           [](const Rational& a, double b) -> Number {
-                              if (b == 0)
-                                  throw std::runtime_error("Division by zero");
                               return static_cast<double>(a.numerator) / (a.denominator * b);
                           },
                           [](const Rational& a, const ComplexType& b) -> Number {
-                              if (b == ComplexType(0, 0))
-                                  throw std::runtime_error("Division by zero");
-                              double aValue = static_cast<double>(a.numerator) / a.denominator;
-                              return ComplexType(aValue) / b;
+                              double aVal = static_cast<double>(a.numerator) / a.denominator;
+                              double denominator = b.real() * b.real() + b.imag() * b.imag();
+                              return ComplexType(
+                                  (aVal * b.real()) / denominator,
+                                  (-aVal * b.imag()) / denominator);
                           },
 
-                          // Double combinations
                           [](double a, int b) -> Number {
-                              if (b == 0)
-                                  throw std::runtime_error("Division by zero");
                               return a / static_cast<double>(b);
                           },
                           [](double a, const Rational& b) -> Number {
-                              if (b.numerator == 0)
-                                  throw std::runtime_error("Division by zero");
                               return a / (static_cast<double>(b.numerator) / b.denominator);
                           },
                           [](double a, double b) -> Number {
-                              if (b == 0)
-                                  throw std::runtime_error("Division by zero");
                               return a / b;
                           },
                           [](double a, const ComplexType& b) -> Number {
-                              if (b == ComplexType(0, 0))
-                                  throw std::runtime_error("Division by zero");
-                              return ComplexType(a) / b;
+                              double denominator = b.real() * b.real() + b.imag() * b.imag();
+                              return ComplexType(
+                                  (a * b.real()) / denominator,
+                                  (-a * b.imag()) / denominator);
                           },
 
                           // Complex combinations
+                          [](const ComplexType& a, const ComplexType& b) -> Number {
+                              double denominator = b.real() * b.real() + b.imag() * b.imag();
+                              return ComplexType(
+                                  (a.real() * b.real() + a.imag() * b.imag()) / denominator,
+                                  (a.imag() * b.real() - a.real() * b.imag()) / denominator);
+                          },
                           [](const ComplexType& a, int b) -> Number {
-                              if (b == 0)
-                                  throw std::runtime_error("Division by zero");
                               return ComplexType(a.real() / b, a.imag() / b);
                           },
                           [](const ComplexType& a, const Rational& b) -> Number {
-                              if (b.numerator == 0)
-                                  throw std::runtime_error("Division by zero");
-                              double bValue = static_cast<double>(b.numerator) / b.denominator;
-                              return a / ComplexType(bValue, 0);
+                              double bVal = static_cast<double>(b.numerator) / b.denominator;
+                              return ComplexType(a.real() / bVal, a.imag() / bVal);
                           },
                           [](const ComplexType& a, double b) -> Number {
-                              if (b == 0)
-                                  throw std::runtime_error("Division by zero");
                               return ComplexType(a.real() / b, a.imag() / b);
-                          },
-                          [](const ComplexType& a, const ComplexType& b) -> Number {
-                              if (b == ComplexType(0, 0))
-                                  throw std::runtime_error("Division by zero");
-                              double denominator = b.real() * b.real() + b.imag() * b.imag();
-                              double real = (a.real() * b.real() + a.imag() * b.imag()) / denominator;
-                              double imag = (a.imag() * b.real() - a.real() * b.imag()) / denominator;
-                              return ComplexType(real, imag);
-                          },
-                          [](const auto& a, const auto& b) -> Number {
-                              throw std::runtime_error("Unsupported types for division");
                           } },
         value, other.value);
 }
+
 Number Number::operator-() const
 {
     return std::visit(overloaded {
                           [](int a) -> Number {
                               if (a == std::numeric_limits<int>::min()) {
-                                  // #TODO handle edge cases - int min
                                   return static_cast<double>(-(static_cast<long long>(a)));
                               }
-                              return -a;
-                          },
-                          [](double a) -> Number {
                               return -a;
                           },
                           [](const Rational& r) -> Number {
                               return Rational(-r.numerator, r.denominator);
                           },
+                          [](double d) -> Number {
+                              return -d;
+                          },
                           [](const ComplexType& c) -> Number {
                               return ComplexType(-c.real(), -c.imag());
+                          } },
+        value);
+}
+
+std::string Number::toString() const
+{
+    return std::visit(overloaded {
+                          [](int i) {
+                              return std::format("{}", i);
+                          },
+                          [](const Rational& r) {
+                              return std::format("{}/{}", r.numerator, r.denominator);
+                          },
+                          [](double d) {
+                              return std::format("{:.6g}", d);
+                          },
+                          [](const ComplexType& c) {
+                              if (c.imag() == 0) {
+                                  return std::format("{:.6g}", c.real());
+                              }
+                              if (c.real() == 0) {
+                                  return std::format("{:.6g}i", c.imag());
+                              }
+                              if (c.imag() < 0) {
+                                  return std::format("{:.6g}{:.6g}i", c.real(), c.imag());
+                              }
+                              return std::format("{:.6g}+{:.6g}i", c.real(), c.imag());
                           } },
         value);
 }

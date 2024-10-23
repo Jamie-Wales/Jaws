@@ -26,12 +26,9 @@ std::optional<std::unique_ptr<Expression>> Parser::parse()
         return std::nullopt;
     }
 }
-
 std::unique_ptr<Expression> Parser::expression()
 {
-    Token token = peek();
-    if (token.type == Tokentype::LEFT_PAREN) {
-        advance();
+    if (match(Tokentype::LEFT_PAREN)) {
         if (match(Tokentype::DEFINE)) {
             return defineExpression();
         } else {
@@ -44,21 +41,30 @@ std::unique_ptr<Expression> Parser::expression()
 
 std::unique_ptr<Expression> Parser::defineExpression()
 {
-    Token name = advance();
     if (match(Tokentype::LEFT_PAREN)) {
-        size_t count = 0;
-        while (!match(Tokentype::RIGHT_PAREN)) {
-            count++;
+        Token name = consume(Tokentype::IDENTIFIER, "Expect function name");
+        std::vector<Token> parameters;
+        while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+            parameters.push_back(
+                consume(Tokentype::IDENTIFIER, "Expect parameter name"));
         }
-        std::unique_ptr<Expression> body = expression();
+        consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
+
+        auto body = expression();
         return std::make_unique<Expression>(Expression {
-            DefineProcedure { name, count, std::move(body) },
+            DefineProcedure {
+                name,
+                std::move(parameters),
+                std::move(body) },
             name.line });
     } else {
-        std::unique_ptr<Expression> value = expression();
-        consume(Tokentype::RIGHT_PAREN, "Expect ')' after define expression.");
+        Token name = consume(Tokentype::IDENTIFIER, "Expect variable name");
+        auto value = expression();
+
         return std::make_unique<Expression>(Expression {
-            DefineExpression { std::move(name), std::move(value) },
+            DefineExpression {
+                name,
+                std::move(value) },
             name.line });
     }
 }
@@ -80,7 +86,7 @@ std::unique_ptr<Expression> Parser::atom()
     case Tokentype::IF:
         return std::make_unique<Expression>(Expression { AtomExpression { token }, token.line });
     default:
-        throw ParseError("Unexpected token", token, scanner->getLine(token.line));
+        throw ParseError("Unexpected token in atom ", token, scanner->getLine(token.line));
     }
 }
 
