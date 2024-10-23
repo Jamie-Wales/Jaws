@@ -155,8 +155,6 @@ bool Number::operator==(const Number& other) const
                           [](int a, const Rational& b) {
                               return a * b.denominator == b.numerator;
                           },
-
-                          // Double equality
                           [](double a, double b) {
                               if (std::isnan(a) || std::isnan(b))
                                   return false;
@@ -318,7 +316,6 @@ Number Number::operator-(const Number& other) const
                               return ComplexType(a - b.real(), -b.imag());
                           },
 
-                          // Complex combinations
                           [](const ComplexType& a, int b) -> Number {
                               return ComplexType(a.real() - b, a.imag());
                           },
@@ -339,7 +336,6 @@ Number Number::operator-(const Number& other) const
 Number Number::operator*(const Number& other) const
 {
     return std::visit(overloaded {
-                          // Integer combinations
                           [](int a, int b) -> Number {
                               long long result = static_cast<long long>(a) * b;
                               if (result > std::numeric_limits<int>::max() || result < std::numeric_limits<int>::min()) {
@@ -370,7 +366,6 @@ Number Number::operator*(const Number& other) const
                               double aVal = static_cast<double>(a.numerator) / a.denominator;
                               return ComplexType(aVal * b.real(), aVal * b.imag());
                           },
-
                           [](double a, int b) -> Number {
                               return a * static_cast<double>(b);
                           },

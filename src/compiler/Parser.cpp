@@ -1,6 +1,5 @@
 #include "Parser.h"
 #include "Error.h"
-#include <iostream>
 
 void Parser::initialize(std::shared_ptr<Scanner> s)
 {
@@ -34,9 +33,27 @@ std::unique_ptr<Expression> Parser::expression()
         } else {
             return sexpression();
         }
+    } else if (match(Tokentype::QUOTE)) {
+        return list();
     } else {
         return atom();
     }
+}
+
+std::unique_ptr<Expression> Parser::list()
+{
+    std::vector<std::unique_ptr<Expression>> output = {};
+    if (match(Tokentype::LEFT_PAREN)) {
+        while (!match(Tokentype::RIGHT_PAREN)) {
+            auto expr = expression();
+            output.emplace_back(std::move(expr));
+        }
+    }
+
+    return std::make_unique<Expression>(Expression {
+        ListExpression {
+            std::move(output) },
+        previousToken().line });
 }
 
 std::unique_ptr<Expression> Parser::defineExpression()

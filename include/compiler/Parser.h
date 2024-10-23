@@ -17,6 +17,7 @@ private:
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Expression> atom();
     std::unique_ptr<Expression> sexpression();
+    std::unique_ptr<Expression> list();
     Token advance();
     bool isAtEnd() const;
     Token peek() const;
