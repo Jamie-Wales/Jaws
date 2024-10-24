@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jaws WASM Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        #input { width: 100%; height: 100px; margin: 10px 0; }
+        #output { white-space: pre-wrap; background: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Jaws Scheme WASM Test</h1>
+    <textarea id="input">(+ 1 2 3)</textarea>
+    <button onclick="runCode()">Evaluate</button>
+    <div id="output">Loading...</div>
+
+    <!-- Load the WASM JavaScript glue code first -->
+    <script src="build/jaws.js"></script>
+    
+    <script>
+        // Wait for the page to load
+        window.addEventListener('load', init);
+
+        let jaws = null;
+
+        async function init() {
+            try {
+                // Make sure JawsInterpreter is available
+                if (typeof JawsInterpreter === 'undefined') {
+                    throw new Error('JawsInterpreter not loaded. Check the path to jaws.js');
+                }
+
+                const JawsModule = await JawsInterpreter();
+                jaws = new JawsModule.JawsWrapper();
+                console.log("Jaws loaded successfully");
+                document.getElementById('output').textContent = 'Ready!';
+                
+                // Test the interpreter
+                const testResult = jaws.evaluate("(+ 1 2)");
+                console.log("Test evaluation:", testResult);
+            } catch (err) {
+                console.error("Failed to load Jaws:", err);
+                document.getElementById('output').textContent = 
+                    'Error loading Jaws: ' + err + '\n\n' +
+                    'Make sure jaws.js and jaws.wasm are in the build directory.';
+            }
+        }
+
+        function runCode() {
+            if (!jaws) {
+                document.getElementById('output').textContent = 'Waiting for Jaws to load...';
+                return;
+            }
+
+            const code = document.getElementById('input').value;
+            try {
+                const result = jaws.evaluate(code);
+                document.getElementById('output').textContent = result || 'No output';
+            } catch (err) {
+                document.getElementById('output').textContent = 'Error: ' + err;
+            }
+        }
+    </script>
+</body>
+</html>
