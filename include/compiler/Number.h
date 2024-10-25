@@ -1,9 +1,9 @@
 // Number.h
 #pragma once
+#include <compare>
 #include <complex>
 #include <string>
 #include <variant>
-#include <compare>
 
 class Number {
 public:
@@ -15,7 +15,7 @@ public:
     };
 
     using ComplexType = std::complex<double>;
-    
+
     std::variant<int, Rational, double, ComplexType> value;
 
     Number(int i);
@@ -30,11 +30,12 @@ public:
     bool isRational() const;
     bool isInteger() const;
 
+    int toInt() const;
     std::string toString() const;
 
     Number operator+(const Number& other) const;
     Number operator-(const Number& other) const;
-    Number operator-() const;  
+    Number operator-() const;
     Number operator*(const Number& other) const;
     Number operator/(const Number& other) const;
 

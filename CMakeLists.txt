@@ -1,96 +1,51 @@
+# web/CMakeLists.txt
 cmake_minimum_required(VERSION 3.14)
-project(jaws)
+project(jaws_wasm)
 
-if(NOT APPLE)
-    message(FATAL_ERROR "This project is currently only supported on macOS")
-endif()
+set(CMAKE_TOOLCHAIN_FILE $ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
-set(CMAKE_OSX_ARCHITECTURES "arm64")
-
-# Enable testing
-include(CTest)
-enable_testing()
-
-include(FetchContent)
-fetchcontent_declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
+file(GLOB SOURCES
+    "../src/compiler/*.cpp"
 )
-set(gtest_force_shared_crt on cache bool "" force)
-FetchContent_MakeAvailable(googletest)
+list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
+list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/JawsWrapper.cpp")
 
-# Collect source files
-file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp")
-file(GLOB_RECURSE RUNTIME_SOURCES "${PROJECT_SOURCE_DIR}/runtime/src/*.c")
-file(GLOB_RECURSE TEST_SOURCES "${PROJECT_SOURCE_DIR}/tests/*.cpp")
+add_executable(jaws_wasm ${SOURCES})
 
-# Exclude main.cpp from compiler sources
-list(FILTER COMPILER_SOURCES EXCLUDE REGEX "main\\.cpp$")
+target_compile_definitions(jaws_wasm PRIVATE WASM_BUILD)
 
-# Create the compiler library
-add_library(compiler_lib STATIC ${COMPILER_SOURCES})
-target_include_directories(compiler_lib PUBLIC
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/compiler
-)
-set_target_properties(compiler_lib PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED ON
+set_target_properties(jaws_wasm PROPERTIES
+    LINK_FLAGS "-s WASM=1 \
+                -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] \
+                -s EXPORTED_FUNCTIONS=['_malloc','_free'] \
+                -s ALLOW_MEMORY_GROWTH=1 \
+                -s NO_EXIT_RUNTIME=1 \
+                -s MODULARIZE=1 \
+                -s EXPORT_NAME='createJawsModule' \
+                -s ENVIRONMENT='web' \
+                -s DISABLE_EXCEPTION_CATCHING=0 \
+                -s WASM_BIGINT=1 \
+                -lembind \
+                --bind \
+                --no-entry"
+    OUTPUT_NAME "jaws"
 )
 
-# Create the runtime library
-add_library(runtime STATIC ${RUNTIME_SOURCES})
-target_include_directories(runtime PUBLIC
-    ${PROJECT_SOURCE_DIR}/include/runtime
-)
-set_target_properties(runtime PROPERTIES
-    C_STANDARD 17
-    C_STANDARD_REQUIRED ON
+target_include_directories(jaws_wasm PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include/compiler"
 )
 
-# Create the jaws executable
-add_executable(jaws src/compiler/main.cpp)
-target_link_libraries(jaws PRIVATE compiler_lib runtime)
-target_include_directories(jaws PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/compiler
+# Copy to the client directory inside web
+add_custom_command(TARGET jaws_wasm POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/client/public/wasm"
+    COMMAND ${CMAKE_COMMAND} -E copy
+        "${CMAKE_CURRENT_BINARY_DIR}/jaws.js"
+        "${CMAKE_CURRENT_SOURCE_DIR}/client/public/wasm/jaws.js"
+    COMMAND ${CMAKE_COMMAND} -E copy
+        "${CMAKE_CURRENT_BINARY_DIR}/jaws.wasm"
+        "${CMAKE_CURRENT_SOURCE_DIR}/client/public/wasm/jaws.wasm"
+    COMMENT "Copying WASM files to web/client/public/wasm directory"
 )
-set_target_properties(jaws PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED ON
-)
-
-# Find assembler and linker
-find_program(AS_PATH as)
-find_program(LD_PATH ld)
-
-if(NOT AS_PATH OR NOT LD_PATH)
-    message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
-endif()
-
-target_compile_definitions(jaws PRIVATE
-    AS_PATH="${AS_PATH}"
-    LD_PATH="${LD_PATH}"
-    RUNTIME_INCLUDE_PATH="${PROJECT_SOURCE_DIR}/include/runtime"
-)
-message(STATUS "Compiler sources: ${COMPILER_SOURCES}")
-message(STATUS "Runtime sources: ${RUNTIME_SOURCES}")
-
-# Create the test executable
-add_executable(tests ${TEST_SOURCES})
-target_include_directories(tests PRIVATE
-    ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/include/compiler
-    ${gtest_SOURCE_DIR}/include
-)
-set_target_properties(tests PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED ON
-)
-
-target_link_libraries(tests PRIVATE compiler_lib runtime gtest_main)
-
-add_test(NAME AllTests COMMAND tests)

@@ -13,6 +13,11 @@ SchemeValue::SchemeValue(Value v)
     : value(std::move(v))
 {
 }
+
+bool SchemeValue::isPort() const
+{
+    return std::holds_alternative<Port>(value);
+}
 bool SchemeValue::isProc() const
 {
     return std::holds_alternative<std::shared_ptr<Procedure>>(value);
@@ -36,7 +41,6 @@ SchemeValue SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue
     }
     throw std::runtime_error("Attempt to call non-procedure value");
 }
-
 bool SchemeValue::isTrue() const
 {
     return std::visit(overloaded {
@@ -45,7 +49,8 @@ bool SchemeValue::isTrue() const
                           [](bool arg) { return arg; },
                           [](const Symbol&) { return true; },
                           [](const std::vector<SchemeValue>& arg) { return !arg.empty(); },
-                          [](const std::shared_ptr<Procedure>&) { return true; } },
+                          [](const std::shared_ptr<Procedure>&) { return true; },
+                          [](const Port& p) { return p.isOpen(); } },
         value);
 }
 
@@ -66,10 +71,12 @@ std::string SchemeValue::toString() const
                               result += ")";
                               return result;
                           },
-                          [](const std::shared_ptr<Procedure>&) { return std::string("<procedure>"); } },
+                          [](const std::shared_ptr<Procedure>&) { return std::string("<procedure>"); },
+                          [](const Port& p) {
+                              return std::string(p.type == PortType::Input ? "<input-port>" : "<output-port>");
+                          } },
         value);
 }
-
 SchemeValue SchemeValue::operator+(const SchemeValue& other) const
 {
     return std::visit(overloaded {
@@ -191,6 +198,9 @@ std::partial_ordering SchemeValue::operator<=>(const SchemeValue& other) const
                           [](const std::shared_ptr<Procedure>&, const std::shared_ptr<Procedure>&) -> std::partial_ordering {
                               return std::partial_ordering::unordered;
                           },
+                          [](const Port&, const Port&) -> std::partial_ordering {
+                              return std::partial_ordering::unordered;
+                          },
 
                           [](const auto& a, const auto& b) -> std::partial_ordering {
                               auto typeOrder = [](const auto& val) -> int {
@@ -207,8 +217,10 @@ std::partial_ordering SchemeValue::operator<=>(const SchemeValue& other) const
                                       return 4;
                                   else if constexpr (std::is_same_v<T, std::shared_ptr<Procedure>>)
                                       return 5;
-                                  else
+                                  else if constexpr (std::is_same_v<T, Port>)
                                       return 6;
+                                  else
+                                      return 7;
                               };
 
                               int orderA = typeOrder(a);

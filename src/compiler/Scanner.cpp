@@ -1,23 +1,16 @@
 #include "Scanner.h"
 #include "Error.h"
-#include <sstream>
 
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
-    { "boolean?", Tokentype::IDENTIFIER },
-    { "list", Tokentype::IDENTIFIER },
-    { "car", Tokentype::IDENTIFIER },
-    { "cdr", Tokentype::IDENTIFIER },
-    { "cadr", Tokentype::IDENTIFIER },
-    { "eq?", Tokentype::IDENTIFIER },
 };
 
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(;.*)"), Tokentype::COMMENT },
     { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
-    { std::regex(R"(([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?([+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)?i)"), Tokentype::COMPLEX },
+    { std::regex(R"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?[+-](?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?i|(?:[+-])?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?i)"), Tokentype::COMPLEX },
     { std::regex(R"([+-]?\d+/\d+)"), Tokentype::RATIONAL },
     { std::regex(R"([+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?)"), Tokentype::FLOAT },
     { std::regex(R"([+-]?\d+)"), Tokentype::INTEGER },
@@ -30,7 +23,6 @@ const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
     { std::regex(R"(\))"), Tokentype::RIGHT_PAREN }
 };
-
 std::vector<Token> Scanner::tokenize(const std::string& input)
 {
     this->input = input;

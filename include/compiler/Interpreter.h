@@ -19,11 +19,29 @@ private:
     static SchemeValue less(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue greater(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue equal(Interpreter&, const std::vector<SchemeValue>& args);
+
+    /* ---- Builtin Procedures  */
     static SchemeValue isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue listProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue carProcudure(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static SchemeValue cadrProcedure(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue cons(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue length(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue append(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue reverse(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue listRef(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue listTail(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue listSet(Interpreter&, const std::vector<SchemeValue>& args);
+
+    static SchemeValue read(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue write(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue display(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue newline(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue openInputFile(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue openOutputFile(Interpreter&, const std::vector<SchemeValue>& args);
+    static SchemeValue closePort(Interpreter&, const std::vector<SchemeValue>& args);
+
 public:
     Interpreter();
     std::unordered_map<std::string, SchemeValue> environment;

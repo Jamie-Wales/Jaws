@@ -19,6 +19,19 @@ Interpreter::Interpreter()
     environment["car"] = SchemeValue(std::make_shared<BuiltInProcedure>(carProcudure));
     environment["cdr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cdrProcedure));
     environment["cadr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cadrProcedure));
+    environment["open-input-file"] = SchemeValue(std::make_shared<BuiltInProcedure>(openInputFile));
+    environment["open-output-file"] = SchemeValue(std::make_shared<BuiltInProcedure>(openOutputFile));
+    environment["close-port"] = SchemeValue(std::make_shared<BuiltInProcedure>(closePort));
+    environment["read"] = SchemeValue(std::make_shared<BuiltInProcedure>(read));
+    environment["write"] = SchemeValue(std::make_shared<BuiltInProcedure>(write));
+    environment["display"] = SchemeValue(std::make_shared<BuiltInProcedure>(display));
+    environment["newline"] = SchemeValue(std::make_shared<BuiltInProcedure>(newline));
+    environment["cons"] = SchemeValue(std::make_shared<BuiltInProcedure>(cons));
+    environment["length"] = SchemeValue(std::make_shared<BuiltInProcedure>(length));
+    environment["append"] = SchemeValue(std::make_shared<BuiltInProcedure>(append));
+    environment["reverse"] = SchemeValue(std::make_shared<BuiltInProcedure>(reverse));
+    environment["list-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(listRef));
+    environment["list-tail"] = SchemeValue(std::make_shared<BuiltInProcedure>(listTail));
 }
 
 std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom, const Expression& expr)

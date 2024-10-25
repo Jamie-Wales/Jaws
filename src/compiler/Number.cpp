@@ -393,7 +393,41 @@ Number Number::operator*(const Number& other) const
                           } },
         value, other.value);
 }
-
+int Number::toInt() const
+{
+    return std::visit(overloaded {
+                          [](int a) -> int {
+                              return a;
+                          },
+                          [](const Rational& r) -> int {
+                              if (r.denominator == 1) {
+                                  return r.numerator;
+                              }
+                              return r.numerator / r.denominator;
+                          },
+                          [](double d) -> int {
+                              if (d > std::numeric_limits<int>::max() || d < std::numeric_limits<int>::min()) {
+                                  throw std::runtime_error("Double value too large for integer conversion");
+                              }
+                              if (d != std::floor(d)) {
+                                  throw std::runtime_error("Cannot convert non-integer to integer");
+                              }
+                              return static_cast<int>(d);
+                          },
+                          [](const ComplexType& c) -> int {
+                              if (c.imag() != 0.0) {
+                                  throw std::runtime_error("Cannot convert complex number with imaginary part to integer");
+                              }
+                              if (c.real() > std::numeric_limits<int>::max() || c.real() < std::numeric_limits<int>::min()) {
+                                  throw std::runtime_error("Complex real part too large for integer conversion");
+                              }
+                              if (c.real() != std::floor(c.real())) {
+                                  throw std::runtime_error("Cannot convert non-integer complex to integer");
+                              }
+                              return static_cast<int>(c.real());
+                          } },
+        value);
+}
 Number Number::operator/(const Number& other) const
 {
     if (other.isZero()) {

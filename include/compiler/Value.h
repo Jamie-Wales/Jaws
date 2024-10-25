@@ -1,6 +1,7 @@
 // Value.h
 #pragma once
 #include "Number.h"
+#include "Port.h"
 #include <compare>
 #include <memory>
 #include <string>
@@ -27,11 +28,13 @@ public:
         std::string,
         Symbol,
         std::vector<SchemeValue>,
-        std::shared_ptr<Procedure>>;
+        std::shared_ptr<Procedure>,
+        Port>;
 
     SchemeValue();
     explicit SchemeValue(Value v);
 
+    bool isPort() const;
     bool isNumber() const;
     bool isSymbol() const;
     bool isProc() const;
