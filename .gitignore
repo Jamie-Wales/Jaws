@@ -1,0 +1,81 @@
+# C++ build
+build/
+Testing/
+*.o
+*.out
+*.exe
+*.dll
+*.so
+*.dylib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+*.cmake
+!CMakeLists.txt
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+.vim/
+*.sublime*
+
+# Node/Web
+web/client/node_modules/
+web/client/dist/
+web/client/build/
+web/client/.env
+web/client/.env.*
+web/client/coverage/
+web/client/.cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# WASM build artifacts
+*.wasm
+web/client/public/wasm/*.wasm
+web/client/public/wasm/*.js
+# LaTeX/Documentation
+tex/
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
+*.synctex.gz
+*.toc
+
+# WASM build artifacts
+web/build/
+*.wasm
+# But maybe keep the final wasm build that's used in the web app
+!web/client/public/wasm/*.wasm
+
+# Testing
+*.gcno
+*.gcda
+*.gcov
+coverage/
+
+# Temporary files
+*.tmp
+*~
+.*.sw?
+.swap
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
