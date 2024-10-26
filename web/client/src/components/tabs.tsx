@@ -1,14 +1,38 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Code2, BookOpen, Lightbulb, Rocket } from "lucide-react";
+import { Code2, BookOpen, Lightbulb, Rocket, ArrowRight } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
+import hljs from 'highlight.js/lib/core';
+import schemeLanguage from 'highlight.js/lib/languages/scheme';
+import 'highlight.js/styles/github-dark-dimmed.css';
 import type { TerminalRef } from './terminal';
 import type { Example } from '../App';
 
+hljs.registerLanguage('scheme', schemeLanguage);
+
+const HighlightedCode = ({ code }: { code: string }) => {
+    const codeRef = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        if (codeRef.current) {
+            hljs.highlightElement(codeRef.current);
+        }
+    }, [code]);
+
+    return (
+        <pre className="bg-muted p-3 rounded-md text-sm">
+            <code ref={codeRef} className="language-scheme">
+                {code}
+            </code>
+        </pre>
+    );
+};
+
 interface GetStartedTabProps {
     terminalRef: React.RefObject<TerminalRef>;
+    onTabChange: () => void;
 }
 
 interface ExamplesTabProps {
@@ -16,10 +40,17 @@ interface ExamplesTabProps {
     handleTryExample: (code: string) => void;
 }
 
-export function GetStartedTab({ terminalRef }: GetStartedTabProps) {
+export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) {
     const handleOpenEditor = () => {
-        terminalRef.current?.writeSystem("Welcome to Jaws Scheme!");
-        terminalRef.current?.writeOutput("Try evaluating: (+ 1 2 3)");
+        onTabChange();
+        terminalRef.current?.writeSystem("|> Welcome to Jaws Scheme! Let's get started with a simple expression.");
+        terminalRef.current?.writeOutput(`Try these examples:
+
+(+ 1 2 3)     ; addition
+(* 7 6)       ; multiplication
+(- 10 5)      ; subtraction
+(/ 15 3)      ; division
+(display "Hello!")  ; print to output`);
     };
 
     return (
@@ -41,14 +72,14 @@ export function GetStartedTab({ terminalRef }: GetStartedTabProps) {
                             <p className="text-sm text-muted-foreground">
                                 Enter this simple expression to get started:
                             </p>
-                            <pre className="bg-muted p-3 rounded-md text-sm">
-                                (+ 1 2 3)
-                            </pre>
+                            <HighlightedCode code="(+ 1 2 3)" />
                             <Button
                                 className="w-full mt-2"
                                 onClick={handleOpenEditor}
                             >
-                                Open Editor
+                                <span className="flex items-center gap-2">
+                                    Try REPL <ArrowRight className="h-4 w-4" />
+                                </span>
                             </Button>
                         </div>
                     </CardContent>
@@ -108,14 +139,13 @@ export function ExamplesTab({ examples, handleTryExample }: ExamplesTabProps) {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleTryExample(example.code)}
+                                        className="flex items-center gap-2"
                                     >
-                                        Try It
+                                        Try It <ArrowRight className="h-4 w-4" />
                                     </Button>
                                 </div>
                                 <p className="text-sm text-muted-foreground">{example.description}</p>
-                                <pre className="bg-muted p-3 rounded-md text-sm">
-                                    {example.code}
-                                </pre>
+                                <HighlightedCode code={example.code} />
                                 {index < examples.length - 1 && (
                                     <Separator className="mt-4" />
                                 )}
@@ -149,6 +179,22 @@ export function DocumentationTab() {
                             <li>List manipulation</li>
                             <li>First-class functions</li>
                             <li>Lexical scoping</li>
+                            <li>Basic I/O operations</li>
+                        </ul>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                        <h3 className="font-semibold">Key Features</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Explore these core features:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                            <li>Interactive REPL with syntax highlighting</li>
+                            <li>Built-in code editor for larger programs</li>
+                            <li>Real-time error reporting</li>
+                            <li>Example programs to learn from</li>
                         </ul>
                     </div>
 

@@ -1,102 +1,327 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useImperativeHandle, KeyboardEvent, forwardRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Terminal, { TerminalRef } from './terminal';
 import CodeMirror from '@uiw/react-codemirror';
 import { StreamLanguage } from '@codemirror/language';
 import { scheme } from '@codemirror/legacy-modes/mode/scheme';
 import { xcodeDark } from '@uiw/codemirror-theme-xcode';
+import { Play } from 'lucide-react';
+import hljs from 'highlight.js/lib/core';
+import 'highlight.js/styles/github-dark-dimmed.css';
 
 interface ReplModesProps {
     onCommand: (command: string) => Promise<string>;
     mode: 'repl' | 'editor';
+    initialInput?: string;
 }
 
-export function IntegratedRepl({ onCommand, mode }: ReplModesProps) {
-    const [code, setCode] = useState('');
-    const terminalRef = useRef<TerminalRef>(null);
+interface TerminalLine {
+    type: 'input' | 'output' | 'system';
+    content: string;
+}
 
-    const handleRun = async () => {
-        if (!code.trim()) return;
+export interface TerminalRef {
+    writeOutput: (content: string) => void;
+    writeSystem: (content: string) => void;
+}
 
-        terminalRef.current?.writeSystem("|> Dunu Dunu Dununununu");
-        try {
-            const result = await onCommand(code);
-            terminalRef.current?.writeOutput(result);
-        } catch (err) {
-            const error = err as Error;
-            terminalRef.current?.writeSystem(`Error: ${error.message}`);
+interface TerminalProps {
+    onCommand: (command: string) => Promise<string>;
+    onInputChange?: (input: string) => void;
+    currentInput?: string;
+}
+
+const HighlightedText = ({ text, type }: { text: string; type: 'input' | 'output' | 'system' }) => {
+    const ref = useRef<HTMLPreElement>(null);
+
+    useEffect(() => {
+        if (ref.current && (type === 'input' || type === 'output')) {
+            hljs.highlightElement(ref.current);
         }
-    };
+    }, [text, type]);
+
+    if (type === 'system') {
+        return <pre className="text-teal-400 font-mono opacity-80">{text}</pre>;
+    }
 
     return (
-        <div className="space-y-4">
-            {mode === 'editor' && (
+        <pre
+            ref={ref}
+            className="hljs language-scheme font-mono whitespace-pre-wrap"
+            style={{ background: 'transparent' }}
+        >
+            {type === 'input' ? '❯ ' : ''}{text}
+        </pre>
+    );
+};
+
+const LiveEditor = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+    return (
+        <div className="flex items-center gap-2 text-sm">
+            <span className="text-blue-400">❯</span>
+            <div className="flex-1 relative">
+                <CodeMirror
+                    value={value}
+                    theme={xcodeDark}
+                    extensions={[StreamLanguage.define(scheme)]}
+                    onChange={onChange}
+                    placeholder="Wrangle some Scheme..."
+                    className="min-h-[24px] [&_.cm-editor]:bg-transparent [&_.cm-focused]:outline-none [&_.cm-line]:pl-0 [&_.cm-gutters]:bg-transparent [&_.cm-gutters]:border-none [&_.cm-content]:whitespace-pre [&_.cm-line]:bg-transparent [&_.cm-activeLine]:bg-transparent [&_.cm-activeLineGutter]:bg-transparent"
+                    basicSetup={{
+                        lineNumbers: false,
+                        foldGutter: false,
+                        dropCursor: false,
+                        allowMultipleSelections: false,
+                        indentOnInput: true,
+                        bracketMatching: true,
+                        closeBrackets: true,
+                        autocompletion: true,
+                        highlightActiveLine: false,
+                        highlightSelectionMatches: false,
+                        closeBracketsKeymap: true,
+                        defaultKeymap: true,
+                        searchKeymap: false,
+                        historyKeymap: true,
+                        foldKeymap: false,
+                        completionKeymap: true,
+                        lintKeymap: false,
+                    }}
+                />
+            </div>
+        </div>
+    );
+};
+const Terminal = forwardRef<TerminalRef, TerminalProps>(
+    ({ onCommand, onInputChange, currentInput }, ref) => {
+        const [lines, setLines] = useState<TerminalLine[]>([]);
+        const [inputValue, setInputValue] = useState('');
+        const terminalRef = useRef<HTMLDivElement>(null);
+
+        useEffect(() => {
+            if (terminalRef.current) {
+                terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+            }
+        }, [lines]);
+
+        useEffect(() => {
+            if (currentInput !== undefined) {
+                setInputValue(currentInput);
+            }
+        }, [currentInput]);
+
+        const writeOutput = (content: string) => {
+            setLines(prev => [...prev, { type: 'output', content }]);
+        };
+
+        const writeSystem = (content: string) => {
+            setLines(prev => [...prev, { type: 'system', content }]);
+        };
+
+        useImperativeHandle(ref, () => ({
+            writeOutput,
+            writeSystem
+        }));
+
+        const handleInputChange = (value: string) => {
+            setInputValue(value);
+            onInputChange?.(value);
+        };
+
+        const handleKeyDown = async (e: KeyboardEvent<HTMLDivElement>) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const openCount = (inputValue.match(/\(/g) || []).length;
+                const closeCount = (inputValue.match(/\)/g) || []).length;
+
+                if (openCount !== closeCount) {
+                    return; // Don't submit if parentheses aren't balanced
+                }
+
+                const cleanedInput = inputValue
+                    .split('\n')
+                    .map(line => line.trim())
+                    .join(' ')
+                    .trim();
+
+                if (!cleanedInput) return;
+
+                e.preventDefault();
+                setLines(prev => [...prev, { type: 'input', content: inputValue }]);
+
+                try {
+                    const result = await onCommand(cleanedInput);
+                    writeOutput(result);
+                    setInputValue('');
+                    onInputChange?.('');
+                } catch (err) {
+                    const error = err as Error;
+                    writeSystem(`Error: ${error.message}`);
+                }
+            }
+        };
+
+        return (
+            <div className="h-full flex flex-col bg-zinc-900">
+                <div
+                    ref={terminalRef}
+                    className="flex-1 p-4 overflow-y-auto font-mono text-sm"
+                >
+                    {lines.map((line, i) => (
+                        <div key={i} className="mb-2">
+                            <HighlightedText text={line.content} type={line.type} />
+                        </div>
+                    ))}
+                </div>
+                <div
+                    className="p-4 border-t border-zinc-700"
+                    onKeyDown={handleKeyDown}
+                >
+                    <LiveEditor
+                        value={currentInput ?? inputValue}
+                        onChange={handleInputChange}
+                    />
+                </div>
+            </div>
+        );
+    }
+);
+
+Terminal.displayName = 'Terminal';
+
+export const IntegratedRepl = forwardRef<TerminalRef, ReplModesProps>(
+    ({ onCommand, mode, initialInput }, ref) => {
+        const [code, setCode] = useState('');
+        const [replInput, setReplInput] = useState(initialInput || '');
+        const terminalRef = useRef<TerminalRef>(null);
+
+        useEffect(() => {
+            if (initialInput !== undefined) {
+                setReplInput(initialInput);
+            }
+        }, [initialInput]);
+
+        useImperativeHandle(ref, () => ({
+            writeOutput: (content: string) => {
+                terminalRef.current?.writeOutput(content);
+            },
+            writeSystem: (content: string) => {
+                terminalRef.current?.writeSystem(content);
+            }
+        }));
+
+        const handleRun = async () => {
+            if (!code.trim()) return;
+
+            terminalRef.current?.writeSystem("|> Executing");
+            try {
+                const result = await onCommand(code);
+                terminalRef.current?.writeOutput(result);
+            } catch (err) {
+                const error = err as Error;
+                terminalRef.current?.writeSystem(`Error: ${error.message}`);
+            }
+        };
+
+        const handleReplRun = async () => {
+            if (!replInput.trim()) return;
+
+            try {
+                const result = await onCommand(replInput);
+                terminalRef.current?.writeOutput(result);
+                setReplInput('');
+            } catch (err) {
+                const error = err as Error;
+                terminalRef.current?.writeSystem(`Error: ${error.message}`);
+            }
+        };
+
+        return (
+            <div className="space-y-4">
+                {mode === 'editor' && (
+                    <Card className="border-zinc-700 bg-zinc-900">
+                        <CardHeader className="border-b border-zinc-700">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-zinc-200">Jaws Editor</CardTitle>
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={handleRun}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Play className="w-4 h-4" />
+                                    Run Program
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <CodeMirror
+                                value={code}
+                                height="200px"
+                                theme={xcodeDark}
+                                extensions={[StreamLanguage.define(scheme)]}
+                                onChange={(value) => setCode(value)}
+                                className="border-none [&_.cm-focused]:outline-none"
+                                basicSetup={{
+                                    lineNumbers: true,
+                                    highlightActiveLineGutter: true,
+                                    highlightSpecialChars: true,
+                                    history: true,
+                                    foldGutter: true,
+                                    drawSelection: true,
+                                    dropCursor: true,
+                                    allowMultipleSelections: true,
+                                    indentOnInput: true,
+                                    bracketMatching: true,
+                                    closeBrackets: true,
+                                    autocompletion: true,
+                                    rectangularSelection: true,
+                                    crosshairCursor: true,
+                                    highlightActiveLine: true,
+                                    highlightSelectionMatches: true,
+                                    closeBracketsKeymap: true,
+                                    defaultKeymap: true,
+                                    searchKeymap: true,
+                                    historyKeymap: true,
+                                    foldKeymap: true,
+                                    completionKeymap: true,
+                                    lintKeymap: true,
+                                }}
+                            />
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Card className="border-zinc-700 bg-zinc-900">
                     <CardHeader className="border-b border-zinc-700">
                         <div className="flex items-center justify-between">
-                            <CardTitle className="text-zinc-200">Jaws Editor</CardTitle>
+                            <div>
+                                <CardTitle className="text-zinc-200">Jaws REPL</CardTitle>
+                                <CardDescription className="text-zinc-400">
+                                    Enter Scheme expressions to evaluate
+                                </CardDescription>
+                            </div>
                             <Button
                                 variant="default"
                                 size="sm"
-                                onClick={handleRun}
+                                onClick={handleReplRun}
+                                className="flex items-center gap-2"
                             >
-                                Run Program
+                                <Play className="w-4 h-4" />
+                                Run
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0">
-                        <CodeMirror
-                            value={code}
-                            height="200px"
-                            theme={xcodeDark}
-                            extensions={[StreamLanguage.define(scheme)]}
-                            onChange={(value) => setCode(value)}
-                            className="border-none [&_.cm-focused]:outline-none"
-                            basicSetup={{
-                                lineNumbers: true,
-                                highlightActiveLineGutter: true,
-                                highlightSpecialChars: true,
-                                history: true,
-                                foldGutter: true,
-                                drawSelection: true,
-                                dropCursor: true,
-                                allowMultipleSelections: true,
-                                indentOnInput: true,
-                                bracketMatching: true,
-                                closeBrackets: true,
-                                autocompletion: true,
-                                rectangularSelection: true,
-                                crosshairCursor: true,
-                                highlightActiveLine: true,
-                                highlightSelectionMatches: true,
-                                closeBracketsKeymap: true,
-                                defaultKeymap: true,
-                                searchKeymap: true,
-                                historyKeymap: true,
-                                foldKeymap: true,
-                                completionKeymap: true,
-                                lintKeymap: true,
-                            }}
+                    <CardContent className="p-0 h-[400px]">
+                        <Terminal
+                            ref={terminalRef}
+                            onCommand={onCommand}
+                            onInputChange={setReplInput}
+                            currentInput={replInput}
                         />
                     </CardContent>
                 </Card>
-            )}
+            </div>
+        );
+    }
+);
 
-            <Card className="border-zinc-700 bg-zinc-900">
-                <CardHeader className="border-b border-zinc-700">
-                    <CardTitle className="text-zinc-200">Jaws REPL</CardTitle>
-                    <CardDescription className="text-zinc-400">
-                        Enter Scheme expressions to evaluate
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 h-[400px]">
-                    <Terminal
-                        ref={terminalRef}
-                        onCommand={onCommand}
-                    />
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
+IntegratedRepl.displayName = 'IntegratedRepl';

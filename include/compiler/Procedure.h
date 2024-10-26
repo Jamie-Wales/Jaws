@@ -1,6 +1,7 @@
 #pragma once
 #include "Expression.h"
 #include "Token.h"
+#include "Value.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -9,16 +10,27 @@ class Interpreter;
 
 class Procedure {
 public:
-    virtual SchemeValue operator()(Interpreter&, const std::vector<SchemeValue>&) const = 0;
+    virtual std::optional<SchemeValue> operator()(Interpreter& interp, const std::vector<SchemeValue>& args) const = 0;
     virtual ~Procedure() = default;
 };
 
 class BuiltInProcedure : public Procedure {
 public:
-    using Func = std::function<SchemeValue(Interpreter&, const std::vector<SchemeValue>&)>;
+    using Func = std::function<std::optional<SchemeValue>(Interpreter&, const std::vector<SchemeValue>&)>;
 
-    explicit BuiltInProcedure(Func f);
-    SchemeValue operator()(Interpreter& interp, const std::vector<SchemeValue>& args) const override;
+    explicit BuiltInProcedure(Func f)
+        : func(std::move(f))
+    {
+    }
+    explicit BuiltInProcedure(std::optional<SchemeValue> (*f)(Interpreter&, const std::vector<SchemeValue>&))
+        : func(f)
+    {
+    }
+
+    std::optional<SchemeValue> operator()(Interpreter& interp, const std::vector<SchemeValue>& args) const override
+    {
+        return func(interp, args);
+    }
 
 private:
     Func func;
@@ -32,7 +44,7 @@ public:
     {
     }
 
-    SchemeValue operator()(Interpreter& interp, const std::vector<SchemeValue>& args) const override;
+    std::optional<SchemeValue> operator()(Interpreter& interp, const std::vector<SchemeValue>& args) const override;
 
 private:
     std::vector<Token> paramNames;

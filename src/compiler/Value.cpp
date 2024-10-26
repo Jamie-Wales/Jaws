@@ -33,11 +33,12 @@ bool SchemeValue::isNumber() const
     return std::holds_alternative<Number>(value);
 }
 
-SchemeValue SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue>& args) const
+std::optional<SchemeValue> SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue>& args) const
 {
     if (isProc()) {
         auto ele = std::get<std::shared_ptr<Procedure>>(value);
-        return (*ele)(interp, args);
+        if (ele)
+            return (*ele)(interp, args);
     }
     throw std::runtime_error("Attempt to call non-procedure value");
 }

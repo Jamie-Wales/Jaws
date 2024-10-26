@@ -1,22 +1,114 @@
-# React + TypeScript + Vite
+# Jaws Scheme Web REPL
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern web-based REPL (Read-Eval-Print Loop) for the Jaws Scheme interpreter, built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🚀 Interactive REPL with syntax highlighting
+- 📝 Built-in code editor for larger programs
+- 🎨 Modern, dark-themed UI using shadcn/ui
+- 🔍 Real-time error reporting
+- 📚 Example programs and documentation
+- ⚡ Fast evaluation with immediate feedback
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+### Prerequisites
 
-- Configure the top-level `parserOptions` property like this:
+- Node.js 16.x or higher
+- npm or yarn
 
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/jaws-web
+cd jaws-web
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn
+```
+
+3. Start the development server:
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## Usage
+
+### REPL Mode
+
+The REPL provides an interactive environment where you can:
+- Type Scheme expressions directly
+- See immediate evaluation results
+- View syntax-highlighted code
+- Multi-line editing with autocompletion
+
+Example usage:
+```scheme
+;; Basic arithmetic
+(+ 1 2 3)
+
+;; Define functions
+(define factorial
+  (lambda (n)
+    (if (<= n 1)
+        1
+        (* n (factorial (- n 1))))))
+```
+
+### Editor Mode
+
+For larger programs, switch to the editor mode which provides:
+- Full-screen code editor
+- Line numbers
+- Advanced syntax highlighting
+- Code formatting
+- Run button for program execution
+
+## Built With
+
+- [React](https://reactjs.org/) - UI Framework
+- [TypeScript](https://www.typescriptlang.org/) - Type Safety
+- [Vite](https://vitejs.dev/) - Build Tool
+- [shadcn/ui](https://ui.shadcn.com/) - UI Components
+- [CodeMirror](https://codemirror.net/) - Code Editor
+- [highlight.js](https://highlightjs.org/) - Syntax Highlighting
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+
+## Project Structure
+
+```
+src/
+  ├── components/
+  │   ├── repl-modes.tsx    # REPL and Editor components
+  │   ├── terminal.tsx      # Terminal implementation
+  │   └── tabs/            # Tab components for different sections
+  ├── hooks/
+  │   └── useJawsInterpreter.ts   # Scheme interpreter hook
+  ├── styles/
+  │   └── globals.css      # Global styles
+  └── App.tsx              # Main application component
+```
+
+## Development
+
+### ESLint Configuration
+
+The project uses ESLint with TypeScript support. To enable type-aware lint rules:
+
+1. Configure parser options:
 ```js
 export default tseslint.config({
   languageOptions: {
-    // other options...
     parserOptions: {
       project: ['./tsconfig.node.json', './tsconfig.app.json'],
       tsconfigRootDir: import.meta.dirname,
@@ -25,26 +117,45 @@ export default tseslint.config({
 })
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+2. Install React ESLint plugin:
+```bash
+npm install eslint-plugin-react --save-dev
+```
 
+3. Update ESLint config:
 ```js
-// eslint.config.js
 import react from 'eslint-plugin-react'
-
 export default tseslint.config({
-  // Set the react version
   settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
+  plugins: { react },
   rules: {
-    // other rules...
-    // Enable its recommended rules
     ...react.configs.recommended.rules,
     ...react.configs['jsx-runtime'].rules,
   },
 })
 ```
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- shadcn for the excellent UI components
+- The CodeMirror team for the code editor
+- highlight.js team for syntax highlighting

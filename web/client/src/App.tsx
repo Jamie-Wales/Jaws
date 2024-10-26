@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useJawsInterpreter } from './hooks/useJawsInterpreter'
+import useJawsInterpreter from './hooks/useJawsInterpreter'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { IntegratedRepl } from '@/components/repl-modes'
@@ -34,6 +34,8 @@ export interface Example {
 function App() {
     const interpreter = useJawsInterpreter();
     const [mode, setMode] = useState<'repl' | 'editor'>('repl');
+    const [activeTab, setActiveTab] = useState('repl');
+    const [replInput, setReplInput] = useState('');
     const terminalRef = useRef<TerminalRef>(null);
 
     const handleCommand = async (command: string) => {
@@ -46,11 +48,9 @@ function App() {
     };
 
     const handleTryExample = (code: string) => {
-        terminalRef.current?.writeSystem("Loading example...");
-        terminalRef.current?.writeOutput(code);
-        handleCommand(code).catch(error => {
-            terminalRef.current?.writeSystem(`Error: ${error.message}`);
-        });
+        setActiveTab('repl');
+        setReplInput(code);
+        terminalRef.current?.writeSystem("|> Example loaded and ready to run!");
     };
 
     return (
@@ -75,7 +75,7 @@ function App() {
                     </div>
                 </div>
 
-                <Tabs defaultValue="repl" className="space-y-4 mt-8">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 mt-8">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="repl">Interpreter</TabsTrigger>
                         <TabsTrigger value="get-started">Get Started</TabsTrigger>
@@ -87,19 +87,23 @@ function App() {
                         <IntegratedRepl
                             mode={mode}
                             onCommand={handleCommand}
+                            ref={terminalRef}
+                            initialInput={replInput}
                         />
                     </TabsContent>
 
-                    <TabsContent value="get-started">
-                        <GetStartedTab terminalRef={terminalRef} />
-                    </TabsContent>
+                    <GetStartedTab
+                        terminalRef={terminalRef}
+                        onTabChange={() => {
+                            setActiveTab('repl');
+                            setReplInput('(+ 1 2 3)');
+                        }}
+                    />
 
-                    <TabsContent value="examples">
-                        <ExamplesTab
-                            examples={examples}
-                            handleTryExample={handleTryExample}
-                        />
-                    </TabsContent>
+                    <ExamplesTab
+                        examples={examples}
+                        handleTryExample={handleTryExample}
+                    />
 
                     <TabsContent value="documentation">
                         <DocumentationTab />

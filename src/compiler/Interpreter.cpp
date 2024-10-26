@@ -155,7 +155,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expressi
         e->as);
 }
 
-SchemeValue Interpreter::lookupVariable(const std::string& name) const
+std::optional<SchemeValue> Interpreter::lookupVariable(const std::string& name) const
 {
     auto it = environment.find(name);
     if (it != environment.end()) {

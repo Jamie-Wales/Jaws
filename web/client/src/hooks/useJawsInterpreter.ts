@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 declare global {
     interface Window {
-        createJawsModule: () => Promise<{
+        createJawsModule?: () => Promise<{
             JawsWrapper: new () => {
                 evaluate: (input: string) => string;
                 getEnvironment: () => string;
@@ -11,7 +11,7 @@ declare global {
     }
 }
 
-export const useJawsInterpreter = () => {
+const useJawsInterpreter = () => {
     const [interpreter, setInterpreter] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -19,9 +19,23 @@ export const useJawsInterpreter = () => {
     useEffect(() => {
         const initializeInterpreter = async () => {
             try {
-                if (!window.createJawsModule) {
-                    throw new Error('WASM module not loaded');
-                }
+                // Wait for the WASM module to be available
+                const checkModule = () => {
+                    return new Promise<void>((resolve) => {
+                        const check = () => {
+                            if (typeof window.createJawsModule === 'function') {
+                                resolve();
+                            } else {
+                                setTimeout(check, 100);
+                            }
+                        };
+                        check();
+                    });
+                };
+
+                await checkModule();
+                if (!window.createJawsModule) throw new Error('WASM module not loaded');
+
                 const module = await window.createJawsModule();
                 const jawsInstance = new module.JawsWrapper();
                 setInterpreter(jawsInstance);
@@ -42,3 +56,5 @@ export const useJawsInterpreter = () => {
 
     return { evaluate, loading, error };
 };
+
+export default useJawsInterpreter;

@@ -4,6 +4,7 @@
 #include "Port.h"
 #include <compare>
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -41,7 +42,7 @@ public:
 
     std::string asSymbol() const;
 
-    SchemeValue call(Interpreter& interp, const std::vector<SchemeValue>& args) const;
+    std::optional<SchemeValue> call(Interpreter& interp, const std::vector<SchemeValue>& args) const;
 
     bool isTrue() const;
 
