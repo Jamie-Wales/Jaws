@@ -5,6 +5,7 @@ import { HighlightedText } from './highlightedText';
 interface TerminalLine {
     type: 'input' | 'output' | 'system';
     content: string;
+    timestamp: string;
 }
 
 export interface TerminalRef {
@@ -37,12 +38,16 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             }
         }, [currentInput]);
 
+        const getTimestamp = () => {
+            return new Date().toLocaleTimeString();
+        };
+
         const writeOutput = (content: string) => {
-            setLines(prev => [...prev, { type: 'output', content }]);
+            setLines(prev => [...prev, { type: 'output', content, timestamp: getTimestamp() }]);
         };
 
         const writeSystem = (content: string) => {
-            setLines(prev => [...prev, { type: 'system', content }]);
+            setLines(prev => [...prev, { type: 'system', content, timestamp: getTimestamp() }]);
         };
 
         useImperativeHandle(ref, () => ({
@@ -73,7 +78,11 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                 if (!cleanedInput) return;
 
                 e.preventDefault();
-                setLines(prev => [...prev, { type: 'input', content: inputValue }]);
+                setLines(prev => [...prev, {
+                    type: 'input',
+                    content: inputValue,
+                    timestamp: getTimestamp()
+                }]);
 
                 try {
                     const result = await onCommand(cleanedInput);
@@ -95,7 +104,17 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                 >
                     {lines.map((line, i) => (
                         <div key={i} className="mb-2">
-                            <HighlightedText text={line.content} type={line.type} />
+                            <div className="flex items-start gap-2">
+                                {line.type === 'input' && (
+                                    <span className="text-blue-400 shrink-0">λ</span>
+                                )}
+                                <div className="flex-1">
+                                    <HighlightedText text={line.content} type={line.type} />
+                                </div>
+                                <span className="text-zinc-500 text-xs shrink-0 ml-2">
+                                    {line.timestamp}
+                                </span>
+                            </div>
                         </div>
                     ))}
                 </div>

@@ -9,7 +9,7 @@ interface HighlightedTextProps {
 }
 
 export const HighlightedText = ({ text, type }: HighlightedTextProps) => {
-    const ref = useRef < HTMLPreElement > (null);
+    const ref = useRef<HTMLPreElement>(null);
 
     useEffect(() => {
         if (ref.current && (type === 'input' || type === 'output')) {
@@ -27,7 +27,7 @@ export const HighlightedText = ({ text, type }: HighlightedTextProps) => {
             className="hljs language-scheme font-mono whitespace-pre-wrap"
             style={{ background: 'transparent' }}
         >
-            {type === 'input' ? '❯ ' : ''}{text}
+            {text}
         </pre>
     );
 };
