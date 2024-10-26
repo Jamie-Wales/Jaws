@@ -291,7 +291,7 @@ export const IntegratedRepl = forwardRef<TerminalRef, ReplModesProps>(
                 onCommand={onCommand}
                 onInputChange={setReplInput}
                 currentInput={replInput}
-                className={isReplFullscreen ? "h-[calc(100vh-120px)]" : "h-[500px]"}
+                className={isReplFullscreen ? "h-[calc(100vh-120px)]" : "h-[300px]"}
             />
         );
         return (
