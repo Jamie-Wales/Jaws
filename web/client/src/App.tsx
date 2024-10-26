@@ -70,7 +70,7 @@ function App() {
                             variant={mode === 'editor' ? 'default' : 'outline'}
                             onClick={() => setMode('editor')}
                         >
-                            REPL + Editor
+                            (+ Editor Repl)
                         </Button>
                     </div>
                 </div>
