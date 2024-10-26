@@ -1,127 +1,116 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, KeyboardEvent } from 'react';
+import { LiveEditor } from './liveEditor';
+import { HighlightedText } from './highlightedText';
 
-interface TerminalProps {
-    onCommand: (command: string) => Promise<string>;
+interface TerminalLine {
+    type: 'input' | 'output' | 'system';
+    content: string;
 }
 
 export interface TerminalRef {
-    writeOutput: (text: string) => void;
-    writeSystem: (text: string) => void;
-    clear: () => void;
+    writeOutput: (content: string) => void;
+    writeSystem: (content: string) => void;
 }
 
-interface TerminalEntry {
-    type: 'command' | 'system' | 'output';
-    content: string;
-    timestamp: string;
+interface TerminalProps {
+    onCommand: (command: string) => Promise<string>;
+    onInputChange?: (input: string) => void;
+    currentInput?: string;
+    className?: string;
 }
 
-const Terminal = React.forwardRef<TerminalRef, TerminalProps>(({ onCommand }, ref) => {
-    const [history, setHistory] = useState<TerminalEntry[]>([]);
-    const [inputValue, setInputValue] = useState("");
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
+export const Terminal = forwardRef<TerminalRef, TerminalProps>(
+    ({ onCommand, onInputChange, currentInput, className }, ref) => {
+        const [lines, setLines] = useState<TerminalLine[]>([]);
+        const [inputValue, setInputValue] = useState('');
+        const terminalRef = useRef<HTMLDivElement>(null);
 
-    React.useImperativeHandle(ref, () => ({
-        writeOutput: (text: string) => {
-            setHistory(prev => [...prev, {
-                type: 'output',
-                content: text,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
-        },
-        writeSystem: (text: string) => {
-            setHistory(prev => [...prev, {
-                type: 'system',
-                content: text,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
-        },
-        clear: () => {
-            setHistory([]);
-        }
-    }));
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!inputValue.trim()) return;
-
-        setHistory(prev => [...prev, {
-            type: 'command',
-            content: inputValue,
-            timestamp: new Date().toLocaleTimeString()
-        }]);
-
-        try {
-            const output = await onCommand(inputValue.trim());
-            if (output) {
-                setHistory(prev => [...prev, {
-                    type: 'output',
-                    content: output,
-                    timestamp: new Date().toLocaleTimeString()
-                }]);
+        useEffect(() => {
+            if (terminalRef.current) {
+                terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
             }
-        } catch (error: any) {
-            setHistory(prev => [...prev, {
-                type: 'system',
-                content: `Error: ${error.message}`,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
-        }
+        }, [lines]);
 
-        setInputValue("");
-    };
+        useEffect(() => {
+            if (currentInput !== undefined) {
+                setInputValue(currentInput);
+            }
+        }, [currentInput]);
 
-    useEffect(() => {
-        if (scrollAreaRef.current) {
-            const scrollArea = scrollAreaRef.current;
-            scrollArea.scrollTop = scrollArea.scrollHeight;
-        }
-    }, [history]);
+        const writeOutput = (content: string) => {
+            setLines(prev => [...prev, { type: 'output', content }]);
+        };
 
-    return (
-        <div className="w-full bg-zinc-900 rounded-lg border border-zinc-700 overflow-hidden">
-            <div className="flex items-center px-4 py-2 bg-zinc-800 border-b border-zinc-700">
-                <span className="text-lg mr-2 text-zinc-400">λ</span>
-                <span className="text-sm font-medium text-zinc-200">Jaws REPL</span>
-            </div>
+        const writeSystem = (content: string) => {
+            setLines(prev => [...prev, { type: 'system', content }]);
+        };
 
-            <ScrollArea
-                ref={scrollAreaRef}
-                className="h-[400px] p-4 font-mono text-sm"
-            >
-                {history.map((entry, index) => (
-                    <div key={index} className="mb-2">
-                        {entry.type === 'command' ? (
-                            <div className="flex items-center text-zinc-400">
-                                <span className="mr-2">λ</span>
-                                <span className="text-zinc-200">{entry.content}</span>
-                                <span className="ml-auto text-xs">{entry.timestamp}</span>
-                            </div>
-                        ) : (
-                            <div className={`mt-1 whitespace-pre-wrap ${entry.type === 'system' ? 'text-yellow-300' : 'text-zinc-300'
-                                }`}>
-                                {entry.content}
-                            </div>
-                        )}
-                    </div>
-                ))}
+        useImperativeHandle(ref, () => ({
+            writeOutput,
+            writeSystem
+        }));
 
-                <form onSubmit={handleSubmit} className="flex items-center mt-2">
-                    <span className="mr-2 text-zinc-400">λ</span>
-                    <Input
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        className="flex-1 bg-transparent border-none text-zinc-200 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-zinc-600"
-                        placeholder="Wrangle some Scheme"
+        const handleInputChange = (value: string) => {
+            setInputValue(value);
+            onInputChange?.(value);
+        };
+
+        const handleKeyDown = async (e: KeyboardEvent<HTMLDivElement>) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const openCount = (inputValue.match(/\(/g) || []).length;
+                const closeCount = (inputValue.match(/\)/g) || []).length;
+
+                if (openCount !== closeCount) {
+                    return; // Don't submit if parentheses aren't balanced
+                }
+
+                const cleanedInput = inputValue
+                    .split('\n')
+                    .map(line => line.trim())
+                    .join(' ')
+                    .trim();
+
+                if (!cleanedInput) return;
+
+                e.preventDefault();
+                setLines(prev => [...prev, { type: 'input', content: inputValue }]);
+
+                try {
+                    const result = await onCommand(cleanedInput);
+                    writeOutput(result);
+                    setInputValue('');
+                    onInputChange?.('');
+                } catch (err) {
+                    const error = err as Error;
+                    writeSystem(`Error: ${error.message}`);
+                }
+            }
+        };
+
+        return (
+            <div className={`min-h-[500px] flex flex-col bg-zinc-900 ${className}`}>
+                <div
+                    ref={terminalRef}
+                    className="flex-1 min-h-[400px] p-4 overflow-y-auto font-mono text-sm"
+                >
+                    {lines.map((line, i) => (
+                        <div key={i} className="mb-2">
+                            <HighlightedText text={line.content} type={line.type} />
+                        </div>
+                    ))}
+                </div>
+                <div
+                    className="px-4 py-3 border-t border-zinc-700 w-full"
+                    onKeyDown={handleKeyDown}
+                >
+                    <LiveEditor
+                        value={currentInput ?? inputValue}
+                        onChange={handleInputChange}
                     />
-                </form>
-            </ScrollArea>
-        </div>
-    );
-});
+                </div>
+            </div>
+        );
+    }
+);
 
-Terminal.displayName = "Terminal";
-
-export default Terminal;
+Terminal.displayName = 'Terminal';

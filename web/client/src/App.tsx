@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import useJawsInterpreter from './hooks/useJawsInterpreter'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { IntegratedRepl } from '@/components/repl-modes'
+import { ReplModes } from '@/components/repl-modes'
 import { GetStartedTab, ExamplesTab, DocumentationTab } from '@/components/tabs'
 import type { TerminalRef } from '@/components/terminal'
 import './styles/globals.css'
@@ -84,7 +84,7 @@ function App() {
                     </TabsList>
 
                     <TabsContent value="repl">
-                        <IntegratedRepl
+                        <ReplModes
                             mode={mode}
                             onCommand={handleCommand}
                             ref={terminalRef}

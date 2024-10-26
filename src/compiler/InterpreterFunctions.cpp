@@ -359,7 +359,6 @@ std::optional<SchemeValue> Interpreter::display(Interpreter&, const std::vector<
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("DISPLAY requires 1 or 2 arguments");
     }
-
     std::ostream* output;
     if (args.size() == 1) {
         output = &std::cout;
@@ -370,7 +369,6 @@ std::optional<SchemeValue> Interpreter::display(Interpreter&, const std::vector<
         }
         output = port->file.get();
     }
-
     if (const auto* str = std::get_if<std::string>(&args[0].value)) {
         *output << *str;
     } else {
