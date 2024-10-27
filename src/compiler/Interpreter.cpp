@@ -97,7 +97,6 @@ std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom
 std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list, const Expression& expr)
 {
     std::list<SchemeValue> elements;
-    elements.resize(list.elements.size());
     for (const auto& ele : list.elements) {
         std::optional<SchemeValue> item = interpret(ele);
         if (!item) {

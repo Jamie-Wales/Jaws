@@ -2,7 +2,6 @@
 #include "Interpreter.h"
 #include "Port.h"
 #include <optional>
-#include <stdexcept>
 
 std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {
@@ -48,13 +47,10 @@ std::optional<SchemeValue> Interpreter::carProcudure(Interpreter&, const std::ve
     if (args.size() != 1) {
         throw InterpreterError("CAR expects 1 argument");
     }
-
     auto elements = args.back().as<std::vector<SchemeValue>>();
-
     if (elements.size() == 0) {
         throw InterpreterError("CAR invoked on empty list");
     }
-
     return elements[0];
 }
 
@@ -93,7 +89,6 @@ std::optional<SchemeValue> Interpreter::mult(Interpreter&, const std::vector<Sch
 {
     if (args.empty())
         return SchemeValue(Number(1));
-
     SchemeValue result = args[0];
     for (size_t i = 1; i < args.size(); ++i) {
         result = result * args[i];
@@ -122,7 +117,6 @@ std::optional<SchemeValue> Interpreter::less(Interpreter&, const std::vector<Sch
 {
     if (args.size() < 2)
         throw InterpreterError("< requires at least two arguments", std::nullopt);
-
     for (size_t i = 0; i < args.size() - 1; ++i) {
         auto comparison = args[i] <=> args[i + 1];
         if (comparison == std::partial_ordering::unordered) {
@@ -139,7 +133,6 @@ std::optional<SchemeValue> Interpreter::greater(Interpreter&, const std::vector<
 {
     if (args.size() < 2)
         throw InterpreterError("> requires at least two arguments", std::nullopt);
-
     for (size_t i = 0; i < args.size() - 1; ++i) {
         auto comparison = args[i] <=> args[i + 1];
         if (comparison == std::partial_ordering::unordered) {
@@ -156,7 +149,6 @@ std::optional<SchemeValue> Interpreter::equal(Interpreter&, const std::vector<Sc
 {
     if (args.size() < 2)
         throw InterpreterError("= requires at least two arguments", std::nullopt);
-
     for (size_t i = 1; i < args.size(); ++i) {
         if (!(args[0] == args[i])) {
             return SchemeValue(false);
@@ -164,18 +156,21 @@ std::optional<SchemeValue> Interpreter::equal(Interpreter&, const std::vector<Sc
     }
     return SchemeValue(true);
 }
-
 std::optional<SchemeValue> Interpreter::cons(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("cons requires exactly 2 arguments");
     }
+
     if (args[1].isList()) {
-        std::list<SchemeValue> result = args[1].asList();
-        result.push_front(args[0]);
-        return SchemeValue(std::move(result));
+        auto list = args[1].asList();
+        list.push_front(args[0]);
+        return SchemeValue(list);
     }
-    return SchemeValue(std::list<SchemeValue> { args[0], args[1] });
+    std::list<SchemeValue> pair;
+    pair.push_back(args[0]);
+    pair.push_back(args[1]);
+    return SchemeValue(std::move(pair));
 }
 
 std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<SchemeValue>& args)
@@ -192,7 +187,6 @@ std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<S
 std::optional<SchemeValue> Interpreter::append(Interpreter&, const std::vector<SchemeValue>& args)
 {
     std::vector<SchemeValue> result;
-
     for (const auto& arg : args) {
         const auto* list = std::get_if<std::vector<SchemeValue>>(&arg.value);
         if (!list) {
@@ -200,7 +194,6 @@ std::optional<SchemeValue> Interpreter::append(Interpreter&, const std::vector<S
         }
         result.insert(result.end(), list->begin(), list->end());
     }
-
     return SchemeValue(result);
 }
 
@@ -209,12 +202,10 @@ std::optional<SchemeValue> Interpreter::reverse(Interpreter&, const std::vector<
     if (args.size() != 1) {
         throw InterpreterError("REVERSE requires exactly 1 argument");
     }
-
     const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
     if (!list) {
         throw InterpreterError("REVERSE argument must be a list");
     }
-
     std::vector<SchemeValue> result = *list;
     std::reverse(result.begin(), result.end());
     return SchemeValue(result);
@@ -225,21 +216,17 @@ std::optional<SchemeValue> Interpreter::listRef(Interpreter&, const std::vector<
     if (args.size() != 2) {
         throw InterpreterError("LIST-REF requires exactly 2 arguments");
     }
-
     const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
     if (!list) {
         throw InterpreterError("First argument to LIST-REF must be a list");
     }
-
     if (!args[1].isNumber()) {
         throw InterpreterError("Second argument to LIST-REF must be a number");
     }
-
     int index = args[1].as<Number>().toInt();
     if (index < 0 || static_cast<size_t>(index) >= list->size()) {
         throw InterpreterError("LIST-REF index out of bounds");
     }
-
     return (*list)[index];
 }
 
@@ -248,21 +235,17 @@ std::optional<SchemeValue> Interpreter::listTail(Interpreter&, const std::vector
     if (args.size() != 2) {
         throw InterpreterError("LIST-TAIL requires exactly 2 arguments");
     }
-
     const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
     if (!list) {
         throw InterpreterError("First argument to LIST-TAIL must be a list");
     }
-
     if (!args[1].isNumber()) {
         throw InterpreterError("Second argument to LIST-TAIL must be a number");
     }
-
     int index = args[1].as<Number>().toInt();
     if (index < 0 || static_cast<size_t>(index) > list->size()) {
         throw InterpreterError("LIST-TAIL index out of bounds");
     }
-
     std::vector<SchemeValue> result(list->begin() + index, list->end());
     return SchemeValue(result);
 }
@@ -272,18 +255,15 @@ std::optional<SchemeValue> Interpreter::openInputFile(Interpreter&, const std::v
     if (args.size() != 1) {
         throw InterpreterError("OPEN-INPUT-FILE requires exactly 1 argument");
     }
-
     const auto* filename = std::get_if<std::string>(&args[0].value);
     if (!filename) {
         throw InterpreterError("OPEN-INPUT-FILE argument must be a string");
     }
-
     auto file = std::make_shared<std::fstream>();
     file->open(*filename, std::ios::in);
     if (!file->is_open()) {
         throw InterpreterError("Could not open file: " + *filename);
     }
-
     return SchemeValue(Port(file, PortType::Input));
 }
 
@@ -292,18 +272,15 @@ std::optional<SchemeValue> Interpreter::openOutputFile(Interpreter&, const std::
     if (args.size() != 1) {
         throw InterpreterError("OPEN-OUTPUT-FILE requires exactly 1 argument");
     }
-
     const auto* filename = std::get_if<std::string>(&args[0].value);
     if (!filename) {
         throw InterpreterError("OPEN-OUTPUT-FILE argument must be a string");
     }
-
     auto file = std::make_shared<std::fstream>();
     file->open(*filename, std::ios::out);
     if (!file->is_open()) {
         throw InterpreterError("Could not open file: " + *filename);
     }
-
     return SchemeValue(Port(file, PortType::Output));
 }
 
@@ -322,12 +299,10 @@ std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vec
         }
         input = port->file.get();
     }
-
     std::string line;
     if (!std::getline(*input, line)) {
         throw InterpreterError("READ: End of file or error");
     }
-
     return SchemeValue(line);
 }
 
@@ -411,16 +386,13 @@ std::optional<SchemeValue> Interpreter::makeVector(Interpreter&, const std::vect
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("make-vector requires 1 or 2 arguments");
     }
-
     if (!args[0].isNumber()) {
         throw InterpreterError("make-vector: first argument must be a number");
     }
-
     int k = args[0].as<Number>().toInt();
     if (k < 0) {
         throw InterpreterError("make-vector: length must be non-negative");
     }
-
     SchemeValue fill = args.size() == 2 ? args[1] : SchemeValue(Number(0));
     std::vector<SchemeValue> vec(k, fill);
     return SchemeValue(std::move(vec));
