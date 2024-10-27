@@ -9,6 +9,7 @@ import schemeLanguage from 'highlight.js/lib/languages/scheme';
 import 'highlight.js/styles/github-dark-dimmed.css';
 import type { TerminalRef } from './terminal';
 import type { Example } from '../App';
+import { WelcomeHeader } from './welcome';
 
 hljs.registerLanguage('scheme', schemeLanguage);
 

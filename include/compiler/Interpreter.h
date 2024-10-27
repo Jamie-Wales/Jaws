@@ -9,23 +9,26 @@ class InterpreterError;
 
 class Interpreter {
 private:
+    /* ---- Interpreter Functions */
     std::optional<SchemeValue> defineExpression(const DefineExpression& de, const Expression& expr);
     std::optional<SchemeValue> interpretAtom(const AtomExpression& atom, const Expression& expr);
     std::optional<SchemeValue> interpretList(const ListExpression& list, const Expression& expr);
     std::optional<SchemeValue> interpretSExpression(const sExpression& se, const Expression& expr);
     std::optional<SchemeValue> defineProcedure(DefineProcedure& dp, const Expression& e);
-
-    // All built-in procedures should return std::optional<SchemeValue>
+    std::optional<SchemeValue> interpretVector(const VectorExpression& v, const Expression& e);
+    /* ----- Maths procedures ----- */
     static std::optional<SchemeValue> plus(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> mult(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> div(Interpreter&, const std::vector<SchemeValue>& args);
+
+    /* ----- boolean procs ----- */
     static std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& args);
-    
-    /* ---- Builtin Procedures  */
     static std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
+
+    /* ----- List procedures ----- */
     static std::optional<SchemeValue> listProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> carProcudure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args);
@@ -37,6 +40,7 @@ private:
     static std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>& args);
+    /* ----- File i/o ----- */
     static std::optional<SchemeValue> read(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> write(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> display(Interpreter&, const std::vector<SchemeValue>& args);
@@ -44,6 +48,12 @@ private:
     static std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> openOutputFile(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> closePort(Interpreter&, const std::vector<SchemeValue>& args);
+    /* Vector procedures */
+    static std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args);
 
 public:
     Interpreter();

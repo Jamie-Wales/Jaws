@@ -66,7 +66,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                 const closeCount = (inputValue.match(/\)/g) || []).length;
 
                 if (openCount !== closeCount) {
-                    return; // Don't submit if parentheses aren't balanced
+                    return;
                 }
 
                 const cleanedInput = inputValue

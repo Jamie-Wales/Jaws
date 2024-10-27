@@ -2,6 +2,7 @@
 #include "Interpreter.h"
 #include "Port.h"
 #include <optional>
+#include <stdexcept>
 
 std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {
@@ -37,9 +38,9 @@ std::optional<SchemeValue> Interpreter::isBooleanProc(Interpreter&, const std::v
     throw InterpreterError("Arg is not a bool", std::nullopt);
 }
 
-std::optional<SchemeValue> Interpreter::listProcedure(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::listProcedure(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
-    return SchemeValue(args);
+    return SchemeValue(std::list<SchemeValue>(args.begin(), args.end()));
 }
 
 std::optional<SchemeValue> Interpreter::carProcudure(Interpreter&, const std::vector<SchemeValue>& args)
@@ -60,26 +61,32 @@ std::optional<SchemeValue> Interpreter::carProcudure(Interpreter&, const std::ve
 std::optional<SchemeValue> Interpreter::cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
-        throw InterpreterError("CDR expects 1 argument a list");
+        throw InterpreterError("car requires exactly 1 argument");
     }
-
-    auto elements = args.back().as<std::vector<SchemeValue>>();
-    if (elements.size() < 2) {
-        throw InterpreterError("CDR requires a list of atleast 2 elements");
+    if (!args[0].isList()) {
+        throw InterpreterError("car: argument must be a list");
     }
-    std::vector<SchemeValue> outputs = {};
-    for (int i = 1; i < elements.size(); i++) {
-        outputs.emplace_back(elements[i]);
+    const auto& list = args[0].asList();
+    if (list.empty()) {
+        throw InterpreterError("car: empty list");
     }
-
-    return SchemeValue(outputs);
+    return list.front();
 }
 
 std::optional<SchemeValue> Interpreter::cadrProcedure(Interpreter& ele, const std::vector<SchemeValue>& args)
 {
-    SchemeValue val = cdrProcedure(ele, args).value();
-    val = carProcudure(ele, { args }).value();
-    return val;
+    if (args.size() != 1) {
+        throw InterpreterError("cadr requires exactly 1 argument");
+    }
+    if (!args[0].isList()) {
+        throw InterpreterError("cadr: argument must be a list");
+    }
+    const auto& list = args[0].asList();
+    auto it = std::next(list.begin());
+    if (it == list.end()) {
+        throw InterpreterError("cadr: list too short");
+    }
+    return *it;
 }
 
 std::optional<SchemeValue> Interpreter::mult(Interpreter&, const std::vector<SchemeValue>& args)
@@ -161,33 +168,25 @@ std::optional<SchemeValue> Interpreter::equal(Interpreter&, const std::vector<Sc
 std::optional<SchemeValue> Interpreter::cons(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
-        throw InterpreterError("CONS requires exactly 2 arguments");
+        throw InterpreterError("cons requires exactly 2 arguments");
     }
-
-    std::vector<SchemeValue> result;
-    result.push_back(args[0]);
-
-    if (auto* list = std::get_if<std::vector<SchemeValue>>(&args[1].value)) {
-        result.insert(result.end(), list->begin(), list->end());
-    } else {
-        result.push_back(args[1]);
+    if (args[1].isList()) {
+        std::list<SchemeValue> result = args[1].asList();
+        result.push_front(args[0]);
+        return SchemeValue(std::move(result));
     }
-
-    return SchemeValue(result);
+    return SchemeValue(std::list<SchemeValue> { args[0], args[1] });
 }
 
 std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
-        throw InterpreterError("LENGTH requires exactly 1 argument");
+        throw InterpreterError("length requires exactly 1 argument");
     }
-
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
-    if (!list) {
-        throw InterpreterError("LENGTH argument must be a list");
+    if (!args[0].isList()) {
+        throw InterpreterError("length: argument must be a list");
     }
-
-    return SchemeValue(Number(static_cast<int>(list->size())));
+    return SchemeValue(Number(static_cast<int>(args[0].asList().size())));
 }
 
 std::optional<SchemeValue> Interpreter::append(Interpreter&, const std::vector<SchemeValue>& args)
@@ -313,7 +312,6 @@ std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vec
     if (args.size() > 1) {
         throw InterpreterError("READ accepts at most 1 argument");
     }
-
     std::istream* input;
     if (args.empty()) {
         input = &std::cin;
@@ -338,7 +336,6 @@ std::optional<SchemeValue> Interpreter::write(Interpreter&, const std::vector<Sc
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("WRITE requires 1 or 2 arguments");
     }
-
     std::ostream* output;
     if (args.size() == 1) {
         output = &std::cout;
@@ -349,7 +346,6 @@ std::optional<SchemeValue> Interpreter::write(Interpreter&, const std::vector<Sc
         }
         output = port->file.get();
     }
-
     *output << args[0].toString();
     return std::nullopt;
 }
@@ -382,7 +378,6 @@ std::optional<SchemeValue> Interpreter::newline(Interpreter&, const std::vector<
     if (args.size() > 1) {
         throw InterpreterError("NEWLINE accepts at most 1 argument");
     }
-
     std::ostream* output;
     if (args.empty()) {
         output = &std::cout;
@@ -393,7 +388,6 @@ std::optional<SchemeValue> Interpreter::newline(Interpreter&, const std::vector<
         }
         output = port->file.get();
     }
-
     *output << std::endl;
     return std::nullopt;
 }
@@ -403,14 +397,88 @@ std::optional<SchemeValue> Interpreter::closePort(Interpreter&, const std::vecto
     if (args.size() != 1) {
         throw InterpreterError("CLOSE-PORT requires exactly 1 argument");
     }
-
     const auto* port = std::get_if<Port>(&args[0].value);
     if (!port) {
         throw InterpreterError("CLOSE-PORT argument must be a port");
     }
-
     if (port->isOpen()) {
         port->close();
     }
     return std::nullopt;
+}
+std::optional<SchemeValue> Interpreter::makeVector(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 1 || args.size() > 2) {
+        throw InterpreterError("make-vector requires 1 or 2 arguments");
+    }
+
+    if (!args[0].isNumber()) {
+        throw InterpreterError("make-vector: first argument must be a number");
+    }
+
+    int k = args[0].as<Number>().toInt();
+    if (k < 0) {
+        throw InterpreterError("make-vector: length must be non-negative");
+    }
+
+    SchemeValue fill = args.size() == 2 ? args[1] : SchemeValue(Number(0));
+    std::vector<SchemeValue> vec(k, fill);
+    return SchemeValue(std::move(vec));
+}
+
+std::optional<SchemeValue> Interpreter::vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    return SchemeValue(args);
+}
+
+std::optional<SchemeValue> Interpreter::vectorRef(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("vector-ref requires exactly 2 arguments");
+    }
+    const auto* vec = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+    if (!vec) {
+        throw InterpreterError("vector-ref: first argument must be a vector");
+    }
+    if (!args[1].isNumber()) {
+        throw InterpreterError("vector-ref: second argument must be a number");
+    }
+    int index = args[1].as<Number>().toInt();
+    if (index < 0 || static_cast<size_t>(index) >= vec->size()) {
+        throw InterpreterError("vector-ref: index out of bounds");
+    }
+
+    return (*vec)[index];
+}
+std::optional<SchemeValue> Interpreter::vectorSet(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 3) {
+        throw InterpreterError("vector-set! requires exactly 3 arguments");
+    }
+    auto* vec = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+    if (!vec) {
+        throw InterpreterError("vector-set!: first argument must be a vector");
+    }
+    if (!args[1].isNumber()) {
+        throw InterpreterError("vector-set!: second argument must be a number");
+    }
+    int index = args[1].as<Number>().toInt();
+    if (index < 0 || static_cast<size_t>(index) >= vec->size()) {
+        throw InterpreterError("vector-set!: index out of bounds");
+    }
+    std::vector<SchemeValue> newVec = *vec;
+    newVec[index] = args[2];
+    return SchemeValue(std::move(newVec));
+}
+
+std::optional<SchemeValue> Interpreter::vectorLength(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("vector-length requires exactly 1 argument");
+    }
+    const auto* vec = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+    if (!vec) {
+        throw InterpreterError("vector-length: argument must be a vector");
+    }
+    return SchemeValue(Number(static_cast<int>(vec->size())));
 }

@@ -32,7 +32,26 @@ bool SchemeValue::isNumber() const
 {
     return std::holds_alternative<Number>(value);
 }
+bool SchemeValue::isList() const
+{
+    return std::holds_alternative<std::list<SchemeValue>>(value);
+}
 
+const std::list<SchemeValue>& SchemeValue::asList() const
+{
+    if (!isList()) {
+        throw std::runtime_error("Value is not a list");
+    }
+    return std::get<std::list<SchemeValue>>(value);
+}
+
+std::list<SchemeValue>& SchemeValue::asList()
+{
+    if (!isList()) {
+        throw std::runtime_error("Value is not a list");
+    }
+    return std::get<std::list<SchemeValue>>(value);
+}
 std::optional<SchemeValue> SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue>& args) const
 {
     if (isProc()) {
@@ -49,6 +68,7 @@ bool SchemeValue::isTrue() const
                           [](const std::string& arg) { return !arg.empty(); },
                           [](bool arg) { return arg; },
                           [](const Symbol&) { return true; },
+                          [](const std::list<SchemeValue> l) { return l.size() != 0; },
                           [](const std::vector<SchemeValue>& arg) { return !arg.empty(); },
                           [](const std::shared_ptr<Procedure>&) { return true; },
                           [](const Port& p) { return p.isOpen(); } },
@@ -63,11 +83,23 @@ std::string SchemeValue::toString() const
                           [](bool arg) { return arg ? std::string("#t") : "#f"; },
                           [](const Symbol& arg) { return arg.name; },
                           [](const std::vector<SchemeValue>& arg) {
-                              std::string result = "(";
-                              for (size_t i = 0; i < arg.size(); ++i) {
+                              std::string result = "#(";
+                              for (size_t i = 0; i < arg.size(); i++) {
                                   if (i > 0)
                                       result += " ";
                                   result += arg[i].toString();
+                              }
+                              result += ")";
+                              return result;
+                          },
+                          [](const std::list<SchemeValue>& arg) {
+                              std::string result = "(";
+                              int i = 0;
+                              for (auto& val : arg) {
+                                  if (i > 0)
+                                      result += " ";
+                                  result += val.toString();
+                                  i++;
                               }
                               result += ")";
                               return result;

@@ -61,11 +61,20 @@ public:
     }
 };
 
+class VectorExpression {
+public:
+    std::vector<std::unique_ptr<Expression>> elements;
+    VectorExpression(std::vector<std::unique_ptr<Expression>> elems)
+        : elements(std::move(elems))
+    {
+    }
+};
+
 class Expression {
 public:
-    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure> as;
+    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression> as;
     int line;
-    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure> as, int line)
+    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression> as, int line)
         : as(std::move(as))
         , line(line)
     {
@@ -80,6 +89,14 @@ public:
                        },
                        [&](const ListExpression& e) {
                            std::cout << indentation << "(" << std::endl;
+                           for (const auto& elem : e.elements) {
+                               elem->print(indent + 1);
+                           }
+                           std::cout << indentation << ")" << std::endl;
+                       },
+
+                       [&](const VectorExpression& e) {
+                           std::cout << indentation << "#(" << std::endl;
                            for (const auto& elem : e.elements) {
                                elem->print(indent + 1);
                            }
@@ -119,6 +136,15 @@ public:
                                       clonedElements.push_back(elem->clone());
                                   }
                                   return std::make_unique<Expression>(ListExpression { std::move(clonedElements) }, line);
+                              },
+
+                              [&](const VectorExpression& e) -> std::unique_ptr<Expression> {
+                                  std::vector<std::unique_ptr<Expression>> clonedElements;
+                                  clonedElements.reserve(e.elements.size());
+                                  for (const auto& elem : e.elements) {
+                                      clonedElements.push_back(elem->clone());
+                                  }
+                                  return std::make_unique<Expression>(VectorExpression { std::move(clonedElements) }, line);
                               },
                               [&](const sExpression& e) -> std::unique_ptr<Expression> {
                                   std::vector<std::unique_ptr<Expression>> clonedElements;

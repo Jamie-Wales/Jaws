@@ -6,6 +6,7 @@ import { ReplModes } from '@/components/repl-modes'
 import { GetStartedTab, ExamplesTab, DocumentationTab } from '@/components/tabs'
 import type { TerminalRef } from '@/components/terminal'
 import './styles/globals.css'
+import { WelcomeHeader } from './components/welcome'
 
 export const examples = [
     {

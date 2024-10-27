@@ -3,6 +3,7 @@
 #include "Number.h"
 #include "Port.h"
 #include <compare>
+#include <list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -28,6 +29,7 @@ public:
         bool,
         std::string,
         Symbol,
+        std::list<SchemeValue>,
         std::vector<SchemeValue>,
         std::shared_ptr<Procedure>,
         Port>;
@@ -39,6 +41,9 @@ public:
     bool isNumber() const;
     bool isSymbol() const;
     bool isProc() const;
+    bool isList() const;
+    const std::list<SchemeValue>& asList() const;
+    std::list<SchemeValue>& asList();
 
     std::string asSymbol() const;
 

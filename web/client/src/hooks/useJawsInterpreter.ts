@@ -19,7 +19,6 @@ const useJawsInterpreter = () => {
     useEffect(() => {
         const initializeInterpreter = async () => {
             try {
-                // Wait for the WASM module to be available
                 const checkModule = () => {
                     return new Promise<void>((resolve) => {
                         const check = () => {

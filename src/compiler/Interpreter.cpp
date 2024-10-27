@@ -15,10 +15,6 @@ Interpreter::Interpreter()
     environment["="] = SchemeValue(eq);
     environment["eq?"] = SchemeValue(eq);
     environment["boolean?"] = SchemeValue(std::make_shared<BuiltInProcedure>(isBooleanProc));
-    environment["list"] = SchemeValue(std::make_shared<BuiltInProcedure>(listProcedure));
-    environment["car"] = SchemeValue(std::make_shared<BuiltInProcedure>(carProcudure));
-    environment["cdr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cdrProcedure));
-    environment["cadr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cadrProcedure));
     environment["open-input-file"] = SchemeValue(std::make_shared<BuiltInProcedure>(openInputFile));
     environment["open-output-file"] = SchemeValue(std::make_shared<BuiltInProcedure>(openOutputFile));
     environment["close-port"] = SchemeValue(std::make_shared<BuiltInProcedure>(closePort));
@@ -26,12 +22,24 @@ Interpreter::Interpreter()
     environment["write"] = SchemeValue(std::make_shared<BuiltInProcedure>(write));
     environment["display"] = SchemeValue(std::make_shared<BuiltInProcedure>(display));
     environment["newline"] = SchemeValue(std::make_shared<BuiltInProcedure>(newline));
+
+    environment["list"] = SchemeValue(std::make_shared<BuiltInProcedure>(listProcedure));
+    environment["car"] = SchemeValue(std::make_shared<BuiltInProcedure>(carProcudure));
+    environment["cdr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cdrProcedure));
+    environment["cadr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cadrProcedure));
     environment["cons"] = SchemeValue(std::make_shared<BuiltInProcedure>(cons));
     environment["length"] = SchemeValue(std::make_shared<BuiltInProcedure>(length));
     environment["append"] = SchemeValue(std::make_shared<BuiltInProcedure>(append));
-    environment["reverse"] = SchemeValue(std::make_shared<BuiltInProcedure>(reverse));
+    environment["revrse"] = SchemeValue(std::make_shared<BuiltInProcedure>(reverse));
     environment["list-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(listRef));
     environment["list-tail"] = SchemeValue(std::make_shared<BuiltInProcedure>(listTail));
+
+    // Vector operations
+    environment["make-vector"] = SchemeValue(std::make_shared<BuiltInProcedure>(makeVector));
+    environment["vector"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorProcedure));
+    environment["vector-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorRef));
+    environment["vector-set!"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorSet));
+    environment["vector-length"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorLength));
 }
 
 std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom, const Expression& expr)
@@ -88,8 +96,8 @@ std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom
 
 std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list, const Expression& expr)
 {
-    std::vector<SchemeValue> elements;
-    elements.reserve(list.elements.size());
+    std::list<SchemeValue> elements;
+    elements.resize(list.elements.size());
     for (const auto& ele : list.elements) {
         std::optional<SchemeValue> item = interpret(ele);
         if (!item) {
@@ -148,11 +156,27 @@ std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expressi
                           [this, &e](const ListExpression& l) -> std::optional<SchemeValue> { return interpretList(l, *e); },
                           [this, &e](const sExpression& se) -> std::optional<SchemeValue> { return interpretSExpression(se, *e); },
                           [this, &e](const DefineExpression& de) -> std::optional<SchemeValue> { return defineExpression(de, *e); },
+                          [this, &e](const VectorExpression& v) -> std::optional<SchemeValue> { return interpretVector(v, *e); },
                           [this, &e](DefineProcedure& dp) -> std::optional<SchemeValue> { return defineProcedure(dp, *e); },
                           [&e](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type", *e);
                           } },
         e->as);
+}
+
+std::optional<SchemeValue> Interpreter::interpretVector(const VectorExpression& v, const Expression& e)
+{
+
+    std::vector<SchemeValue> elements;
+    elements.reserve(v.elements.size());
+    for (const auto& ele : v.elements) {
+        std::optional<SchemeValue> item = interpret(ele);
+        if (!item) {
+            return std::nullopt;
+        }
+        elements.push_back(*item);
+    }
+    return SchemeValue(std::move(elements));
 }
 
 std::optional<SchemeValue> Interpreter::lookupVariable(const std::string& name) const

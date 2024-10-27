@@ -30,6 +30,7 @@ enum class Tokentype {
     WHITESPACE,
     COMMENT,
     EOF_TOKEN,
+    HASH,
     ERROR
 };
 

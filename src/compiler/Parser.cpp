@@ -25,6 +25,24 @@ std::optional<std::unique_ptr<Expression>> Parser::parse()
         return std::nullopt;
     }
 }
+
+std::unique_ptr<Expression> Parser::vector()
+{
+    if (match(Tokentype::LEFT_PAREN)) {
+
+        std::vector<std::unique_ptr<Expression>> elements;
+        while (!match(Tokentype::RIGHT_PAREN)) {
+            elements.push_back(expression());
+        }
+
+        return std::make_unique<Expression>(Expression {
+            VectorExpression { std::move(elements) },
+            previousToken().line });
+    }
+
+    throw ParseError("Expect list when defining vector", previousToken(), scanner->getLine(previousToken().line));
+}
+
 std::unique_ptr<Expression> Parser::expression()
 {
     if (match(Tokentype::LEFT_PAREN)) {
@@ -34,7 +52,12 @@ std::unique_ptr<Expression> Parser::expression()
             return sexpression();
         }
     } else if (match(Tokentype::QUOTE)) {
+        if (match(Tokentype::HASH)) {
+            return vector();
+        }
         return list();
+    } else if (match(Tokentype::HASH)) {
+        return vector();
     } else {
         return atom();
     }

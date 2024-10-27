@@ -21,7 +21,8 @@ const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(')"), Tokentype::QUOTE },
     { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE },
     { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
-    { std::regex(R"(\))"), Tokentype::RIGHT_PAREN }
+    { std::regex(R"(\))"), Tokentype::RIGHT_PAREN },
+    { std::regex(R"(\#)"), Tokentype::HASH }
 };
 std::vector<Token> Scanner::tokenize(const std::string& input)
 {
