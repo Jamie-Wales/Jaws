@@ -32,16 +32,22 @@ public:
             std::vector<Token> tokens = scanner->tokenize(input);
             parser.load(tokens);
             auto expr = parser.parse();
-
+            std::optional<SchemeValue> result = std::nullopt;
             if (expr) {
-                std::optional<SchemeValue> result = interpreter.interpret(*expr);
-                if (result) {
-                    return result->toString();
+                for (auto& ex : *expr) {
+                    std::optional<SchemeValue> result = interpreter.interpret(ex);
+                    auto output = interpreter.outputStream.str();
                 }
+
+                std::string output = "";
+                if (result) {
+                    output = result->toString();
+                }
+                output = interpreter.outputStream.str() + output;
+                interpreter.outputStream.str("");
+                return output;
             }
-            auto output = interpreter.outputStream.str();
-            interpreter.outputStream.str("");
-            return output;
+            return "Error";
         } catch (const ParseError& e) {
             return std::string("Parse Error: ") + e.what();
         } catch (const InterpreterError& e) {
