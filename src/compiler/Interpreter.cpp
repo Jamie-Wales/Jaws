@@ -1,6 +1,7 @@
 #include "Interpreter.h"
 #include "Error.h"
 #include "Procedure.h"
+#include <optional>
 #include <variant>
 
 Interpreter::Interpreter()
@@ -11,7 +12,10 @@ Interpreter::Interpreter()
     environment["/"] = SchemeValue(std::make_shared<BuiltInProcedure>(div));
     environment["<"] = SchemeValue(std::make_shared<BuiltInProcedure>(less));
     environment[">"] = SchemeValue(std::make_shared<BuiltInProcedure>(greater));
-    auto eq = std::make_shared<BuiltInProcedure>(equal);
+    environment["help"] = SchemeValue(std::make_shared<BuiltInProcedure>(printHelp));
+
+    auto eq
+        = std::make_shared<BuiltInProcedure>(equal);
     environment["="] = SchemeValue(eq);
     environment["eq?"] = SchemeValue(eq);
     environment["boolean?"] = SchemeValue(std::make_shared<BuiltInProcedure>(isBooleanProc));
@@ -148,6 +152,20 @@ std::optional<SchemeValue> Interpreter::defineProcedure(DefineProcedure& dp, con
     environment[dp.name.lexeme] = SchemeValue(std::move(proc));
     return std::nullopt;
 }
+void Interpreter::run(const std::vector<std::unique_ptr<Expression>>& expressions)
+{
+    for (const auto& expr : expressions) {
+        try {
+            auto result = interpret(expr);
+            if (result) {
+                outputStream << result->toString() << std::endl;
+            }
+        } catch (const InterpreterError& e) {
+            e.printFormattedError();
+        }
+    }
+}
+
 std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expression>& e)
 {
     return std::visit(overloaded {

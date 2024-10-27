@@ -74,3 +74,47 @@ private:
         return oss.str();
     }
 };
+
+class SchemeError : public std::runtime_error {
+public:
+    enum class ErrorType {
+        ArgumentCount,
+        TypeError,
+        ValueError,
+        IOError
+    };
+
+    SchemeError(ErrorType type, std::string message, std::optional<size_t> line = std::nullopt)
+        : std::runtime_error(message)
+        , type_(type)
+        , line_(line)
+    {
+    }
+
+    ErrorType type() const { return type_; }
+    std::optional<size_t> line() const { return line_; }
+
+private:
+    ErrorType type_;
+    std::optional<size_t> line_;
+};
+
+namespace scheme::errors {
+[[nodiscard]] inline SchemeError argument_count(const std::string& proc_name,
+    size_t expected,
+    size_t got)
+{
+    return SchemeError(
+        SchemeError::ErrorType::ArgumentCount,
+        proc_name + " requires " + std::to_string(expected) + " arguments, got " + std::to_string(got));
+}
+
+[[nodiscard]] inline SchemeError type_error(const std::string& proc_name,
+    const std::string& expected_type,
+    const std::string& got_type)
+{
+    return SchemeError(
+        SchemeError::ErrorType::TypeError,
+        proc_name + ": expected " + expected_type + ", got " + got_type);
+}
+}

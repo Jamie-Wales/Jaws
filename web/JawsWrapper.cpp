@@ -39,7 +39,9 @@ public:
                     return result->toString();
                 }
             }
-            return "";
+            auto output = interpreter.outputStream.str();
+            interpreter.outputStream.str("");
+            return output;
         } catch (const ParseError& e) {
             return std::string("Parse Error: ") + e.what();
         } catch (const InterpreterError& e) {

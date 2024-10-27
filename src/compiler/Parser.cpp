@@ -13,13 +13,18 @@ void Parser::load(const std::vector<Token>& t)
     panicMode = false;
 }
 
-std::optional<std::unique_ptr<Expression>> Parser::parse()
+std::optional<std::vector<std::unique_ptr<Expression>>> Parser::parse()
 {
+
+    auto output = std::vector<std::unique_ptr<Expression>> {};
     try {
-        if (isAtEnd()) {
-            return std::nullopt;
+        while (!isAtEnd()) {
+            auto expr = expression();
+            if (expr) {
+                output.emplace_back(std::move(expr));
+            }
         }
-        return expression();
+        return output;
     } catch (const ParseError& e) {
         e.printFormattedError();
         return std::nullopt;
@@ -89,8 +94,8 @@ std::unique_ptr<Expression> Parser::defineExpression()
                 consume(Tokentype::IDENTIFIER, "Expect parameter name"));
         }
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
-
         auto body = expression();
+        consume(Tokentype::RIGHT_PAREN, "Expect ')' after function definition");
         return std::make_unique<Expression>(Expression {
             DefineProcedure {
                 name,
@@ -100,7 +105,7 @@ std::unique_ptr<Expression> Parser::defineExpression()
     } else {
         Token name = consume(Tokentype::IDENTIFIER, "Expect variable name");
         auto value = expression();
-
+        consume(Tokentype::RIGHT_PAREN, "Expect ')' after variable definition");
         return std::make_unique<Expression>(Expression {
             DefineExpression {
                 name,
@@ -108,7 +113,6 @@ std::unique_ptr<Expression> Parser::defineExpression()
             name.line });
     }
 }
-
 std::unique_ptr<Expression> Parser::atom()
 {
     Token token = advance();

@@ -33,6 +33,6 @@ private:
 public:
     Parser() = default;
     void load(const std::vector<Token>& t);
-    std::optional<std::unique_ptr<Expression>> parse();
+    std::optional<std::vector<std::unique_ptr<Expression>>> parse();
     void initialize(std::shared_ptr<Scanner> s);
 };

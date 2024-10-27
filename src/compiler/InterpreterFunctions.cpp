@@ -325,14 +325,15 @@ std::optional<SchemeValue> Interpreter::write(Interpreter&, const std::vector<Sc
     return std::nullopt;
 }
 
-std::optional<SchemeValue> Interpreter::display(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::display(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("DISPLAY requires 1 or 2 arguments");
     }
     std::ostream* output;
     if (args.size() == 1) {
-        output = &std::cout;
+        interp.outputStream << args[0].toString();
+        return std::nullopt;
     } else {
         const auto* port = std::get_if<Port>(&args[1].value);
         if (!port || port->type != PortType::Output || !port->isOpen()) {
@@ -453,4 +454,24 @@ std::optional<SchemeValue> Interpreter::vectorLength(Interpreter&, const std::ve
         throw InterpreterError("vector-length: argument must be a vector");
     }
     return SchemeValue(Number(static_cast<int>(vec->size())));
+}
+
+std::optional<SchemeValue> Interpreter::printHelp(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+
+    interp.outputStream << "Available commands:\n"
+                        << "  exit       - Exit the Jaws REPL\n"
+                        << "  help       - Display this help message\n"
+                        << "\nBasic Jaws syntax:\n"
+                        << "  Numbers    - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
+                        << "  Strings    - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
+                        << "  Lists      - Enclosed in parentheses (e.g., (+ 1 2))\n"
+                        << "  Symbols    - Identifiers for variables and functions\n"
+                        << "\nBuilt-in functions:\n"
+                        << "  +          - Addition (e.g., (+ 1 2 3))\n"
+                        << "  define     - Define variables (e.g., (define x 10))\n"
+                        << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
+                        << "\nEnter Scheme expressions to evaluate them" << std::endl;
+
+    return std::nullopt;
 }

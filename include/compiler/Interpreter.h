@@ -54,9 +54,13 @@ private:
     static std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> printHelp(Interpreter& interp, const std::vector<SchemeValue>& args);
 
 public:
     Interpreter();
+    std::stringstream outputStream;
+
+    void run(const std::vector<std::unique_ptr<Expression>>& expressions);
     std::unordered_map<std::string, std::optional<SchemeValue>> environment;
     std::optional<SchemeValue> interpret(const std::unique_ptr<Expression>& e);
     std::optional<SchemeValue> lookupVariable(const std::string& name) const;

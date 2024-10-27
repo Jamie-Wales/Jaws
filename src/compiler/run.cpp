@@ -5,6 +5,7 @@
 #include "Scanner.h"
 #include "Token.h"
 #include "Value.h"
+#include "icons.h"
 #include "run.h"
 #include <cstdlib>
 #include <fstream>
@@ -12,52 +13,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-
-constexpr const auto jaws = R"(
-
-     ██╗ █████╗ ██╗    ██╗███████╗
-     ██║██╔══██╗██║    ██║██╔════╝
-     ██║███████║██║ █╗ ██║███████╗
-██   ██║██╔══██║██║███╗██║╚════██║
-╚█████╔╝██║  ██║╚███╔███╔╝███████║
- ╚════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
-                                  
-        ⠀ ⢯⠙⠲⢤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        ⠀⠀⠸⡆⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀
-        ⠀⠀⠀⡇⠀⠀⠀⠀⠈⢳⡀⠀⠀⠀⠀⠀
-        ⠀⠀⢰⠇⠀⠀⠀⠀⠀⠈⢷⠀⠀⠀⠀⠀
-        ⣀⡴⠒⢾⡀⣀⡴⠒⢦⣀⢀⡼⠓⢦⣀
-        ⣩⠴⠒⢶⣉⣉⡴⠒⢦⣉⣉⡴⠒⠶⣌
-        ⠁⠀⠀⠀⠈⠁⠀⠀⠀⠈⠁⠀⠀⠀⠈
-    )";
-
-constexpr const auto jaws2 =
-    R"(
-We're gonna need a bigger boat
-------------------------------
-
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠓⠦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⢀⡠⢤⣤⣀⣀⣤⣄⣠⣼⣧⣶⠆⠀⠀⠀⡀⠀⠀⣀⠀⠀
-⠀⠀⠀⠀⠀⠉⠉⠉⠛⠛⠛⠉⠭⠙⠛⠋⠛⠒⠒⠒⠋⠀⠂⠒⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⡶⠛⠻⢷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⠋⠀⠀⠀⠀⠹⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⣰⣿⡇⠀⠀⠀⠀⠀⠰⠿⣿⣧⡀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⣼⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣷⡀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣠⣼⡿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣦⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣿⠋⠀⢀⣠⣤⣴⣶⣾⣶⢶⣶⣦⣤⣤⡀⠈⠻⡀⠀⠀⠀⠀
-⠀⠀⠀⣸⠃⢠⣾⡟⠋⡁⢸⡀⢠⡆⠀⣦⠀⡍⢙⠻⣦⠀⢱⡀⠀⠀⠀
-⠀⠀⢰⡏⠀⣾⠁⢷⣄⣷⣾⣷⣿⣿⣾⣿⣼⣧⣾⢀⠿⡆⠀⣧⠀⠀⠀
-⠀⢀⣿⡇⢰⣇⣷⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡔⡃⠀⣿⣧⠀⠀
-⠀⣾⣿⠁⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⣿⣿⡆⠀
-⣸⣿⡏⠀⠀⢹⣿⣿⣿⠛⣿⠏⢹⣿⠃⢻⡟⢹⣿⣿⣿⠀⠀⢿⣿⣷⠀
-⣿⡿⠀⠀⠀⠸⡿⠻⠙⣀⣨⠤⠤⠧⠤⠬⣀⡘⠹⠻⡻⠀⠀⠈⢿⣿⡇
-⣿⠇⠀⠀⠀⠀⠀⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⡇
-⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡗
-⠈⠳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⠀
-)";
 
 std::string readFile(const std::string& path)
 {
@@ -84,47 +39,19 @@ void runFile(const std::string& path)
         if (!expr) {
             throw std::runtime_error("Parsing failed");
         }
-
-        Interpreter interpreter;
-        if (expr) {
-            std::optional<SchemeValue> result = interpreter.interpret(*expr);
-            if (result) {
-                std::cout << result->toString() << std::endl;
-            }
-        }
+        Interpreter i;
+        i.run(*expr);
+        std::cout << i.outputStream.str();
     } catch (const InterpreterError& e) {
         e.printFormattedError();
     }
 }
 
-void printJawsLogo()
-{
-    std::cout << jaws << '\n';
-    std::cout << "Jaws Awesomely Wrangles Scheme v0.2\n\n";
-}
-
-void printHelp()
-{
-
-    std::cout << "Available commands:\n"
-              << "  exit       - Exit the Jaws REPL\n"
-              << "  help       - Display this help message\n"
-              << "\nBasic Jaws syntax:\n"
-              << "  Numbers    - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
-              << "  Strings    - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
-              << "  Lists      - Enclosed in parentheses (e.g., (+ 1 2))\n"
-              << "  Symbols    - Identifiers for variables and functions\n"
-              << "\nBuilt-in functions:\n"
-              << "  +          - Addition (e.g., (+ 1 2 3))\n"
-              << "  define     - Define variables (e.g., (define x 10))\n"
-              << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
-              << "\nEnter Scheme expressions to evaluate them" << std::endl;
-}
 void runPrompt()
 {
     printJawsLogo();
     std::cout << "Welcome to the Jaws REPL!\n";
-    std::cout << "Type 'exit' to quit, 'help' for commands.\n\n";
+    std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
 
     auto scanner = std::make_shared<Scanner>();
     Parser parser;
@@ -143,11 +70,6 @@ void runPrompt()
             break;
         }
 
-        if (input == "help") {
-            printHelp();
-            continue;
-        }
-
         if (input == "jaws") {
             std::cout << jaws2 << std::endl;
             continue;
@@ -161,10 +83,16 @@ void runPrompt()
             parser.load(tokens);
             auto expr = parser.parse();
             if (expr) {
-                std::optional<SchemeValue> result = interpreter.interpret(*expr);
-                if (result) {
-                    std::cout << result->toString() << std::endl;
+                for (auto& ex : *expr) {
+                    std::optional<SchemeValue> result = interpreter.interpret(ex);
+                    auto output = interpreter.outputStream.str();
+                    if (result) {
+                        output += result->toString();
+                    }
+                    std::cout << output << std::endl;
                 }
+
+                interpreter.outputStream.str("");
             }
         } catch (const ParseError& e) {
             e.printFormattedError();
