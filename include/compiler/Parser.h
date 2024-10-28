@@ -20,6 +20,7 @@ private:
     std::unique_ptr<Expression> list();
     std::unique_ptr<Expression> vector();
     std::unique_ptr<Expression> lambda();
+    std::unique_ptr<Expression> ifExpression();
     Token advance();
     bool isAtEnd() const;
     Token peek() const;

@@ -175,6 +175,18 @@ std::optional<SchemeValue> Interpreter::lambda(LambdaExpression& l, const Expres
     return lambda;
 }
 
+std::optional<SchemeValue> Interpreter::ifExpression(const IfExpression& i, const Expression& e)
+{
+
+    auto condval = interpret(i.condition);
+
+    if (condval->isTrue()) {
+        return interpret(i.then);
+    } else if (i.el) {
+        return interpret(*i.el);
+    }
+    return std::nullopt;
+}
 std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expression>& e)
 {
     return std::visit(overloaded {
@@ -185,6 +197,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expressi
                           [this, &e](const VectorExpression& v) -> std::optional<SchemeValue> { return interpretVector(v, *e); },
                           [this, &e](DefineProcedure& dp) -> std::optional<SchemeValue> { return defineProcedure(dp, *e); },
                           [this, &e](LambdaExpression& l) -> std::optional<SchemeValue> { return lambda(l, *e); },
+                          [this, &e](IfExpression& i) -> std::optional<SchemeValue> { return ifExpression(i, *e); },
                           [&e](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type", *e);
                           } },

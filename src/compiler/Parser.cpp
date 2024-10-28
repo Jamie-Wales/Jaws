@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Error.h"
+#include <optional>
 
 void Parser::initialize(std::shared_ptr<Scanner> s)
 {
@@ -48,6 +49,24 @@ std::unique_ptr<Expression> Parser::vector()
     throw ParseError("Expect list when defining vector", previousToken(), scanner->getLine(previousToken().line));
 }
 
+std::unique_ptr<Expression> Parser::ifExpression()
+{
+    auto condition = expression();
+    auto then = expression();
+    std::optional<std::unique_ptr<Expression>> elseExpr = std::nullopt;
+    if (!check(Tokentype::RIGHT_PAREN)) {
+        elseExpr = std::make_optional(expression());
+    }
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' at end of if expression");
+
+    return std::make_unique<Expression>(Expression {
+        IfExpression {
+            std::move(condition),
+            std::move(then),
+            std::move(elseExpr) },
+        previousToken().line });
+}
+
 std::unique_ptr<Expression> Parser::expression()
 {
     if (match(Tokentype::LEFT_PAREN)) {
@@ -55,6 +74,8 @@ std::unique_ptr<Expression> Parser::expression()
             return defineExpression();
         } else if (match(Tokentype::LAMBDA)) {
             return lambda();
+        } else if (match(Tokentype::IF)) {
+            return ifExpression();
         } else {
             return sexpression();
         }
@@ -69,25 +90,6 @@ std::unique_ptr<Expression> Parser::expression()
         return atom();
     }
 }
-
-std::unique_ptr<Expression> Parser::lambda()
-{
-    std::vector<Token> parameters;
-    consume(Tokentype::LEFT_PAREN, "Lambda expects a parameter list");
-    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        parameters.push_back(
-            consume(Tokentype::IDENTIFIER, "Expect parameter name"));
-    }
-    consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
-    auto body = expression();
-    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda definition");
-    return std::make_unique<Expression>(Expression {
-        LambdaExpression {
-            std::move(parameters),
-            std::move(body) },
-        previousToken().line });
-}
-
 std::unique_ptr<Expression> Parser::list()
 {
     std::vector<std::unique_ptr<Expression>> output = {};
@@ -124,7 +126,7 @@ std::unique_ptr<Expression> Parser::defineExpression()
             name.line });
     } else {
         Token name = consume(Tokentype::IDENTIFIER, "Expect variable name");
-        auto value = expression();
+        auto value = expression(); // This should handle the lambda expression
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after variable definition");
         return std::make_unique<Expression>(Expression {
             DefineExpression {
@@ -132,6 +134,24 @@ std::unique_ptr<Expression> Parser::defineExpression()
                 std::move(value) },
             name.line });
     }
+}
+
+std::unique_ptr<Expression> Parser::lambda()
+{
+    std::vector<Token> parameters;
+    consume(Tokentype::LEFT_PAREN, "Lambda expects a parameter list");
+    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+        parameters.push_back(
+            consume(Tokentype::IDENTIFIER, "Expect parameter name"));
+    }
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
+    auto body = expression();
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda definition");
+    return std::make_unique<Expression>(Expression {
+        LambdaExpression {
+            std::move(parameters),
+            std::move(body) },
+        previousToken().line });
 }
 std::unique_ptr<Expression> Parser::atom()
 {

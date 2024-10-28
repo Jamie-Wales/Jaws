@@ -82,11 +82,24 @@ public:
     }
 };
 
+class IfExpression {
+public:
+    std::unique_ptr<Expression> condition;
+    std::unique_ptr<Expression> then;
+    std::optional<std::unique_ptr<Expression>> el;
+    IfExpression(std::unique_ptr<Expression> condition, std::unique_ptr<Expression> then, std::optional<std::unique_ptr<Expression>> el)
+        : condition(std::move(condition))
+        , then(std::move(then))
+        , el(std::move(el))
+    {
+    }
+};
+
 class Expression {
 public:
-    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression> as;
+    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression, IfExpression> as;
     int line;
-    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression> as, int line)
+    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression, IfExpression> as, int line)
         : as(std::move(as))
         , line(line)
     {
@@ -107,6 +120,17 @@ public:
                            std::cout << indentation << ")" << std::endl;
                        },
 
+                       [&](const IfExpression& i) {
+                           std::cout << indentation << "(if";
+                           i.condition->print();
+                           std::cout << "then" << std::endl;
+                           i.then->print();
+                           if (i.el) {
+                               std::cout << "else" << std::endl;
+                               (*i.el)->print();
+                           }
+                           std::cout << indentation << ")" << std::endl;
+                       },
                        [&](const VectorExpression& e) {
                            std::cout << indentation << "#(" << std::endl;
                            for (const auto& elem : e.elements) {
@@ -186,6 +210,24 @@ public:
                                   return std::make_unique<Expression>(
                                       LambdaExpression { l.parameters, l.body->clone() },
                                       line);
+                              },
+
+                              [&](const IfExpression& i) -> std::unique_ptr<Expression> {
+                                  if (i.el) {
+                                      return std::make_unique<Expression>(
+                                          IfExpression {
+                                              i.condition->clone(),
+                                              i.then->clone(),
+                                              (*i.el)->clone() },
+                                          line);
+                                  } else {
+                                      return std::make_unique<Expression>(
+                                          IfExpression {
+                                              i.condition->clone(),
+                                              i.then->clone(),
+                                              std::nullopt },
+                                          line);
+                                  }
                               } },
             as);
     };

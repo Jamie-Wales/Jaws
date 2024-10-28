@@ -17,6 +17,8 @@ private:
     std::optional<SchemeValue> interpretSExpression(const sExpression& se, const Expression& expr);
     std::optional<SchemeValue> defineProcedure(DefineProcedure& dp, const Expression& e);
     std::optional<SchemeValue> interpretVector(const VectorExpression& v, const Expression& e);
+    std::optional<SchemeValue> ifExpression(const IfExpression& i, const Expression& e);
+
     /* ----- Maths procedures ----- */
     static std::optional<SchemeValue> plus(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& args);
