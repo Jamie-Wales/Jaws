@@ -166,6 +166,15 @@ void Interpreter::run(const std::vector<std::unique_ptr<Expression>>& expression
     }
 }
 
+std::optional<SchemeValue> Interpreter::lambda(LambdaExpression& l, const Expression& e)
+{
+    auto proc = std::make_shared<UserProcedure>(
+        std::move(l.parameters),
+        std::move(l.body));
+    auto lambda = SchemeValue(std::move(proc));
+    return lambda;
+}
+
 std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expression>& e)
 {
     return std::visit(overloaded {
@@ -175,6 +184,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expressi
                           [this, &e](const DefineExpression& de) -> std::optional<SchemeValue> { return defineExpression(de, *e); },
                           [this, &e](const VectorExpression& v) -> std::optional<SchemeValue> { return interpretVector(v, *e); },
                           [this, &e](DefineProcedure& dp) -> std::optional<SchemeValue> { return defineProcedure(dp, *e); },
+                          [this, &e](LambdaExpression& l) -> std::optional<SchemeValue> { return lambda(l, *e); },
                           [&e](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type", *e);
                           } },

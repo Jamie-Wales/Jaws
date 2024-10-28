@@ -13,6 +13,7 @@ private:
     std::optional<SchemeValue> defineExpression(const DefineExpression& de, const Expression& expr);
     std::optional<SchemeValue> interpretAtom(const AtomExpression& atom, const Expression& expr);
     std::optional<SchemeValue> interpretList(const ListExpression& list, const Expression& expr);
+    std::optional<SchemeValue> lambda(LambdaExpression& l, const Expression& e);
     std::optional<SchemeValue> interpretSExpression(const sExpression& se, const Expression& expr);
     std::optional<SchemeValue> defineProcedure(DefineProcedure& dp, const Expression& e);
     std::optional<SchemeValue> interpretVector(const VectorExpression& v, const Expression& e);

@@ -33,17 +33,15 @@ public:
             parser.load(tokens);
             auto expr = parser.parse();
             std::optional<SchemeValue> result = std::nullopt;
+            std::string str;
             if (expr) {
                 for (auto& ex : *expr) {
-                    std::optional<SchemeValue> result = interpreter.interpret(ex);
-                    auto output = interpreter.outputStream.str();
+                    result = interpreter.interpret(ex);
                 }
-
-                std::string output = "";
                 if (result) {
-                    output = result->toString();
+                    str = result->toString();
                 }
-                output = interpreter.outputStream.str() + output;
+                auto output = interpreter.outputStream.str() + str;
                 interpreter.outputStream.str("");
                 return output;
             }

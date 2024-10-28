@@ -28,6 +28,17 @@ public:
     }
 };
 
+class LambdaExpression {
+public:
+    std::vector<Token> parameters;
+    std::unique_ptr<Expression> body;
+    LambdaExpression(std::vector<Token> parameters, std::unique_ptr<Expression> body)
+        : parameters(std::move(parameters))
+        , body(std::move(body))
+    {
+    }
+};
+
 class sExpression {
 public:
     std::vector<std::unique_ptr<Expression>> elements;
@@ -36,6 +47,7 @@ public:
     {
     }
 };
+
 class DefineExpression {
 public:
     Token name;
@@ -72,9 +84,9 @@ public:
 
 class Expression {
 public:
-    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression> as;
+    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression> as;
     int line;
-    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression> as, int line)
+    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression> as, int line)
         : as(std::move(as))
         , line(line)
     {
@@ -120,6 +132,12 @@ public:
                            d.body->print(indent + 1);
                            std::cout << indentation << ")" << std::endl;
                        },
+
+                       [&](const LambdaExpression& l) {
+                           std::cout << indentation << "(lambda " << std::endl;
+                           l.body->print();
+                           std::cout << indentation << ")" << std::endl;
+                       },
                    },
             as);
     }
@@ -162,6 +180,11 @@ public:
                               [&](const DefineProcedure& e) -> std::unique_ptr<Expression> {
                                   return std::make_unique<Expression>(
                                       DefineProcedure { e.name, e.parameters, e.body->clone() },
+                                      line);
+                              },
+                              [&](const LambdaExpression& l) -> std::unique_ptr<Expression> {
+                                  return std::make_unique<Expression>(
+                                      LambdaExpression { l.parameters, l.body->clone() },
                                       line);
                               } },
             as);

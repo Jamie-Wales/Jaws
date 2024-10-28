@@ -53,6 +53,8 @@ std::unique_ptr<Expression> Parser::expression()
     if (match(Tokentype::LEFT_PAREN)) {
         if (match(Tokentype::DEFINE)) {
             return defineExpression();
+        } else if (match(Tokentype::LAMBDA)) {
+            return lambda();
         } else {
             return sexpression();
         }
@@ -66,6 +68,24 @@ std::unique_ptr<Expression> Parser::expression()
     } else {
         return atom();
     }
+}
+
+std::unique_ptr<Expression> Parser::lambda()
+{
+    std::vector<Token> parameters;
+    consume(Tokentype::LEFT_PAREN, "Lambda expects a parameter list");
+    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+        parameters.push_back(
+            consume(Tokentype::IDENTIFIER, "Expect parameter name"));
+    }
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
+    auto body = expression();
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda definition");
+    return std::make_unique<Expression>(Expression {
+        LambdaExpression {
+            std::move(parameters),
+            std::move(body) },
+        previousToken().line });
 }
 
 std::unique_ptr<Expression> Parser::list()
