@@ -246,7 +246,6 @@ Number Number::operator+(const Number& other) const
                               return ComplexType(a + b.real(), b.imag());
                           },
 
-                          // Complex combinations
                           [](const ComplexType& a, int b) -> Number {
                               return ComplexType(a.real() + b, a.imag());
                           },
@@ -564,4 +563,125 @@ std::string Number::toString() const
                               return std::format("{:.6g}+{:.6g}i", c.real(), c.imag());
                           } },
         value);
+}
+
+double Number::asFloat() const
+{
+    return std::visit(overloaded {
+                          [](int i) -> double {
+                              return static_cast<double>(i);
+                          },
+                          [](const Rational& r) -> double {
+                              return static_cast<double>(r.numerator) / r.denominator;
+                          },
+                          [](double d) -> double {
+                              return d;
+                          },
+                          [](const ComplexType& c) -> double {
+                              if (c.imag() != 0.0) {
+                                  throw std::runtime_error("Inexact->exact: complex number cannot be coerced to real");
+                              }
+                              return c.real();
+                          } },
+        value);
+}
+
+bool Number::asBoolean() const
+{
+    return !isZero();
+}
+
+Number::Rational Number::asRational() const
+{
+    return std::visit(overloaded {
+                          [](int i) -> Rational {
+                              return Rational(i, 1);
+                          },
+                          [](const Rational& r) -> Rational {
+                              return r;
+                          },
+                          [](double d) -> Rational {
+                              if (std::isnan(d) || std::isinf(d)) {
+                                  throw std::runtime_error("Inexact->exact: no exact representation for NaN or infinity");
+                              }
+
+                              if (std::floor(d) == d) {
+                                  if (d > std::numeric_limits<int>::max() || d < std::numeric_limits<int>::min()) {
+                                      throw std::runtime_error("Inexact->exact: number too large for exact representation");
+                                  }
+                                  return Rational(static_cast<int>(d), 1);
+                              }
+
+                              double value = d;
+                              int num = 0, den = 1;
+                              int prevNum = 1, prevDen = 0;
+                              int i = 0;
+                              double epsilon = 1e-10;
+
+                              while (i++ < 100) {
+                                  int intPart = static_cast<int>(value);
+                                  num = intPart * den + prevNum;
+                                  prevNum = den;
+                                  den = num;
+                                  prevDen = num;
+
+                                  double fractPart = value - intPart;
+                                  if (std::abs(fractPart) < epsilon)
+                                      break;
+                                  if (fractPart == 0.0)
+                                      break;
+                                  value = 1.0 / fractPart;
+                              }
+
+                              return Rational(num, den);
+                          },
+                          [](const ComplexType& c) -> Rational {
+                              if (c.imag() != 0.0) {
+                                  throw std::runtime_error("Inexact->exact: complex number cannot be coerced to rational");
+                              }
+                              return Number(c.real()).asRational();
+                          } },
+        value);
+}
+
+Number::ComplexType Number::asComplex() const
+{
+    return std::visit(overloaded {
+                          [](int i) -> ComplexType {
+                              return ComplexType(static_cast<double>(i), 0.0);
+                          },
+                          [](const Rational& r) -> ComplexType {
+                              return ComplexType(static_cast<double>(r.numerator) / r.denominator, 0.0);
+                          },
+                          [](double d) -> ComplexType {
+                              return ComplexType(d, 0.0);
+                          },
+                          [](const ComplexType& c) -> ComplexType {
+                              return c;
+                          } },
+        value);
+}
+
+bool Number::isExact() const
+{
+    return std::visit(overloaded {
+                          [](int) -> bool { return true; },
+                          [](const Rational&) -> bool { return true; },
+                          [](double) -> bool { return false; },
+                          [](const ComplexType& c) -> bool {
+                              return std::floor(c.real()) == c.real() && std::floor(c.imag()) == c.imag();
+                          } },
+        value);
+}
+
+bool Number::isInexact() const
+{
+    return !isExact();
+}
+
+bool Number::isEqv(const Number& other) const
+{
+    if (isExact() != other.isExact())
+        return false;
+    return *this == other;
 }

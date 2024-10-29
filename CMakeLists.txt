@@ -5,8 +5,8 @@ if(NOT APPLE)
     message(FATAL_ERROR "This project is currently only supported on macOS")
 endif()
 
+# Basic setup
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 
@@ -14,13 +14,25 @@ set(CMAKE_OSX_ARCHITECTURES "arm64")
 include(CTest)
 enable_testing()
 
+# Fetch dependencies
 include(FetchContent)
-fetchcontent_declare(
+
+# GoogleTest setup
+FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
 )
-set(gtest_force_shared_crt on cache bool "" force)
-FetchContent_MakeAvailable(googletest)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# FTXUI setup
+FetchContent_Declare(ftxui
+    GIT_REPOSITORY https://github.com/ArthurSonzogni/ftxui
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+)
+
+# Make dependencies available
+FetchContent_MakeAvailable(googletest ftxui)
 
 # Collect source files
 file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp")
@@ -35,6 +47,7 @@ add_library(compiler_lib STATIC ${COMPILER_SOURCES})
 target_include_directories(compiler_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
+    ${ftxui_SOURCE_DIR}/include
 )
 set_target_properties(compiler_lib PROPERTIES
     CXX_STANDARD 20
@@ -53,10 +66,17 @@ set_target_properties(runtime PROPERTIES
 
 # Create the jaws executable
 add_executable(jaws src/compiler/main.cpp)
-target_link_libraries(jaws PRIVATE compiler_lib runtime)
+target_link_libraries(jaws
+    PRIVATE compiler_lib
+    PRIVATE runtime
+    PRIVATE ftxui::screen
+    PRIVATE ftxui::dom
+    PRIVATE ftxui::component
+)
 target_include_directories(jaws PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
+    ${ftxui_SOURCE_DIR}/include
 )
 set_target_properties(jaws PROPERTIES
     CXX_STANDARD 20
@@ -66,16 +86,18 @@ set_target_properties(jaws PROPERTIES
 # Find assembler and linker
 find_program(AS_PATH as)
 find_program(LD_PATH ld)
-
 if(NOT AS_PATH OR NOT LD_PATH)
     message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
 endif()
 
+# Set compile definitions
 target_compile_definitions(jaws PRIVATE
     AS_PATH="${AS_PATH}"
     LD_PATH="${LD_PATH}"
     RUNTIME_INCLUDE_PATH="${PROJECT_SOURCE_DIR}/include/runtime"
 )
+
+# Debug output
 message(STATUS "Compiler sources: ${COMPILER_SOURCES}")
 message(STATUS "Runtime sources: ${RUNTIME_SOURCES}")
 
@@ -90,7 +112,9 @@ set_target_properties(tests PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
-
-target_link_libraries(tests PRIVATE compiler_lib runtime gtest_main)
-
+target_link_libraries(tests
+    PRIVATE compiler_lib
+    PRIVATE runtime
+    PRIVATE gtest_main
+)
 add_test(NAME AllTests COMMAND tests)

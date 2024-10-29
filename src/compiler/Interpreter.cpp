@@ -10,6 +10,8 @@ Interpreter::Interpreter()
     environment["-"] = SchemeValue(std::make_shared<BuiltInProcedure>(minus));
     environment["*"] = SchemeValue(std::make_shared<BuiltInProcedure>(mult));
     environment["/"] = SchemeValue(std::make_shared<BuiltInProcedure>(div));
+    environment["<="] = SchemeValue(std::make_shared<BuiltInProcedure>(less));
+    environment[">="] = SchemeValue(std::make_shared<BuiltInProcedure>(greater));
     environment["<"] = SchemeValue(std::make_shared<BuiltInProcedure>(less));
     environment[">"] = SchemeValue(std::make_shared<BuiltInProcedure>(greater));
     environment["help"] = SchemeValue(std::make_shared<BuiltInProcedure>(printHelp));

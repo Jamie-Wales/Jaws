@@ -1,7 +1,52 @@
 #include "Error.h"
 #include "Interpreter.h"
+#include "Number.h"
 #include "Port.h"
 #include <optional>
+
+std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 2) {
+        throw InterpreterError("'<=' requires at least 2 arguments");
+    }
+
+    for (size_t i = 0; i < args.size() - 1; i++) {
+        if (!args[i].isNumber() || !args[i + 1].isNumber()) {
+            throw InterpreterError("Cannot compare non-numeric values with <=");
+        }
+
+        auto ordering = args[i].asNumber() <=> args[i + 1].asNumber();
+        if (ordering == std::partial_ordering::unordered) {
+            throw InterpreterError("Cannot compare these numeric types with <=");
+        }
+        if (ordering == std::partial_ordering::greater) {
+            return SchemeValue(false);
+        }
+    }
+    return SchemeValue(true);
+}
+
+std::optional<SchemeValue> Interpreter::greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 2) {
+        throw InterpreterError("'>=' requires at least 2 arguments");
+    }
+
+    for (size_t i = 0; i < args.size() - 1; i++) {
+        if (!args[i].isNumber() || !args[i + 1].isNumber()) {
+            throw InterpreterError("Cannot compare non-numeric values with >=");
+        }
+
+        auto ordering = args[i].asNumber() <=> args[i + 1].asNumber();
+        if (ordering == std::partial_ordering::unordered) {
+            throw InterpreterError("Cannot compare these numeric types with >=");
+        }
+        if (ordering == std::partial_ordering::less) {
+            return SchemeValue(false);
+        }
+    }
+    return SchemeValue(true);
+}
 
 std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
 {

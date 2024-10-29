@@ -32,6 +32,14 @@ bool SchemeValue::isNumber() const
 {
     return std::holds_alternative<Number>(value);
 }
+
+Number SchemeValue::asNumber() const
+{
+    if (!std::holds_alternative<Number>(value)) {
+        throw std::runtime_error("Value is not Number");
+    }
+    return std::get<Number>(value);
+}
 bool SchemeValue::isList() const
 {
     return std::holds_alternative<std::list<SchemeValue>>(value);

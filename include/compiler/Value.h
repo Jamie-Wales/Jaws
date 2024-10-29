@@ -39,6 +39,7 @@ public:
 
     bool isPort() const;
     bool isNumber() const;
+    Number asNumber() const;
     bool isSymbol() const;
     bool isProc() const;
     bool isList() const;

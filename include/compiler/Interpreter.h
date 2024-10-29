@@ -29,6 +29,8 @@ private:
     static std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
 
     /* ----- List procedures ----- */

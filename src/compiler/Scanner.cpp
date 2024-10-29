@@ -14,7 +14,7 @@ const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"([+-]?\d+/\d+)"), Tokentype::RATIONAL },
     { std::regex(R"([+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?)"), Tokentype::FLOAT },
     { std::regex(R"([+-]?\d+)"), Tokentype::INTEGER },
-    { std::regex(R"([\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
+    { std::regex(R"(<=|>=|[\+\-\*/=<>][\+\-\*/=<>]*)"), Tokentype::SYMBOL },
     { std::regex(R"(#t|#true)"), Tokentype::TRUE },
     { std::regex(R"(#f|#false)"), Tokentype::FALSE },
     { std::regex(R"([a-zA-Z_][a-zA-Z0-9_+\-?!]*)"), Tokentype::IDENTIFIER },
@@ -24,6 +24,7 @@ const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(\))"), Tokentype::RIGHT_PAREN },
     { std::regex(R"(\#)"), Tokentype::HASH }
 };
+
 std::vector<Token> Scanner::tokenize(const std::string& input)
 {
     this->input = input;
