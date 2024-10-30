@@ -34,6 +34,8 @@ private:
     static std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
 
     /* ----- List procedures ----- */
+
+    static std::optional<SchemeValue> map(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> carProcudure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args);

@@ -15,7 +15,7 @@ Interpreter::Interpreter()
     environment["<"] = SchemeValue(std::make_shared<BuiltInProcedure>(less));
     environment[">"] = SchemeValue(std::make_shared<BuiltInProcedure>(greater));
     environment["help"] = SchemeValue(std::make_shared<BuiltInProcedure>(printHelp));
-
+    environment["map"] = SchemeValue(std::make_shared<BuiltInProcedure>(map));
     auto eq
         = std::make_shared<BuiltInProcedure>(equal);
     environment["="] = SchemeValue(eq);

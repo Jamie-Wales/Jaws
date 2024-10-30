@@ -42,6 +42,7 @@ public:
     Number asNumber() const;
     bool isSymbol() const;
     bool isProc() const;
+    std::shared_ptr<Procedure> asProc() const;
     bool isList() const;
     const std::list<SchemeValue>& asList() const;
     std::list<SchemeValue>& asList();

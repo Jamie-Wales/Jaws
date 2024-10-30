@@ -40,6 +40,15 @@ Number SchemeValue::asNumber() const
     }
     return std::get<Number>(value);
 }
+
+std::shared_ptr<Procedure> SchemeValue::asProc() const
+{
+    if (!isProc()) {
+        throw std::runtime_error("Value is not procedure");
+    }
+    return std::get<std::shared_ptr<Procedure>>(value);
+}
+
 bool SchemeValue::isList() const
 {
     return std::holds_alternative<std::list<SchemeValue>>(value);
