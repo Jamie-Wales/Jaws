@@ -12,6 +12,7 @@
 
 class Procedure;
 class Interpreter;
+class Expression;
 
 struct Symbol {
     std::string name;
@@ -32,8 +33,30 @@ public:
         std::list<SchemeValue>,
         std::vector<SchemeValue>,
         std::shared_ptr<Procedure>,
-        Port>;
+        Port,
+        std::shared_ptr<Expression>>;
+    SchemeValue(SchemeValue&& other) noexcept
+        : value(std::move(other.value))
+    {
+    }
 
+    SchemeValue& operator=(SchemeValue&& other) noexcept
+    {
+        value = std::move(other.value);
+        return *this;
+    }
+    SchemeValue(const SchemeValue& other)
+        : value(other.value)
+    {
+    }
+
+    SchemeValue& operator=(const SchemeValue& other)
+    {
+        if (this != &other) {
+            value = other.value;
+        }
+        return *this;
+    }
     SchemeValue();
     explicit SchemeValue(Value v);
 
@@ -89,3 +112,5 @@ public:
         }
     }
 };
+
+SchemeValue expressionToValue(const Expression& expr);

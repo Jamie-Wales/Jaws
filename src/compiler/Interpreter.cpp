@@ -1,6 +1,7 @@
 #include "Interpreter.h"
 #include "Error.h"
 #include "Procedure.h"
+#include <memory>
 #include <optional>
 #include <variant>
 
@@ -28,7 +29,7 @@ Interpreter::Interpreter()
     environment["write"] = SchemeValue(std::make_shared<BuiltInProcedure>(write));
     environment["display"] = SchemeValue(std::make_shared<BuiltInProcedure>(display));
     environment["newline"] = SchemeValue(std::make_shared<BuiltInProcedure>(newline));
-
+    environment["eval"] = SchemeValue(std::make_shared<BuiltInProcedure>(eval));
     environment["list"] = SchemeValue(std::make_shared<BuiltInProcedure>(listProcedure));
     environment["car"] = SchemeValue(std::make_shared<BuiltInProcedure>(carProcudure));
     environment["cdr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cdrProcedure));
@@ -39,13 +40,16 @@ Interpreter::Interpreter()
     environment["revrse"] = SchemeValue(std::make_shared<BuiltInProcedure>(reverse));
     environment["list-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(listRef));
     environment["list-tail"] = SchemeValue(std::make_shared<BuiltInProcedure>(listTail));
-
-    // Vector operations
     environment["make-vector"] = SchemeValue(std::make_shared<BuiltInProcedure>(makeVector));
     environment["vector"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorProcedure));
     environment["vector-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorRef));
     environment["vector-set!"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorSet));
     environment["vector-length"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorLength));
+}
+
+std::optional<SchemeValue> Interpreter::interpretQuoteExpression(const QuoteExpression& qe, const Expression& e)
+{
+    return SchemeValue(qe.expression);
 }
 
 std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom, const Expression& expr)
@@ -154,7 +158,7 @@ std::optional<SchemeValue> Interpreter::defineProcedure(DefineProcedure& dp, con
     environment[dp.name.lexeme] = SchemeValue(std::move(proc));
     return std::nullopt;
 }
-void Interpreter::run(const std::vector<std::unique_ptr<Expression>>& expressions)
+void Interpreter::run(const std::vector<std::shared_ptr<Expression>>& expressions)
 {
     for (const auto& expr : expressions) {
         try {
@@ -189,7 +193,7 @@ std::optional<SchemeValue> Interpreter::ifExpression(const IfExpression& i, cons
     }
     return std::nullopt;
 }
-std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expression>& e)
+std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expression>& e)
 {
     return std::visit(overloaded {
                           [this, &e](const AtomExpression& a) -> std::optional<SchemeValue> { return interpretAtom(a, *e); },
@@ -200,6 +204,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::unique_ptr<Expressi
                           [this, &e](DefineProcedure& dp) -> std::optional<SchemeValue> { return defineProcedure(dp, *e); },
                           [this, &e](LambdaExpression& l) -> std::optional<SchemeValue> { return lambda(l, *e); },
                           [this, &e](IfExpression& i) -> std::optional<SchemeValue> { return ifExpression(i, *e); },
+                          [this, &e](QuoteExpression& q) -> std::optional<SchemeValue> { return interpretQuoteExpression(q, *e); },
                           [&e](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type", *e);
                           } },

@@ -8,6 +8,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+
 class Expression;
 
 class AtomExpression {
@@ -21,8 +22,8 @@ public:
 
 class ListExpression {
 public:
-    std::vector<std::unique_ptr<Expression>> elements;
-    ListExpression(std::vector<std::unique_ptr<Expression>> elems)
+    std::vector<std::shared_ptr<Expression>> elements;
+    ListExpression(std::vector<std::shared_ptr<Expression>> elems)
         : elements(std::move(elems))
     {
     }
@@ -31,8 +32,8 @@ public:
 class LambdaExpression {
 public:
     std::vector<Token> parameters;
-    std::unique_ptr<Expression> body;
-    LambdaExpression(std::vector<Token> parameters, std::unique_ptr<Expression> body)
+    std::shared_ptr<Expression> body;
+    LambdaExpression(std::vector<Token> parameters, std::shared_ptr<Expression> body)
         : parameters(std::move(parameters))
         , body(std::move(body))
     {
@@ -41,8 +42,8 @@ public:
 
 class sExpression {
 public:
-    std::vector<std::unique_ptr<Expression>> elements;
-    sExpression(std::vector<std::unique_ptr<Expression>> elems)
+    std::vector<std::shared_ptr<Expression>> elements;
+    sExpression(std::vector<std::shared_ptr<Expression>> elems)
         : elements(std::move(elems))
     {
     }
@@ -51,8 +52,8 @@ public:
 class DefineExpression {
 public:
     Token name;
-    std::unique_ptr<Expression> value;
-    DefineExpression(Token n, std::unique_ptr<Expression> v)
+    std::shared_ptr<Expression> value;
+    DefineExpression(Token n, std::shared_ptr<Expression> v)
         : name(std::move(n))
         , value(std::move(v))
     {
@@ -63,20 +64,28 @@ class DefineProcedure {
 public:
     Token name;
     std::vector<Token> parameters;
-    std::unique_ptr<Expression> body;
-
-    DefineProcedure(Token name, std::vector<Token> parameters, std::unique_ptr<Expression> body)
-        : name(name)
+    std::shared_ptr<Expression> body;
+    DefineProcedure(Token name, std::vector<Token> parameters, std::shared_ptr<Expression> body)
+        : name(std::move(name))
         , parameters(std::move(parameters))
         , body(std::move(body))
     {
     }
 };
 
+class QuoteExpression {
+public:
+    std::shared_ptr<Expression> expression;
+    QuoteExpression(std::shared_ptr<Expression> expression)
+        : expression(std::move(expression))
+    {
+    }
+};
+
 class VectorExpression {
 public:
-    std::vector<std::unique_ptr<Expression>> elements;
-    VectorExpression(std::vector<std::unique_ptr<Expression>> elems)
+    std::vector<std::shared_ptr<Expression>> elements;
+    VectorExpression(std::vector<std::shared_ptr<Expression>> elems)
         : elements(std::move(elems))
     {
     }
@@ -84,10 +93,10 @@ public:
 
 class IfExpression {
 public:
-    std::unique_ptr<Expression> condition;
-    std::unique_ptr<Expression> then;
-    std::optional<std::unique_ptr<Expression>> el;
-    IfExpression(std::unique_ptr<Expression> condition, std::unique_ptr<Expression> then, std::optional<std::unique_ptr<Expression>> el)
+    std::shared_ptr<Expression> condition;
+    std::shared_ptr<Expression> then;
+    std::optional<std::shared_ptr<Expression>> el;
+    IfExpression(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> then, std::optional<std::shared_ptr<Expression>> el)
         : condition(std::move(condition))
         , then(std::move(then))
         , el(std::move(el))
@@ -97,9 +106,32 @@ public:
 
 class Expression {
 public:
-    std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression, IfExpression> as;
+    std::variant<
+        AtomExpression,
+        sExpression,
+        ListExpression,
+        DefineExpression,
+        DefineProcedure,
+        VectorExpression,
+        LambdaExpression,
+        IfExpression,
+        QuoteExpression>
+        as;
     int line;
-    Expression(std::variant<AtomExpression, sExpression, ListExpression, DefineExpression, DefineProcedure, VectorExpression, LambdaExpression, IfExpression> as, int line)
+
+    Expression(
+        std::variant<
+            AtomExpression,
+            sExpression,
+            ListExpression,
+            DefineExpression,
+            DefineProcedure,
+            VectorExpression,
+            LambdaExpression,
+            IfExpression,
+            QuoteExpression>
+            as,
+        int line)
         : as(std::move(as))
         , line(line)
     {
@@ -119,15 +151,14 @@ public:
                            }
                            std::cout << indentation << ")" << std::endl;
                        },
-
                        [&](const IfExpression& i) {
-                           std::cout << indentation << "(if";
-                           i.condition->print();
-                           std::cout << "then" << std::endl;
-                           i.then->print();
+                           std::cout << indentation << "(if" << std::endl;
+                           i.condition->print(indent + 1);
+                           std::cout << indentation << "then" << std::endl;
+                           i.then->print(indent + 1);
                            if (i.el) {
-                               std::cout << "else" << std::endl;
-                               (*i.el)->print();
+                               std::cout << indentation << "else" << std::endl;
+                               (*i.el)->print(indent + 1);
                            }
                            std::cout << indentation << ")" << std::endl;
                        },
@@ -145,83 +176,88 @@ public:
                            }
                            std::cout << indentation << ")" << std::endl;
                        },
+                       [&](const QuoteExpression& e) {
+                           std::cout << indentation << "(quote " << std::endl;
+                           e.expression->print(indent + 1);
+                           std::cout << indentation << ")" << std::endl;
+                       },
                        [&](const DefineExpression& d) {
                            std::cout << indentation << std::format("(define {}", d.name.lexeme) << std::endl;
                            d.value->print(indent + 1);
                            std::cout << indentation << ")" << std::endl;
                        },
-
                        [&](const DefineProcedure& d) {
                            std::cout << indentation << std::format("(define {}", d.name.lexeme) << std::endl;
                            d.body->print(indent + 1);
                            std::cout << indentation << ")" << std::endl;
                        },
-
                        [&](const LambdaExpression& l) {
                            std::cout << indentation << "(lambda " << std::endl;
-                           l.body->print();
+                           l.body->print(indent + 1);
                            std::cout << indentation << ")" << std::endl;
                        },
                    },
             as);
     }
-    std::unique_ptr<Expression> clone() const
+
+    std::shared_ptr<Expression> clone() const
     {
         return std::visit(overloaded {
-                              [&](const AtomExpression& e) -> std::unique_ptr<Expression> {
-                                  return std::make_unique<Expression>(AtomExpression { e.value }, line);
+                              [&](const AtomExpression& e) -> std::shared_ptr<Expression> {
+                                  return std::make_shared<Expression>(AtomExpression { e.value }, line);
                               },
-                              [&](const ListExpression& e) -> std::unique_ptr<Expression> {
-                                  std::vector<std::unique_ptr<Expression>> clonedElements;
+                              [&](const ListExpression& e) -> std::shared_ptr<Expression> {
+                                  std::vector<std::shared_ptr<Expression>> clonedElements;
                                   clonedElements.reserve(e.elements.size());
                                   for (const auto& elem : e.elements) {
                                       clonedElements.push_back(elem->clone());
                                   }
-                                  return std::make_unique<Expression>(ListExpression { std::move(clonedElements) }, line);
+                                  return std::make_shared<Expression>(ListExpression { std::move(clonedElements) }, line);
                               },
-
-                              [&](const VectorExpression& e) -> std::unique_ptr<Expression> {
-                                  std::vector<std::unique_ptr<Expression>> clonedElements;
+                              [&](const QuoteExpression& e) -> std::shared_ptr<Expression> {
+                                  return std::make_shared<Expression>(QuoteExpression { e.expression->clone() }, line);
+                              },
+                              [&](const VectorExpression& e) -> std::shared_ptr<Expression> {
+                                  std::vector<std::shared_ptr<Expression>> clonedElements;
                                   clonedElements.reserve(e.elements.size());
                                   for (const auto& elem : e.elements) {
                                       clonedElements.push_back(elem->clone());
                                   }
-                                  return std::make_unique<Expression>(VectorExpression { std::move(clonedElements) }, line);
+                                  return std::make_shared<Expression>(VectorExpression { std::move(clonedElements) }, line);
                               },
-                              [&](const sExpression& e) -> std::unique_ptr<Expression> {
-                                  std::vector<std::unique_ptr<Expression>> clonedElements;
+                              [&](const sExpression& e) -> std::shared_ptr<Expression> {
+                                  std::vector<std::shared_ptr<Expression>> clonedElements;
                                   clonedElements.reserve(e.elements.size());
                                   for (const auto& elem : e.elements) {
                                       clonedElements.push_back(elem->clone());
                                   }
-                                  return std::make_unique<Expression>(sExpression { std::move(clonedElements) }, line);
+                                  return std::make_shared<Expression>(sExpression { std::move(clonedElements) }, line);
                               },
-                              [&](const DefineExpression& e) -> std::unique_ptr<Expression> {
-                                  return std::make_unique<Expression>(
+                              [&](const DefineExpression& e) -> std::shared_ptr<Expression> {
+                                  return std::make_shared<Expression>(
                                       DefineExpression { e.name, e.value->clone() },
                                       line);
                               },
-                              [&](const DefineProcedure& e) -> std::unique_ptr<Expression> {
-                                  return std::make_unique<Expression>(
+                              [&](const DefineProcedure& e) -> std::shared_ptr<Expression> {
+                                  return std::make_shared<Expression>(
                                       DefineProcedure { e.name, e.parameters, e.body->clone() },
                                       line);
                               },
-                              [&](const LambdaExpression& l) -> std::unique_ptr<Expression> {
-                                  return std::make_unique<Expression>(
+                              [&](const LambdaExpression& l) -> std::shared_ptr<Expression> {
+                                  return std::make_shared<Expression>(
                                       LambdaExpression { l.parameters, l.body->clone() },
                                       line);
                               },
-
-                              [&](const IfExpression& i) -> std::unique_ptr<Expression> {
+                              [&](const IfExpression& i) -> std::shared_ptr<Expression> {
                                   if (i.el) {
-                                      return std::make_unique<Expression>(
+                                      return std::make_shared<Expression>(
                                           IfExpression {
                                               i.condition->clone(),
                                               i.then->clone(),
                                               (*i.el)->clone() },
                                           line);
                                   } else {
-                                      return std::make_unique<Expression>(
+                                      return std::make_shared<Expression>(
                                           IfExpression {
                                               i.condition->clone(),
                                               i.then->clone(),
@@ -230,5 +266,5 @@ public:
                                   }
                               } },
             as);
-    };
+    }
 };

@@ -18,6 +18,7 @@ private:
     std::optional<SchemeValue> defineProcedure(DefineProcedure& dp, const Expression& e);
     std::optional<SchemeValue> interpretVector(const VectorExpression& v, const Expression& e);
     std::optional<SchemeValue> ifExpression(const IfExpression& i, const Expression& e);
+    std::optional<SchemeValue> interpretQuoteExpression(const QuoteExpression& qe, const Expression& e);
 
     /* ----- Maths procedures ----- */
     static std::optional<SchemeValue> plus(Interpreter&, const std::vector<SchemeValue>& args);
@@ -34,7 +35,6 @@ private:
     static std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
 
     /* ----- List procedures ----- */
-
     static std::optional<SchemeValue> map(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> carProcudure(Interpreter&, const std::vector<SchemeValue>& args);
@@ -47,6 +47,7 @@ private:
     static std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>& args);
+
     /* ----- File i/o ----- */
     static std::optional<SchemeValue> read(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> write(Interpreter&, const std::vector<SchemeValue>& args);
@@ -55,7 +56,11 @@ private:
     static std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> openOutputFile(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> closePort(Interpreter&, const std::vector<SchemeValue>& args);
+
     /* Vector procedures */
+
+    static std::optional<SchemeValue> eval(Interpreter& interp, const std::vector<SchemeValue>& args);
+    static std::optional<SchemeValue> quote(Interpreter& interp, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args);
@@ -67,8 +72,8 @@ public:
     Interpreter();
     std::stringstream outputStream;
 
-    void run(const std::vector<std::unique_ptr<Expression>>& expressions);
+    void run(const std::vector<std::shared_ptr<Expression>>& expressions);
     std::unordered_map<std::string, std::optional<SchemeValue>> environment;
-    std::optional<SchemeValue> interpret(const std::unique_ptr<Expression>& e);
+    std::optional<SchemeValue> interpret(const std::shared_ptr<Expression>& e);
     std::optional<SchemeValue> lookupVariable(const std::string& name) const;
 };

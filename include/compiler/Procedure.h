@@ -38,7 +38,7 @@ private:
 
 class UserProcedure : public Procedure {
 public:
-    UserProcedure(std::vector<Token> params, std::unique_ptr<Expression> bodyExpr)
+    UserProcedure(std::vector<Token> params, std::shared_ptr<Expression> bodyExpr)
         : paramNames(std::move(params))
         , body(std::move(bodyExpr))
     {
@@ -48,5 +48,5 @@ public:
 
 private:
     std::vector<Token> paramNames;
-    std::unique_ptr<Expression> body;
+    std::shared_ptr<Expression> body;
 };

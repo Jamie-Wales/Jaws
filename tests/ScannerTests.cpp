@@ -58,7 +58,7 @@ TEST(ScannerTest, TokenizesSymbolsAndOperators)
     auto tokens = scanner.tokenize(input);
     EXPECT_EQ(tokens[0].type, Tokentype::LEFT_PAREN);
     EXPECT_EQ(tokens[0].lexeme, "(");
-    EXPECT_EQ(tokens[1].type, Tokentype::SYMBOL);
+    EXPECT_EQ(tokens[1].type, Tokentype::IDENTIFIER);
     EXPECT_EQ(tokens[1].lexeme, "+");
     EXPECT_EQ(tokens[2].type, Tokentype::INTEGER);
     EXPECT_EQ(tokens[2].lexeme, "1");
@@ -67,7 +67,6 @@ TEST(ScannerTest, TokenizesSymbolsAndOperators)
     EXPECT_EQ(tokens[4].type, Tokentype::RIGHT_PAREN);
     EXPECT_EQ(tokens[4].lexeme, ")");
 }
-
 TEST(ScannerTest, TokenizesStrings)
 {
     Scanner scanner;
@@ -91,7 +90,7 @@ TEST(ScannerTest, TokenizesBooleans)
 TEST(ScannerTest, HandlesUnknownCharacters)
 {
     Scanner scanner;
-    std::string input = "@";
+    std::string input = "\\";
     try {
         auto tokens = scanner.tokenize(input);
         FAIL() << "Expected ParseError";

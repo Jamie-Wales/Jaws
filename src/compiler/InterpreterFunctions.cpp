@@ -1,7 +1,9 @@
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
+#include "Parser.h"
 #include "Port.h"
+#include "Scanner.h"
 #include <optional>
 
 std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
@@ -24,6 +26,35 @@ std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vec
         }
     }
     return SchemeValue(true);
+}
+std::optional<SchemeValue> Interpreter::eval(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("Eval expects one argument");
+    }
+    auto ele = args[0].toString();
+    Scanner scanner = {};
+    Parser p = {};
+    p.load(scanner.tokenize(ele));
+    auto opt = p.parse();
+    if (opt) {
+        auto expr = std::move((*opt));
+        auto val = std::visit(
+            overloaded {
+                [&interp](QuoteExpression& expr) {
+                    return interp.interpret(expr.expression);
+                },
+                [&interp](auto& expr) -> std::optional<SchemeValue> {
+                    return std::nullopt;
+                } },
+            expr[0]->as);
+        if (val) {
+            return *val;
+        } else {
+            return interp.interpret(expr[0]);
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<SchemeValue> Interpreter::greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
@@ -254,7 +285,16 @@ std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vec
     if (!std::getline(*input, line)) {
         throw InterpreterError("READ: End of file or error");
     }
-    return SchemeValue(line);
+    Scanner scan = {};
+    auto tokens = scan.tokenize(line);
+    Parser p = {};
+    p.load(tokens);
+    auto opt = p.parse();
+    if (opt) {
+        auto ele = (*opt)[0];
+        return SchemeValue(ele);
+    }
+    return std::nullopt;
 }
 
 std::optional<SchemeValue> Interpreter::write(Interpreter&, const std::vector<SchemeValue>& args)

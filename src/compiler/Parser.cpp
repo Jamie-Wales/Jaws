@@ -14,15 +14,14 @@ void Parser::load(const std::vector<Token>& t)
     panicMode = false;
 }
 
-std::optional<std::vector<std::unique_ptr<Expression>>> Parser::parse()
+std::optional<std::vector<std::shared_ptr<Expression>>> Parser::parse()
 {
-
-    auto output = std::vector<std::unique_ptr<Expression>> {};
+    auto output = std::vector<std::shared_ptr<Expression>> {};
     try {
         while (!isAtEnd()) {
             auto expr = expression();
             if (expr) {
-                output.emplace_back(std::move(expr));
+                output.push_back(expr);
             }
         }
         return output;
@@ -32,16 +31,15 @@ std::optional<std::vector<std::unique_ptr<Expression>>> Parser::parse()
     }
 }
 
-std::unique_ptr<Expression> Parser::vector()
+std::shared_ptr<Expression> Parser::vector()
 {
     if (match(Tokentype::LEFT_PAREN)) {
-
-        std::vector<std::unique_ptr<Expression>> elements;
+        std::vector<std::shared_ptr<Expression>> elements;
         while (!match(Tokentype::RIGHT_PAREN)) {
             elements.push_back(expression());
         }
 
-        return std::make_unique<Expression>(Expression {
+        return std::make_shared<Expression>(Expression {
             VectorExpression { std::move(elements) },
             previousToken().line });
     }
@@ -49,25 +47,25 @@ std::unique_ptr<Expression> Parser::vector()
     throw ParseError("Expect list when defining vector", previousToken(), scanner->getLine(previousToken().line));
 }
 
-std::unique_ptr<Expression> Parser::ifExpression()
+std::shared_ptr<Expression> Parser::ifExpression()
 {
     auto condition = expression();
     auto then = expression();
-    std::optional<std::unique_ptr<Expression>> elseExpr = std::nullopt;
+    std::optional<std::shared_ptr<Expression>> elseExpr = std::nullopt;
     if (!check(Tokentype::RIGHT_PAREN)) {
-        elseExpr = std::make_optional(expression());
+        elseExpr = expression();
     }
     consume(Tokentype::RIGHT_PAREN, "Expect ')' at end of if expression");
 
-    return std::make_unique<Expression>(Expression {
+    return std::make_shared<Expression>(Expression {
         IfExpression {
-            std::move(condition),
-            std::move(then),
-            std::move(elseExpr) },
+            condition,
+            then,
+            elseExpr },
         previousToken().line });
 }
 
-std::unique_ptr<Expression> Parser::expression()
+std::shared_ptr<Expression> Parser::expression()
 {
     if (match(Tokentype::LEFT_PAREN)) {
         if (match(Tokentype::DEFINE)) {
@@ -76,37 +74,38 @@ std::unique_ptr<Expression> Parser::expression()
             return lambda();
         } else if (match(Tokentype::IF)) {
             return ifExpression();
+        } else if (match(Tokentype::QUOTE)) {
+            auto qexpr = quoteExpression();
+            consume(Tokentype::RIGHT_PAREN, "(quote expects ')' at end of expression)");
+            return qexpr;
         } else {
             return sexpression();
         }
     } else if (match(Tokentype::QUOTE)) {
-        if (match(Tokentype::HASH)) {
-            return vector();
-        }
-        return list();
+        return quoteExpression();
     } else if (match(Tokentype::HASH)) {
         return vector();
     } else {
         return atom();
     }
 }
-std::unique_ptr<Expression> Parser::list()
+
+std::shared_ptr<Expression> Parser::list()
 {
-    std::vector<std::unique_ptr<Expression>> output = {};
+    std::vector<std::shared_ptr<Expression>> output;
     if (match(Tokentype::LEFT_PAREN)) {
         while (!match(Tokentype::RIGHT_PAREN)) {
-            auto expr = expression();
-            output.emplace_back(std::move(expr));
+            output.push_back(expression());
         }
     }
 
-    return std::make_unique<Expression>(Expression {
+    return std::make_shared<Expression>(Expression {
         ListExpression {
             std::move(output) },
         previousToken().line });
 }
 
-std::unique_ptr<Expression> Parser::defineExpression()
+std::shared_ptr<Expression> Parser::defineExpression()
 {
     if (match(Tokentype::LEFT_PAREN)) {
         Token name = consume(Tokentype::IDENTIFIER, "Expect function name");
@@ -118,25 +117,25 @@ std::unique_ptr<Expression> Parser::defineExpression()
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
         auto body = expression();
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after function definition");
-        return std::make_unique<Expression>(Expression {
+        return std::make_shared<Expression>(Expression {
             DefineProcedure {
                 name,
                 std::move(parameters),
-                std::move(body) },
+                body },
             name.line });
     } else {
         Token name = consume(Tokentype::IDENTIFIER, "Expect variable name");
-        auto value = expression(); // This should handle the lambda expression
+        auto value = expression();
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after variable definition");
-        return std::make_unique<Expression>(Expression {
+        return std::make_shared<Expression>(Expression {
             DefineExpression {
                 name,
-                std::move(value) },
+                value },
             name.line });
     }
 }
 
-std::unique_ptr<Expression> Parser::lambda()
+std::shared_ptr<Expression> Parser::lambda()
 {
     std::vector<Token> parameters;
     consume(Tokentype::LEFT_PAREN, "Lambda expects a parameter list");
@@ -147,17 +146,17 @@ std::unique_ptr<Expression> Parser::lambda()
     consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
     auto body = expression();
     consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda definition");
-    return std::make_unique<Expression>(Expression {
+    return std::make_shared<Expression>(Expression {
         LambdaExpression {
             std::move(parameters),
-            std::move(body) },
+            body },
         previousToken().line });
 }
-std::unique_ptr<Expression> Parser::atom()
+
+std::shared_ptr<Expression> Parser::atom()
 {
     Token token = advance();
     switch (token.type) {
-    case Tokentype::SYMBOL:
     case Tokentype::IDENTIFIER:
     case Tokentype::INTEGER:
     case Tokentype::FLOAT:
@@ -168,22 +167,28 @@ std::unique_ptr<Expression> Parser::atom()
     case Tokentype::FALSE:
     case Tokentype::LAMBDA:
     case Tokentype::IF:
-        return std::make_unique<Expression>(Expression { AtomExpression { token }, token.line });
+        return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });
     default:
         throw ParseError("Unexpected token in atom ", token, scanner->getLine(token.line));
     }
 }
 
-std::unique_ptr<Expression> Parser::sexpression()
+std::shared_ptr<Expression> Parser::sexpression()
 {
-    std::vector<std::unique_ptr<Expression>> elements;
+    std::vector<std::shared_ptr<Expression>> elements;
     elements.push_back(expression());
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         elements.push_back(expression());
     }
     Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after s-expression.");
-    return std::make_unique<Expression>(Expression { sExpression { std::move(elements) }, rightParen.line });
+    return std::make_shared<Expression>(Expression { sExpression { std::move(elements) }, rightParen.line });
 }
+
+std::shared_ptr<Expression> Parser::quoteExpression()
+{
+    return std::make_shared<Expression>(Expression { QuoteExpression { expression() }, previousToken().line });
+}
+
 Token Parser::advance()
 {
     if (!isAtEnd())

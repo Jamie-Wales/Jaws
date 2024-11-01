@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Expression.h"
 #include "Scanner.h"
 #include "Token.h"
@@ -14,13 +13,16 @@ private:
     size_t current = 0;
     bool panicMode = false;
 
-    std::unique_ptr<Expression> expression();
-    std::unique_ptr<Expression> atom();
-    std::unique_ptr<Expression> sexpression();
-    std::unique_ptr<Expression> list();
-    std::unique_ptr<Expression> vector();
-    std::unique_ptr<Expression> lambda();
-    std::unique_ptr<Expression> ifExpression();
+    std::shared_ptr<Expression> expression();
+    std::shared_ptr<Expression> atom();
+    std::shared_ptr<Expression> quoteExpression();
+    std::shared_ptr<Expression> sexpression();
+    std::shared_ptr<Expression> list();
+    std::shared_ptr<Expression> vector();
+    std::shared_ptr<Expression> lambda();
+    std::shared_ptr<Expression> ifExpression();
+    std::shared_ptr<Expression> defineExpression();
+
     Token advance();
     bool isAtEnd() const;
     Token peek() const;
@@ -30,11 +32,10 @@ private:
     bool match(Tokentype type);
     void error(const std::string& message);
     void errorAt(const Token& token, const std::string& message);
-    std::unique_ptr<Expression> defineExpression();
 
 public:
     Parser() = default;
     void load(const std::vector<Token>& t);
-    std::optional<std::vector<std::unique_ptr<Expression>>> parse();
+    std::optional<std::vector<std::shared_ptr<Expression>>> parse();
     void initialize(std::shared_ptr<Scanner> s);
 };

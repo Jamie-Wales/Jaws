@@ -12,15 +12,15 @@ public:
         Rational(int n, int d);
         void simplify();
     };
-    
+
     using ComplexType = std::complex<double>;
     std::variant<int, Rational, double, ComplexType> value;
-    
+
     Number(int i);
     Number(double d);
     Number(const Rational& r);
     Number(const ComplexType& c);
-    
+
     bool isNumber() const;
     bool isZero() const;
     bool isComplex() const;
@@ -30,18 +30,14 @@ public:
     bool isExact() const;
     bool isInexact() const;
     bool isFloat() const;
-    
     double asFloat() const;
     bool asBoolean() const;
     Rational asRational() const;
     ComplexType asComplex() const;
     int toInt() const;
     int asInteger() const;
-    
     bool isEqv(const Number& other) const;
-    
     std::string toString() const;
-    
     Number operator+(const Number& other) const;
     Number operator-(const Number& other) const;
     Number operator-() const;
