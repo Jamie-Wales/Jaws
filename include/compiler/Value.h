@@ -65,6 +65,8 @@ public:
     Number asNumber() const;
     bool isSymbol() const;
     bool isProc() const;
+    bool isExpr() const;
+    std::shared_ptr<Expression> asExpr() const;
     std::shared_ptr<Procedure> asProc() const;
     bool isList() const;
     const std::list<SchemeValue>& asList() const;

@@ -5,7 +5,6 @@ project(jaws_wasm)
 set(CMAKE_TOOLCHAIN_FILE $ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 file(GLOB SOURCES
     "../src/compiler/*.cpp"
 )
@@ -15,6 +14,7 @@ list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/JawsWrapper.cpp")
 add_executable(jaws_wasm ${SOURCES})
 
 target_compile_definitions(jaws_wasm PRIVATE WASM_BUILD)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set_target_properties(jaws_wasm PROPERTIES
     LINK_FLAGS "-s WASM=1 \

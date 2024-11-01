@@ -179,6 +179,11 @@ bool SchemeValue::isProc() const
     return std::holds_alternative<std::shared_ptr<Procedure>>(value);
 }
 
+bool SchemeValue::isExpr() const
+{
+    return std::holds_alternative<std::shared_ptr<Expression>>(value);
+}
+
 bool SchemeValue::isSymbol() const
 {
     return std::holds_alternative<Symbol>(value);
@@ -203,6 +208,14 @@ std::shared_ptr<Procedure> SchemeValue::asProc() const
         throw std::runtime_error("Value is not procedure");
     }
     return std::get<std::shared_ptr<Procedure>>(value);
+}
+
+std::shared_ptr<Expression> SchemeValue::asExpr() const
+{
+    if (!isExpr()) {
+        throw std::runtime_error("Value is not procedure");
+    }
+    return std::get<std::shared_ptr<Expression>>(value);
 }
 
 bool SchemeValue::isList() const

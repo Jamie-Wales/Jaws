@@ -5,6 +5,7 @@
 #include "Port.h"
 #include "Scanner.h"
 #include <optional>
+#include <stdexcept>
 
 std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
 {
@@ -13,11 +14,18 @@ std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vec
     }
 
     for (size_t i = 0; i < args.size() - 1; i++) {
-        if (!args[i].isNumber() || !args[i + 1].isNumber()) {
+        SchemeValue curr = args[i], next = args[i + 1];
+
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        if (next.isExpr())
+            next = expressionToValue(*next.asExpr());
+
+        if (!curr.isNumber() || !next.isNumber()) {
             throw InterpreterError("Cannot compare non-numeric values with <=");
         }
 
-        auto ordering = args[i].asNumber() <=> args[i + 1].asNumber();
+        auto ordering = curr.asNumber() <=> next.asNumber();
         if (ordering == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these numeric types with <=");
         }
@@ -27,34 +35,18 @@ std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vec
     }
     return SchemeValue(true);
 }
+
 std::optional<SchemeValue> Interpreter::eval(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("Eval expects one argument");
     }
-    auto ele = args[0].toString();
-    Scanner scanner = {};
-    Parser p = {};
-    p.load(scanner.tokenize(ele));
-    auto opt = p.parse();
-    if (opt) {
-        auto expr = std::move((*opt));
-        auto val = std::visit(
-            overloaded {
-                [&interp](QuoteExpression& expr) {
-                    return interp.interpret(expr.expression);
-                },
-                [&interp](auto& expr) -> std::optional<SchemeValue> {
-                    return std::nullopt;
-                } },
-            expr[0]->as);
-        if (val) {
-            return *val;
-        } else {
-            return interp.interpret(expr[0]);
-        }
+    SchemeValue arg = args[0];
+    if (arg.isExpr()) {
+        return interp.interpret(arg.asExpr());
     }
-    return std::nullopt;
+
+    return arg;
 }
 
 std::optional<SchemeValue> Interpreter::greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
@@ -64,11 +56,18 @@ std::optional<SchemeValue> Interpreter::greaterOrEqual(Interpreter&, const std::
     }
 
     for (size_t i = 0; i < args.size() - 1; i++) {
-        if (!args[i].isNumber() || !args[i + 1].isNumber()) {
+        SchemeValue curr = args[i], next = args[i + 1];
+
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        if (next.isExpr())
+            next = expressionToValue(*next.asExpr());
+
+        if (!curr.isNumber() || !next.isNumber()) {
             throw InterpreterError("Cannot compare non-numeric values with >=");
         }
 
-        auto ordering = args[i].asNumber() <=> args[i + 1].asNumber();
+        auto ordering = curr.asNumber() <=> next.asNumber();
         if (ordering == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these numeric types with >=");
         }
@@ -84,8 +83,14 @@ std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<Sch
     if (args.empty())
         return SchemeValue(Number(0));
     SchemeValue result = args[0];
+    if (result.isExpr())
+        result = expressionToValue(*result.asExpr());
+
     for (size_t i = 1; i < args.size(); ++i) {
-        result = result + args[i];
+        SchemeValue curr = args[i];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        result = result + curr;
     }
     return result;
 }
@@ -94,11 +99,23 @@ std::optional<SchemeValue> Interpreter::minus(Interpreter&, const std::vector<Sc
 {
     if (args.empty())
         throw InterpreterError("Cannot call procedure - on empty list", std::nullopt);
-    if (args.size() == 1)
-        return -args[0];
+
+    if (args.size() == 1) {
+        SchemeValue arg = args[0];
+        if (arg.isExpr())
+            arg = expressionToValue(*arg.asExpr());
+        return -arg;
+    }
+
     SchemeValue result = args[0];
+    if (result.isExpr())
+        result = expressionToValue(*result.asExpr());
+
     for (size_t i = 1; i < args.size(); ++i) {
-        result = result - args[i];
+        SchemeValue curr = args[i];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        result = result - curr;
     }
     return result;
 }
@@ -107,15 +124,27 @@ std::optional<SchemeValue> Interpreter::isBooleanProc(Interpreter&, const std::v
 {
     if (args.size() != 1)
         throw InterpreterError("Cannot call boolean on multiple arguments", std::nullopt);
-    if (std::holds_alternative<bool>(args[0].value)) {
-        return SchemeValue(std::get<bool>(args[0].value));
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    if (std::holds_alternative<bool>(arg.value)) {
+        return SchemeValue(std::get<bool>(arg.value));
     }
     throw InterpreterError("Arg is not a bool", std::nullopt);
 }
 
 std::optional<SchemeValue> Interpreter::listProcedure(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
-    return SchemeValue(std::list<SchemeValue>(args.begin(), args.end()));
+    std::vector<SchemeValue> evaluated;
+    evaluated.reserve(args.size());
+    for (const auto& arg : args) {
+        if (arg.isExpr()) {
+            evaluated.push_back(expressionToValue(*arg.asExpr()));
+        } else {
+            evaluated.push_back(arg);
+        }
+    }
+    return SchemeValue(std::list<SchemeValue>(evaluated.begin(), evaluated.end()));
 }
 
 std::optional<SchemeValue> Interpreter::carProcudure(Interpreter&, const std::vector<SchemeValue>& args)
@@ -123,7 +152,10 @@ std::optional<SchemeValue> Interpreter::carProcudure(Interpreter&, const std::ve
     if (args.size() != 1) {
         throw InterpreterError("CAR expects 1 argument");
     }
-    auto elements = args.back().as<std::list<SchemeValue>>();
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    auto elements = arg.as<std::list<SchemeValue>>();
     if (elements.size() == 0) {
         throw InterpreterError("CAR invoked on empty list");
     }
@@ -135,10 +167,13 @@ std::optional<SchemeValue> Interpreter::cdrProcedure(Interpreter&, const std::ve
     if (args.size() != 1) {
         throw InterpreterError("car requires exactly 1 argument");
     }
-    if (!args[0].isList()) {
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    if (!arg.isList()) {
         throw InterpreterError("car: argument must be a list");
     }
-    const auto& list = args[0].asList();
+    const auto& list = arg.asList();
     if (list.empty()) {
         throw InterpreterError("car: empty list");
     }
@@ -150,10 +185,13 @@ std::optional<SchemeValue> Interpreter::cadrProcedure(Interpreter& ele, const st
     if (args.size() != 1) {
         throw InterpreterError("cadr requires exactly 1 argument");
     }
-    if (!args[0].isList()) {
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    if (!arg.isList()) {
         throw InterpreterError("cadr: argument must be a list");
     }
-    const auto& list = args[0].asList();
+    const auto& list = arg.asList();
     auto it = std::next(list.begin());
     if (it == list.end()) {
         throw InterpreterError("cadr: list too short");
@@ -166,8 +204,14 @@ std::optional<SchemeValue> Interpreter::mult(Interpreter&, const std::vector<Sch
     if (args.empty())
         return SchemeValue(Number(1));
     SchemeValue result = args[0];
+    if (result.isExpr())
+        result = expressionToValue(*result.asExpr());
+
     for (size_t i = 1; i < args.size(); ++i) {
-        result = result * args[i];
+        SchemeValue curr = args[i];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        result = result * curr;
     }
     return result;
 }
@@ -176,15 +220,27 @@ std::optional<SchemeValue> Interpreter::div(Interpreter&, const std::vector<Sche
 {
     if (args.empty())
         throw InterpreterError("Cannot call procedure / on empty list", std::nullopt);
-    if (args.size() == 1)
-        return SchemeValue(Number(1)) / args[0];
+
+    if (args.size() == 1) {
+        SchemeValue arg = args[0];
+        if (arg.isExpr())
+            arg = expressionToValue(*arg.asExpr());
+        return SchemeValue(Number(1)) / arg;
+    }
+
     SchemeValue result = args[0];
+    if (result.isExpr())
+        result = expressionToValue(*result.asExpr());
+
     for (size_t i = 1; i < args.size(); ++i) {
-        auto num = args[i].as<Number>();
+        SchemeValue curr = args[i];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        auto num = curr.as<Number>();
         if (num.isZero()) {
             throw InterpreterError("Division by zero", std::nullopt);
         }
-        result = result / args[i];
+        result = result / curr;
     }
     return result;
 }
@@ -193,8 +249,15 @@ std::optional<SchemeValue> Interpreter::less(Interpreter&, const std::vector<Sch
 {
     if (args.size() < 2)
         throw InterpreterError("< requires at least two arguments", std::nullopt);
+
     for (size_t i = 0; i < args.size() - 1; ++i) {
-        auto comparison = args[i] <=> args[i + 1];
+        SchemeValue curr = args[i], next = args[i + 1];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        if (next.isExpr())
+            next = expressionToValue(*next.asExpr());
+
+        auto comparison = curr <=> next;
         if (comparison == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these values", std::nullopt);
         }
@@ -209,8 +272,15 @@ std::optional<SchemeValue> Interpreter::greater(Interpreter&, const std::vector<
 {
     if (args.size() < 2)
         throw InterpreterError("> requires at least two arguments", std::nullopt);
+
     for (size_t i = 0; i < args.size() - 1; ++i) {
-        auto comparison = args[i] <=> args[i + 1];
+        SchemeValue curr = args[i], next = args[i + 1];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        if (next.isExpr())
+            next = expressionToValue(*next.asExpr());
+
+        auto comparison = curr <=> next;
         if (comparison == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these values", std::nullopt);
         }
@@ -225,19 +295,31 @@ std::optional<SchemeValue> Interpreter::equal(Interpreter&, const std::vector<Sc
 {
     if (args.size() < 2)
         throw InterpreterError("= requires at least two arguments", std::nullopt);
+
+    SchemeValue first = args[0];
+    if (first.isExpr())
+        first = expressionToValue(*first.asExpr());
+
     for (size_t i = 1; i < args.size(); ++i) {
-        if (!(args[0] == args[i])) {
+        SchemeValue curr = args[i];
+        if (curr.isExpr())
+            curr = expressionToValue(*curr.asExpr());
+        if (!(first == curr)) {
             return SchemeValue(false);
         }
     }
     return SchemeValue(true);
 }
+
 std::optional<SchemeValue> Interpreter::openInputFile(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("OPEN-INPUT-FILE requires exactly 1 argument");
     }
-    const auto* filename = std::get_if<std::string>(&args[0].value);
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    const auto* filename = std::get_if<std::string>(&arg.value);
     if (!filename) {
         throw InterpreterError("OPEN-INPUT-FILE argument must be a string");
     }
@@ -254,7 +336,10 @@ std::optional<SchemeValue> Interpreter::openOutputFile(Interpreter&, const std::
     if (args.size() != 1) {
         throw InterpreterError("OPEN-OUTPUT-FILE requires exactly 1 argument");
     }
-    const auto* filename = std::get_if<std::string>(&args[0].value);
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    const auto* filename = std::get_if<std::string>(&arg.value);
     if (!filename) {
         throw InterpreterError("OPEN-OUTPUT-FILE argument must be a string");
     }
@@ -265,7 +350,6 @@ std::optional<SchemeValue> Interpreter::openOutputFile(Interpreter&, const std::
     }
     return SchemeValue(Port(file, PortType::Output));
 }
-
 std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() > 1) {
@@ -275,7 +359,10 @@ std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vec
     if (args.empty()) {
         input = &std::cin;
     } else {
-        const auto* port = std::get_if<Port>(&args[0].value);
+        SchemeValue arg = args[0];
+        if (arg.isExpr())
+            arg = expressionToValue(*arg.asExpr());
+        const auto* port = std::get_if<Port>(&arg.value);
         if (!port || port->type != PortType::Input || !port->isOpen()) {
             throw InterpreterError("READ argument must be an open input port");
         }
@@ -294,6 +381,7 @@ std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vec
         auto ele = (*opt)[0];
         return SchemeValue(ele);
     }
+
     return std::nullopt;
 }
 
@@ -302,17 +390,25 @@ std::optional<SchemeValue> Interpreter::write(Interpreter&, const std::vector<Sc
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("WRITE requires 1 or 2 arguments");
     }
+
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+
     std::ostream* output;
     if (args.size() == 1) {
         output = &std::cout;
     } else {
-        const auto* port = std::get_if<Port>(&args[1].value);
+        SchemeValue portArg = args[1];
+        if (portArg.isExpr())
+            portArg = expressionToValue(*portArg.asExpr());
+        const auto* port = std::get_if<Port>(&portArg.value);
         if (!port || port->type != PortType::Output || !port->isOpen()) {
             throw InterpreterError("WRITE second argument must be an open output port");
         }
         output = port->file.get();
     }
-    *output << args[0].toString();
+    *output << arg.toString();
     return std::nullopt;
 }
 
@@ -321,21 +417,29 @@ std::optional<SchemeValue> Interpreter::display(Interpreter& interp, const std::
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("DISPLAY requires 1 or 2 arguments");
     }
-    std::ostream* output;
+
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+
     if (args.size() == 1) {
-        interp.outputStream << args[0].toString();
+        interp.outputStream << arg.toString();
         return std::nullopt;
-    } else {
-        const auto* port = std::get_if<Port>(&args[1].value);
-        if (!port || port->type != PortType::Output || !port->isOpen()) {
-            throw InterpreterError("DISPLAY second argument must be an open output port");
-        }
-        output = port->file.get();
     }
-    if (const auto* str = std::get_if<std::string>(&args[0].value)) {
+
+    SchemeValue portArg = args[1];
+    if (portArg.isExpr())
+        portArg = expressionToValue(*portArg.asExpr());
+    const auto* port = std::get_if<Port>(&portArg.value);
+    if (!port || port->type != PortType::Output || !port->isOpen()) {
+        throw InterpreterError("DISPLAY second argument must be an open output port");
+    }
+    std::ostream* output = port->file.get();
+
+    if (const auto* str = std::get_if<std::string>(&arg.value)) {
         *output << *str;
     } else {
-        *output << args[0].toString();
+        *output << arg.toString();
     }
     return std::nullopt;
 }
@@ -349,7 +453,10 @@ std::optional<SchemeValue> Interpreter::newline(Interpreter&, const std::vector<
     if (args.empty()) {
         output = &std::cout;
     } else {
-        const auto* port = std::get_if<Port>(&args[0].value);
+        SchemeValue arg = args[0];
+        if (arg.isExpr())
+            arg = expressionToValue(*arg.asExpr());
+        const auto* port = std::get_if<Port>(&arg.value);
         if (!port || port->type != PortType::Output || !port->isOpen()) {
             throw InterpreterError("NEWLINE argument must be an open output port");
         }
@@ -364,7 +471,10 @@ std::optional<SchemeValue> Interpreter::closePort(Interpreter&, const std::vecto
     if (args.size() != 1) {
         throw InterpreterError("CLOSE-PORT requires exactly 1 argument");
     }
-    const auto* port = std::get_if<Port>(&args[0].value);
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    const auto* port = std::get_if<Port>(&arg.value);
     if (!port) {
         throw InterpreterError("CLOSE-PORT argument must be a port");
     }
@@ -373,26 +483,43 @@ std::optional<SchemeValue> Interpreter::closePort(Interpreter&, const std::vecto
     }
     return std::nullopt;
 }
+
 std::optional<SchemeValue> Interpreter::makeVector(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("make-vector requires 1 or 2 arguments");
     }
-    if (!args[0].isNumber()) {
+
+    SchemeValue sizeArg = args[0];
+    if (sizeArg.isExpr())
+        sizeArg = expressionToValue(*sizeArg.asExpr());
+    if (!sizeArg.isNumber()) {
         throw InterpreterError("make-vector: first argument must be a number");
     }
-    int k = args[0].as<Number>().toInt();
+    int k = sizeArg.as<Number>().toInt();
     if (k < 0) {
         throw InterpreterError("make-vector: length must be non-negative");
     }
+
     SchemeValue fill = args.size() == 2 ? args[1] : SchemeValue(Number(0));
+    if (fill.isExpr())
+        fill = expressionToValue(*fill.asExpr());
     std::vector<SchemeValue> vec(k, fill);
     return SchemeValue(std::move(vec));
 }
 
 std::optional<SchemeValue> Interpreter::vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    return SchemeValue(args);
+    std::vector<SchemeValue> evaluated;
+    evaluated.reserve(args.size());
+    for (const auto& arg : args) {
+        if (arg.isExpr()) {
+            evaluated.push_back(expressionToValue(*arg.asExpr()));
+        } else {
+            evaluated.push_back(arg);
+        }
+    }
+    return SchemeValue(evaluated);
 }
 
 std::optional<SchemeValue> Interpreter::vectorRef(Interpreter&, const std::vector<SchemeValue>& args)
@@ -400,38 +527,60 @@ std::optional<SchemeValue> Interpreter::vectorRef(Interpreter&, const std::vecto
     if (args.size() != 2) {
         throw InterpreterError("vector-ref requires exactly 2 arguments");
     }
-    const auto* vec = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+
+    SchemeValue vecArg = args[0];
+    if (vecArg.isExpr())
+        vecArg = expressionToValue(*vecArg.asExpr());
+    const auto* vec = std::get_if<std::vector<SchemeValue>>(&vecArg.value);
     if (!vec) {
         throw InterpreterError("vector-ref: first argument must be a vector");
     }
-    if (!args[1].isNumber()) {
+
+    SchemeValue indexArg = args[1];
+    if (indexArg.isExpr())
+        indexArg = expressionToValue(*indexArg.asExpr());
+    if (!indexArg.isNumber()) {
         throw InterpreterError("vector-ref: second argument must be a number");
     }
-    int index = args[1].as<Number>().toInt();
+    int index = indexArg.as<Number>().toInt();
     if (index < 0 || static_cast<size_t>(index) >= vec->size()) {
         throw InterpreterError("vector-ref: index out of bounds");
     }
 
     return (*vec)[index];
 }
+
 std::optional<SchemeValue> Interpreter::vectorSet(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 3) {
         throw InterpreterError("vector-set! requires exactly 3 arguments");
     }
-    auto* vec = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+
+    SchemeValue vecArg = args[0];
+    if (vecArg.isExpr())
+        vecArg = expressionToValue(*vecArg.asExpr());
+    auto* vec = std::get_if<std::vector<SchemeValue>>(&vecArg.value);
     if (!vec) {
         throw InterpreterError("vector-set!: first argument must be a vector");
     }
-    if (!args[1].isNumber()) {
+
+    SchemeValue indexArg = args[1];
+    if (indexArg.isExpr())
+        indexArg = expressionToValue(*indexArg.asExpr());
+    if (!indexArg.isNumber()) {
         throw InterpreterError("vector-set!: second argument must be a number");
     }
-    int index = args[1].as<Number>().toInt();
+    int index = indexArg.as<Number>().toInt();
     if (index < 0 || static_cast<size_t>(index) >= vec->size()) {
         throw InterpreterError("vector-set!: index out of bounds");
     }
+
+    SchemeValue valueArg = args[2];
+    if (valueArg.isExpr())
+        valueArg = expressionToValue(*valueArg.asExpr());
+
     std::vector<SchemeValue> newVec = *vec;
-    newVec[index] = args[2];
+    newVec[index] = valueArg;
     return SchemeValue(std::move(newVec));
 }
 
@@ -440,7 +589,11 @@ std::optional<SchemeValue> Interpreter::vectorLength(Interpreter&, const std::ve
     if (args.size() != 1) {
         throw InterpreterError("vector-length requires exactly 1 argument");
     }
-    const auto* vec = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    const auto* vec = std::get_if<std::vector<SchemeValue>>(&arg.value);
     if (!vec) {
         throw InterpreterError("vector-length: argument must be a vector");
     }
@@ -449,7 +602,6 @@ std::optional<SchemeValue> Interpreter::vectorLength(Interpreter&, const std::ve
 
 std::optional<SchemeValue> Interpreter::printHelp(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
-
     interp.outputStream << "Available commands:\n"
                         << "  exit       - Exit the Jaws REPL\n"
                         << "  help       - Display this help message\n"

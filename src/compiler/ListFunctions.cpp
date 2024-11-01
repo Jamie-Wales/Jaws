@@ -1,4 +1,3 @@
-
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
@@ -9,7 +8,12 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
     if (args.size() < 2) {
         throw InterpreterError("MAP requires procedure and arguments");
     }
-    if (!args[0].isProc()) {
+
+    SchemeValue proc = args[0];
+    if (proc.isExpr()) {
+        proc = expressionToValue(*proc.asExpr());
+    }
+    if (!proc.isProc()) {
         throw InterpreterError("MAP requires first argument to be procedure");
     }
 
@@ -19,10 +23,14 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
 
     size_t length = 0;
     for (size_t i = 1; i < args.size(); i++) {
-        if (!args[i].isList()) {
+        SchemeValue arg = args[i];
+        if (arg.isExpr()) {
+            arg = expressionToValue(*arg.asExpr());
+        }
+        if (!arg.isList()) {
             throw InterpreterError("MAP requires list arguments");
         }
-        const auto& list = args[i].asList();
+        const auto& list = arg.asList();
         if (i == 1) {
             length = list.size();
         } else if (list.size() != length) {
@@ -39,7 +47,7 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
             ++iters[i];
         }
 
-        auto procResult = args[0].call(interp, call_args);
+        auto procResult = proc.call(interp, call_args);
         if (!procResult) {
             throw InterpreterError("MAP procedure must return a value");
         }
@@ -55,14 +63,24 @@ std::optional<SchemeValue> Interpreter::cons(Interpreter&, const std::vector<Sch
         throw InterpreterError("cons requires exactly 2 arguments");
     }
 
-    if (args[1].isList()) {
-        auto list = args[1].asList();
-        list.push_front(args[0]);
+    SchemeValue first = args[0];
+    if (first.isExpr()) {
+        first = expressionToValue(*first.asExpr());
+    }
+
+    SchemeValue second = args[1];
+    if (second.isExpr()) {
+        second = expressionToValue(*second.asExpr());
+    }
+
+    if (second.isList()) {
+        auto list = second.asList();
+        list.push_front(first);
         return SchemeValue(list);
     }
     std::list<SchemeValue> pair;
-    pair.push_back(args[0]);
-    pair.push_back(args[1]);
+    pair.push_back(first);
+    pair.push_back(second);
     return SchemeValue(std::move(pair));
 }
 
@@ -71,17 +89,26 @@ std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<S
     if (args.size() != 1) {
         throw InterpreterError("length requires exactly 1 argument");
     }
-    if (!args[0].isList()) {
+
+    SchemeValue arg = args[0];
+    if (arg.isExpr()) {
+        arg = expressionToValue(*arg.asExpr());
+    }
+    if (!arg.isList()) {
         throw InterpreterError("length: argument must be a list");
     }
-    return SchemeValue(Number(static_cast<int>(args[0].asList().size())));
+    return SchemeValue(Number(static_cast<int>(arg.asList().size())));
 }
 
 std::optional<SchemeValue> Interpreter::append(Interpreter&, const std::vector<SchemeValue>& args)
 {
     std::vector<SchemeValue> result;
     for (const auto& arg : args) {
-        const auto* list = std::get_if<std::list<SchemeValue>>(&arg.value);
+        SchemeValue curr = arg;
+        if (curr.isExpr()) {
+            curr = expressionToValue(*curr.asExpr());
+        }
+        const auto* list = std::get_if<std::list<SchemeValue>>(&curr.value);
         if (!list) {
             throw InterpreterError("APPEND arguments must be lists");
         }
@@ -95,7 +122,12 @@ std::optional<SchemeValue> Interpreter::reverse(Interpreter&, const std::vector<
     if (args.size() != 1) {
         throw InterpreterError("REVERSE requires exactly 1 argument");
     }
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+
+    SchemeValue arg = args[0];
+    if (arg.isExpr()) {
+        arg = expressionToValue(*arg.asExpr());
+    }
+    const auto* list = std::get_if<std::vector<SchemeValue>>(&arg.value);
     if (!list) {
         throw InterpreterError("REVERSE argument must be a list");
     }
@@ -109,14 +141,24 @@ std::optional<SchemeValue> Interpreter::listRef(Interpreter&, const std::vector<
     if (args.size() != 2) {
         throw InterpreterError("LIST-REF requires exactly 2 arguments");
     }
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+
+    SchemeValue list_arg = args[0];
+    if (list_arg.isExpr()) {
+        list_arg = expressionToValue(*list_arg.asExpr());
+    }
+    const auto* list = std::get_if<std::vector<SchemeValue>>(&list_arg.value);
     if (!list) {
         throw InterpreterError("First argument to LIST-REF must be a list");
     }
-    if (!args[1].isNumber()) {
+
+    SchemeValue index_arg = args[1];
+    if (index_arg.isExpr()) {
+        index_arg = expressionToValue(*index_arg.asExpr());
+    }
+    if (!index_arg.isNumber()) {
         throw InterpreterError("Second argument to LIST-REF must be a number");
     }
-    int index = args[1].as<Number>().toInt();
+    int index = index_arg.as<Number>().toInt();
     if (index < 0 || static_cast<size_t>(index) >= list->size()) {
         throw InterpreterError("LIST-REF index out of bounds");
     }
@@ -128,14 +170,24 @@ std::optional<SchemeValue> Interpreter::listTail(Interpreter&, const std::vector
     if (args.size() != 2) {
         throw InterpreterError("LIST-TAIL requires exactly 2 arguments");
     }
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&args[0].value);
+
+    SchemeValue list_arg = args[0];
+    if (list_arg.isExpr()) {
+        list_arg = expressionToValue(*list_arg.asExpr());
+    }
+    const auto* list = std::get_if<std::vector<SchemeValue>>(&list_arg.value);
     if (!list) {
         throw InterpreterError("First argument to LIST-TAIL must be a list");
     }
-    if (!args[1].isNumber()) {
+
+    SchemeValue index_arg = args[1];
+    if (index_arg.isExpr()) {
+        index_arg = expressionToValue(*index_arg.asExpr());
+    }
+    if (!index_arg.isNumber()) {
         throw InterpreterError("Second argument to LIST-TAIL must be a number");
     }
-    int index = args[1].as<Number>().toInt();
+    int index = index_arg.as<Number>().toInt();
     if (index < 0 || static_cast<size_t>(index) > list->size()) {
         throw InterpreterError("LIST-TAIL index out of bounds");
     }
