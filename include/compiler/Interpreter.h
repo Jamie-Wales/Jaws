@@ -60,7 +60,6 @@ private:
     /* Vector procedures */
 
     static std::optional<SchemeValue> eval(Interpreter& interp, const std::vector<SchemeValue>& args);
-    static std::optional<SchemeValue> quote(Interpreter& interp, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args);
