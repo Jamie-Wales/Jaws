@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle, KeyboardEvent } from 'react';
 import { LiveEditor } from './liveEditor';
 import { HighlightedText } from './highlightedText';
+import { Button } from '@/components/ui/button';
+import { Play } from 'lucide-react';
 
-interface TerminalLine {
+export interface TerminalLine {
     type: 'input' | 'output' | 'system';
     content: string;
     timestamp: string;
@@ -11,9 +13,12 @@ interface TerminalLine {
 export interface TerminalRef {
     writeOutput: (content: string) => void;
     writeSystem: (content: string) => void;
+    getCurrentInput: () => string;
+    clearInput: () => void;
+    setInput: (input: string) => void;
 }
 
-interface TerminalProps {
+export interface TerminalProps {
     onCommand: (command: string) => Promise<string>;
     onInputChange?: (input: string) => void;
     currentInput?: string;
@@ -38,21 +43,68 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             }
         }, [currentInput]);
 
-        const getTimestamp = () => {
-            return new Date().toLocaleTimeString();
-        };
 
+        const handleCommand = async (input: string) => {
+            if (!input.trim()) return;
+
+            const cleanedInput = input
+                .split('\n')
+                .map(line => line.trim())
+                .join(' ')
+                .trim();
+
+            setLines(prev => [...prev, {
+                type: 'input',
+                content: cleanedInput,
+                timestamp: new Date().toLocaleTimeString()
+            }]);
+
+            try {
+                const result = await onCommand(cleanedInput);
+                writeOutput(result);
+            } catch (err) {
+                const error = err as Error;
+                writeSystem(`Error: ${error.message}`);
+            } finally {
+                clearInput();
+            }
+
+        };
         const writeOutput = (content: string) => {
-            setLines(prev => [...prev, { type: 'output', content, timestamp: getTimestamp() }]);
+            setLines(prev => [...prev, {
+                type: 'output',
+                content,
+                timestamp: new Date().toLocaleTimeString()
+            }]);
+
         };
 
         const writeSystem = (content: string) => {
-            setLines(prev => [...prev, { type: 'system', content, timestamp: getTimestamp() }]);
+            setLines(prev => [...prev, {
+                type: 'system',
+                content,
+                timestamp: new Date().toLocaleTimeString()
+            }]);
+        };
+
+        const getCurrentInput = () => inputValue;
+
+        const clearInput = () => {
+            setInputValue('');
+            onInputChange?.('');
+        };
+
+        const setInput = (input: string) => {
+            setInputValue(input);
+            onInputChange?.(input);
         };
 
         useImperativeHandle(ref, () => ({
             writeOutput,
-            writeSystem
+            writeSystem,
+            getCurrentInput,
+            clearInput,
+            setInput
         }));
 
         const handleInputChange = (value: string) => {
@@ -64,35 +116,10 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             if (e.key === 'Enter' && !e.shiftKey) {
                 const openCount = (inputValue.match(/\(/g) || []).length;
                 const closeCount = (inputValue.match(/\)/g) || []).length;
-
-                if (openCount !== closeCount) {
-                    return;
-                }
-
-                const cleanedInput = inputValue
-                    .split('\n')
-                    .map(line => line.trim())
-                    .join(' ')
-                    .trim();
-
-                if (!cleanedInput) return;
-
+                if (openCount !== closeCount) return;
                 e.preventDefault();
-                setLines(prev => [...prev, {
-                    type: 'input',
-                    content: inputValue,
-                    timestamp: getTimestamp()
-                }]);
-
-                try {
-                    const result = await onCommand(cleanedInput);
-                    writeOutput(result);
-                    setInputValue('');
-                    onInputChange?.('');
-                } catch (err) {
-                    const error = err as Error;
-                    writeSystem(`Error: ${error.message}`);
-                }
+                await handleCommand(inputValue);
+                clearInput();
             }
         };
 
@@ -118,14 +145,27 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                         </div>
                     ))}
                 </div>
-                <div
-                    className="px-4 py-3 border-t border-zinc-700 w-full"
-                    onKeyDown={handleKeyDown}
-                >
-                    <LiveEditor
-                        value={currentInput ?? inputValue}
-                        onChange={handleInputChange}
-                    />
+                <div className="border-t border-zinc-700">
+                    <div
+                        className="px-4 py-3 w-full"
+                        onKeyDown={handleKeyDown}
+                    >
+                        <LiveEditor
+                            onChange={handleInputChange}
+                            value={inputValue}
+                        />
+                        <div className="mt-2 flex justify-end">
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleCommand(inputValue)}
+                                className="flex items-center gap-2"
+                            >
+                                <Play className="h-4 w-4" />
+                                Run
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

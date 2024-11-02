@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
  
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @layer base {
   html, 
   body, 
@@ -9,6 +11,7 @@
     @apply h-full w-full;
   }
   :root {
+    font-family: 'Poppins', system-ui, sans-serif;
     --background: 200 20% 98%;
     --foreground: 200 50% 10%;
     

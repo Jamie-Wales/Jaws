@@ -1,46 +1,90 @@
 import { useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Code, BookOpen, Users, Terminal, Github, ParenthesesIcon, LucideGithub, GithubIcon } from 'lucide-react';
+import {
+    ArrowRight,
+    Code,
+    BookOpen,
+    Users,
+    Terminal,
+    ParenthesesIcon,
+    Github
+} from 'lucide-react';
 import hljs from 'highlight.js/lib/core';
 import schemeLanguage from 'highlight.js/lib/languages/scheme';
 import 'highlight.js/styles/github-dark-dimmed.css';
-export const WelcomePage = () => {
-    const sampleCode = `jaws> (define greet
-  (lambda (name)
-    (string-append 
-      "Hello, " 
-      name 
-      "!")))
 
-jaws> (greet "friend")
-"Hello, friend!"
-`;
+interface WelcomePageProps {
+    onTryEditor: () => void;
+    onGetStarted: () => void;
+    onViewExamples: () => void;
+    onViewDocs: () => void;
+}
 
+type CodeLine = {
+    type: 'input' | 'output';
+    content: string;
+};
+
+export const WelcomePage = ({
+    onTryEditor,
+    onGetStarted,
+    onViewExamples,
+    onViewDocs
+}: WelcomePageProps) => {
+    const sampleCode: CodeLine[] = [
+        {
+            type: 'input',
+            content: '(define greet\n  (lambda (name)\n    (string-append\n      "Hello, "\n      name\n      "!")))'
+        },
+        {
+            type: 'input',
+            content: '(greet "friend")'
+        },
+        {
+            type: 'output',
+            content: '"Hello, friend!"'
+        }
+    ];
 
     hljs.registerLanguage('scheme', schemeLanguage);
 
-    const HighlightedCode = ({ code }: { code: string }) => {
-        const codeRef = useRef<HTMLElement>(null);
+    const HighlightedCode = ({ code }: { code: CodeLine[] }) => {
+        const codeRefs = useRef<(HTMLElement | null)[]>([]);
 
         useEffect(() => {
-            if (codeRef.current) {
-                hljs.highlightElement(codeRef.current);
-            }
-        }, [code]);
+            codeRefs.current.forEach(ref => {
+                if (ref) {
+                    hljs.highlightElement(ref);
+                }
+            });
+        }, []);
 
         return (
-            <pre className="bg-muted p-3 rounded-md text-sm">
-                <code ref={codeRef} className="language-scheme">
-                    {code}
-                </code>
-            </pre>
+            <div className="font-mono text-sm space-y-2 bg-zinc-900">
+                {code.map((line, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                        {line.type === 'input' ? (
+                            <span className="text-cyan-400 shrink-0">λ</span>
+                        ) : (
+                            <span className="ml-4" />
+                        )}
+                        <div className="flex-1">
+                            <code
+                                ref={el => codeRefs.current[i] = el}
+                                className={`bg-zinc-900 language-scheme block whitespace-pre ${line.type === 'output' ? 'text-green-400' : ''
+                                    }`}
+                            >
+                                {line.content}
+                            </code>
+                        </div>
+                    </div>
+                ))}
+            </div>
         );
     };
-
     return (
         <div className="min-h-screen bg-white">
-            {/* Hero Section */}
             <header className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
                 <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -51,19 +95,22 @@ jaws> (greet "friend")
                         <Button
                             variant="ghost"
                             className="text-white hover:bg-slate-800/60"
+                            onClick={onViewDocs}
                         >
                             Documentation
                         </Button>
                         <Button
                             variant="ghost"
                             className="text-white hover:bg-slate-800/60"
+                            onClick={onViewExamples}
                         >
                             Examples
                         </Button>
                         <Button
                             className="bg-cyan-500 hover:bg-cyan-600 text-white"
-                            onClick={() => {
-                            }}>                            Get Started
+                            onClick={onGetStarted}
+                        >
+                            Get Started
                         </Button>
                     </div>
                 </nav>
@@ -86,6 +133,7 @@ jaws> (greet "friend")
                             <Button
                                 size="lg"
                                 className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                                onClick={onTryEditor}
                             >
                                 Try Online Editor <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
@@ -93,18 +141,18 @@ jaws> (greet "friend")
                                 variant="outline"
                                 size="lg"
                                 className="bg-transparent text-white hover:bg-slate-800/60 border-white hover:border-white"
+                                onClick={onViewExamples}
                             >
                                 View Examples
                             </Button>
                         </div>
                     </div>
-                    <div className="bg-slate-950 rounded-lg p-6 shadow-xl">
+                    <div className="bg-zinc-900 rounded-lg p-6 shadow-xl ring-1 ring-white/10">
                         <HighlightedCode code={sampleCode} />
                     </div>
                 </div>
             </header>
 
-            {/* Features Section */}
             <section className="py-20 bg-slate-50">
                 <div className="container mx-auto px-6">
                     <h2 className="text-3xl font-bold text-slate-900 text-center mb-12">
@@ -163,7 +211,6 @@ jaws> (greet "friend")
                 </div>
             </section>
 
-            {/* Getting Started Section */}
             <section className="py-20">
                 <div className="container mx-auto px-6 text-center">
                     <h2 className="text-3xl font-bold text-slate-900 mb-12">
@@ -173,6 +220,7 @@ jaws> (greet "friend")
                         <Button
                             size="lg"
                             className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                            onClick={onTryEditor}
                         >
                             Start Coding Now
                         </Button>
@@ -180,6 +228,7 @@ jaws> (greet "friend")
                             variant="outline"
                             size="lg"
                             className="border-slate-800 text-slate-800 hover:bg-slate-100/60 hover:text-slate-900"
+                            onClick={onViewDocs}
                         >
                             Browse Documentation
                         </Button>
@@ -187,7 +236,6 @@ jaws> (greet "friend")
                 </div>
             </section>
 
-            {/* Footer */}
             <footer className="bg-slate-900 text-white">
                 <div className="container mx-auto px-6 py-8">
                     <div className="flex justify-between items-center">
@@ -205,12 +253,14 @@ jaws> (greet "friend")
                             <Button
                                 variant="ghost"
                                 className="text-slate-300 hover:text-white hover:bg-slate-800/60"
+                                onClick={onViewDocs}
                             >
                                 Documentation
                             </Button>
                             <Button
                                 variant="ghost"
                                 className="text-slate-300 hover:text-white hover:bg-slate-800/60"
+                                onClick={onViewExamples}
                             >
                                 Examples
                             </Button>
@@ -221,5 +271,3 @@ jaws> (greet "friend")
         </div>
     );
 };
-
-export default WelcomePage;

@@ -22,7 +22,7 @@ const HighlightedCode = ({ code }: { code: string }) => {
     }, [code]);
 
     return (
-        <pre className="bg-muted p-3 rounded-md text-sm">
+        <pre className="rounded-md text-sm">
             <code ref={codeRef} className="language-scheme">
                 {code}
             </code>
@@ -56,25 +56,25 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
     return (
         <TabsContent value="get-started">
             <div className="grid gap-4 md:grid-cols-2">
-                <Card>
+                <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Rocket className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-zinc-200">
+                            <Rocket className="h-5 w-5 text-cyan-400" />
                             Quick Start
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className="text-slate-400">
                             Get up and running with Jaws Scheme
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <h3 className="font-semibold">Try Your First Program</h3>
-                            <p className="text-sm text-muted-foreground">
+                            <h3 className="font-semibold text-zinc-200">Try Your First Program</h3>
+                            <p className="text-sm text-slate-400">
                                 Enter this simple expression to get started:
                             </p>
                             <HighlightedCode code="(+ 1 2 3)" />
                             <Button
-                                className="w-full mt-2"
+                                className="w-full mt-2 bg-cyan-500 hover:bg-cyan-600 text-white"
                                 onClick={handleOpenEditor}
                             >
                                 <span className="flex items-center gap-2">
@@ -85,30 +85,30 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BookOpen className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-zinc-200">
+                            <BookOpen className="h-5 w-5 text-cyan-400" />
                             Features
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className="text-slate-400">
                             What you can do with Jaws Scheme
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-4">
                             <li className="flex items-start gap-2">
-                                <Code2 className="h-5 w-5 text-muted-foreground shrink-0" />
+                                <Code2 className="h-5 w-5 text-cyan-400 shrink-0" />
                                 <div>
-                                    <span className="font-medium">Modern Editor</span>
-                                    <p className="text-sm text-muted-foreground">Syntax highlighting and auto-completion</p>
+                                    <span className="font-medium text-zinc-200">Modern Editor</span>
+                                    <p className="text-sm text-slate-400">Syntax highlighting and auto-completion</p>
                                 </div>
                             </li>
                             <li className="flex items-start gap-2">
-                                <Lightbulb className="h-5 w-5 text-muted-foreground shrink-0" />
+                                <Lightbulb className="h-5 w-5 text-cyan-400 shrink-0" />
                                 <div>
-                                    <span className="font-medium">Interactive REPL</span>
-                                    <p className="text-sm text-muted-foreground">Evaluate code instantly in your browser</p>
+                                    <span className="font-medium text-zinc-200">Interactive REPL</span>
+                                    <p className="text-sm text-slate-400">Evaluate code instantly in your browser</p>
                                 </div>
                             </li>
                         </ul>
@@ -118,14 +118,13 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
         </TabsContent>
     );
 }
-
 export function ExamplesTab({ examples, handleTryExample }: ExamplesTabProps) {
     return (
         <TabsContent value="examples">
-            <Card>
+            <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
                 <CardHeader>
-                    <CardTitle>Example Programs</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-zinc-200">Example Programs</CardTitle>
+                    <CardDescription className="text-slate-400">
                         Learn by example with these code snippets
                     </CardDescription>
                 </CardHeader>
@@ -134,20 +133,20 @@ export function ExamplesTab({ examples, handleTryExample }: ExamplesTabProps) {
                         {examples.map((example, index) => (
                             <div key={index} className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold">{example.name}</h3>
+                                    <h3 className="font-semibold text-zinc-200">{example.name}</h3>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleTryExample(example.code)}
-                                        className="flex items-center gap-2"
+                                        className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white"
                                     >
                                         Try It <ArrowRight className="h-4 w-4" />
                                     </Button>
                                 </div>
-                                <p className="text-sm text-muted-foreground">{example.description}</p>
+                                <p className="text-sm text-slate-400">{example.description}</p>
                                 <HighlightedCode code={example.code} />
                                 {index < examples.length - 1 && (
-                                    <Separator className="mt-4" />
+                                    <Separator className="mt-4 bg-slate-700/50" />
                                 )}
                             </div>
                         ))}
@@ -161,20 +160,20 @@ export function ExamplesTab({ examples, handleTryExample }: ExamplesTabProps) {
 export function DocumentationTab() {
     return (
         <TabsContent value="documentation">
-            <Card>
+            <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
                 <CardHeader>
-                    <CardTitle>Documentation</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-zinc-200">Documentation</CardTitle>
+                    <CardDescription className="text-slate-400">
                         Learn more about Jaws Scheme and its features
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <h3 className="font-semibold">Language Support</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold text-zinc-200">Language Support</h3>
+                        <p className="text-sm text-slate-400">
                             Jaws implements a subset of R7RS Scheme with support for:
                         </p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                        <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
                             <li>Basic arithmetic operations</li>
                             <li>List manipulation</li>
                             <li>First-class functions</li>
@@ -183,14 +182,14 @@ export function DocumentationTab() {
                         </ul>
                     </div>
 
-                    <Separator />
+                    <Separator className="bg-slate-700/50" />
 
                     <div className="space-y-2">
-                        <h3 className="font-semibold">Key Features</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold text-zinc-200">Key Features</h3>
+                        <p className="text-sm text-slate-400">
                             Explore these core features:
                         </p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                        <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
                             <li>Interactive REPL with syntax highlighting</li>
                             <li>Built-in code editor for larger programs</li>
                             <li>Real-time error reporting</li>
@@ -198,14 +197,14 @@ export function DocumentationTab() {
                         </ul>
                     </div>
 
-                    <Separator />
+                    <Separator className="bg-slate-700/50" />
 
                     <div className="space-y-2">
-                        <h3 className="font-semibold">Getting Help</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="font-semibold text-zinc-200">Getting Help</h3>
+                        <p className="text-sm text-slate-400">
                             Need help? Try these resources:
                         </p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                        <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
                             <li>Check out the examples tab</li>
                             <li>Read the language reference</li>
                             <li>View the source on GitHub</li>
