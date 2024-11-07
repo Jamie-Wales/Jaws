@@ -32,8 +32,8 @@ public:
 class LambdaExpression {
 public:
     std::vector<Token> parameters;
-    std::shared_ptr<Expression> body;
-    LambdaExpression(std::vector<Token> parameters, std::shared_ptr<Expression> body)
+    std::vector<std::shared_ptr<Expression>> body;
+    LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body)
         : parameters(std::move(parameters))
         , body(std::move(body))
     {
@@ -64,8 +64,8 @@ class DefineProcedure {
 public:
     Token name;
     std::vector<Token> parameters;
-    std::shared_ptr<Expression> body;
-    DefineProcedure(Token name, std::vector<Token> parameters, std::shared_ptr<Expression> body)
+    std::vector<std::shared_ptr<Expression>> body;
+    DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body)
         : name(std::move(name))
         , parameters(std::move(parameters))
         , body(std::move(body))
@@ -188,12 +188,16 @@ public:
                        },
                        [&](const DefineProcedure& d) {
                            std::cout << indentation << std::format("(define {}", d.name.lexeme) << std::endl;
-                           d.body->print(indent + 1);
+                           for (auto& ele : d.body) {
+                               ele->print();
+                           }
                            std::cout << indentation << ")" << std::endl;
                        },
                        [&](const LambdaExpression& l) {
                            std::cout << indentation << "(lambda " << std::endl;
-                           l.body->print(indent + 1);
+                           for (auto& ele : l.body) {
+                               ele->print();
+                           }
                            std::cout << indentation << ")" << std::endl;
                        },
                    },
@@ -240,12 +244,13 @@ public:
                               },
                               [&](const DefineProcedure& e) -> std::shared_ptr<Expression> {
                                   return std::make_shared<Expression>(
-                                      DefineProcedure { e.name, e.parameters, e.body->clone() },
+
+                                      DefineProcedure { e.name, e.parameters, std::move(e.body) },
                                       line);
                               },
                               [&](const LambdaExpression& l) -> std::shared_ptr<Expression> {
                                   return std::make_shared<Expression>(
-                                      LambdaExpression { l.parameters, l.body->clone() },
+                                      LambdaExpression { l.parameters, std::move(l.body) },
                                       line);
                               },
                               [&](const IfExpression& i) -> std::shared_ptr<Expression> {

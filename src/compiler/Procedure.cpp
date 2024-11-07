@@ -2,33 +2,25 @@
 #include "Error.h"
 #include "Interpreter.h"
 #include "Value.h"
+#include <optional>
 
 std::optional<SchemeValue> UserProcedure::operator()(Interpreter& interp,
     const std::vector<SchemeValue>& args) const
 {
-    if (args.size() != paramNames.size()) {
-        throw InterpreterError("Expected " + std::to_string(paramNames.size()) + 
-                             " arguments but got " + std::to_string(args.size()));
+    if (args.size() != parameters.size()) {
+        throw InterpreterError("Expected " + std::to_string(parameters.size()) + " arguments but got " + std::to_string(args.size()));
     }
-    std::unordered_map<std::string, std::optional<SchemeValue>> oldBindings;
-    for (const auto& param : paramNames) {
-        auto it = interp.environment.find(param.lexeme);
-        if (it != interp.environment.end()) {
-            oldBindings[param.lexeme] = it->second;
-        }
-    }
+
+    interp.scope->pushFrame();
     for (size_t i = 0; i < args.size(); i++) {
-        interp.environment[paramNames[i].lexeme] = args[i];
+        interp.scope->define(parameters[i].lexeme, args[i]);
     }
-    auto result = interp.interpret(body);
-    for (const auto& [param, value] : oldBindings) {
-        interp.environment[param] = value;
+    std::optional<SchemeValue> result;
+    for (auto p : body) {
+        result = interp.interpret(p);
     }
-    for (const auto& param : paramNames) {
-        if (oldBindings.find(param.lexeme) == oldBindings.end()) {
-            interp.environment.erase(param.lexeme);
-        }
-    }
+
+    interp.scope->popFrame();
     if (!result) {
         throw InterpreterError("Procedure body returned no value");
     }

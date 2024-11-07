@@ -1,9 +1,9 @@
 #pragma once
+#include "Environment.h"
 #include "Expression.h"
 #include "Value.h"
 #include <memory>
 #include <optional>
-#include <unordered_map>
 
 class InterpreterError;
 
@@ -69,10 +69,10 @@ private:
 
 public:
     Interpreter();
-    std::stringstream outputStream;
 
+    std::shared_ptr<Environment> scope;
+    std::stringstream outputStream;
     void run(const std::vector<std::shared_ptr<Expression>>& expressions);
-    std::unordered_map<std::string, std::optional<SchemeValue>> environment;
     std::optional<SchemeValue> interpret(const std::shared_ptr<Expression>& e);
     std::optional<SchemeValue> lookupVariable(const std::string& name) const;
 };

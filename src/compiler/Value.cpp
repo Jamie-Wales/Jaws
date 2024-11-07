@@ -124,7 +124,9 @@ SchemeValue expressionToValue(const Expression& expr)
                                   params.push_back(SchemeValue(Symbol { param.lexeme }));
                               }
                               values.push_back(SchemeValue(std::move(params)));
-                              values.push_back(expressionToValue(*d.body));
+                              for (auto p : d.body) {
+                                  values.push_back(SchemeValue(expressionToValue(*p)));
+                              }
 
                               return SchemeValue(std::move(values));
                           },
@@ -138,7 +140,9 @@ SchemeValue expressionToValue(const Expression& expr)
                                   params.push_back(SchemeValue(Symbol { param.lexeme }));
                               }
                               values.push_back(SchemeValue(std::move(params)));
-                              values.push_back(expressionToValue(*l.body));
+                              for (auto p : l.body) {
+                                  values.push_back(expressionToValue(*p));
+                              }
 
                               return SchemeValue(std::move(values));
                           },
@@ -240,13 +244,16 @@ std::list<SchemeValue>& SchemeValue::asList()
 }
 std::optional<SchemeValue> SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue>& args) const
 {
-    if (isProc()) {
-        auto ele = std::get<std::shared_ptr<Procedure>>(value);
-        if (ele)
-            return (*ele)(interp, args);
+    if (!isProc()) {
+        throw std::runtime_error("Attempt to call non-procedure value: " + toString());
     }
-    throw std::runtime_error("Attempt to call non-procedure value");
+    auto proc = std::get<std::shared_ptr<Procedure>>(value);
+    if (!proc) {
+        throw std::runtime_error("Null procedure pointer");
+    }
+    return proc->operator()(interp, args);
 }
+
 bool SchemeValue::isTrue() const
 {
     return std::visit(overloaded {

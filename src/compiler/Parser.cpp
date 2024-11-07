@@ -115,13 +115,18 @@ std::shared_ptr<Expression> Parser::defineExpression()
                 consume(Tokentype::IDENTIFIER, "Expect parameter name"));
         }
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
-        auto body = expression();
+
+        std::vector<std::shared_ptr<Expression>> body;
+        while (!check(Tokentype::RIGHT_PAREN)) {
+            body.push_back(expression());
+        }
         consume(Tokentype::RIGHT_PAREN, "Expect ')' after function definition");
+
         return std::make_shared<Expression>(Expression {
             DefineProcedure {
                 name,
                 std::move(parameters),
-                body },
+                std::move(body) },
             name.line });
     } else {
         Token name = consume(Tokentype::IDENTIFIER, "Expect variable name");
@@ -134,7 +139,6 @@ std::shared_ptr<Expression> Parser::defineExpression()
             name.line });
     }
 }
-
 std::shared_ptr<Expression> Parser::lambda()
 {
     std::vector<Token> parameters;
@@ -144,15 +148,19 @@ std::shared_ptr<Expression> Parser::lambda()
             consume(Tokentype::IDENTIFIER, "Expect parameter name"));
     }
     consume(Tokentype::RIGHT_PAREN, "Expect ')' after parameter list");
-    auto body = expression();
-    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda definition");
+
+    std::vector<std::shared_ptr<Expression>> body;
+    while (!check(Tokentype::RIGHT_PAREN)) {
+        body.push_back(expression());
+    }
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda body");
+
     return std::make_shared<Expression>(Expression {
         LambdaExpression {
             std::move(parameters),
-            body },
+            std::move(body) },
         previousToken().line });
 }
-
 std::shared_ptr<Expression> Parser::atom()
 {
     Token token = advance();

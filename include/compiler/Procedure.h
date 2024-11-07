@@ -38,15 +38,14 @@ private:
 
 class UserProcedure : public Procedure {
 public:
-    UserProcedure(std::vector<Token> params, std::shared_ptr<Expression> bodyExpr)
-        : paramNames(std::move(params))
-        , body(std::move(bodyExpr))
+    UserProcedure(std::vector<Token> parameters,
+        std::vector<std::shared_ptr<Expression>> body)
+        : parameters(std::move(parameters))
+        , body(std::move(body))
     {
     }
-
-    std::optional<SchemeValue> operator()(Interpreter& interp, const std::vector<SchemeValue>& args) const override;
-
-private:
-    std::vector<Token> paramNames;
-    std::shared_ptr<Expression> body;
+    std::optional<SchemeValue> operator()(Interpreter& interp,
+        const std::vector<SchemeValue>& args) const override;
+    std::vector<Token> parameters;
+    std::vector<std::shared_ptr<Expression>> body;
 };

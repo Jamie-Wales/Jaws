@@ -6,47 +6,52 @@
 #include <variant>
 
 Interpreter::Interpreter()
+    : scope(std::make_shared<Environment>())
 {
-    environment["+"] = SchemeValue(std::make_shared<BuiltInProcedure>(plus));
-    environment["-"] = SchemeValue(std::make_shared<BuiltInProcedure>(minus));
-    environment["*"] = SchemeValue(std::make_shared<BuiltInProcedure>(mult));
-    environment["/"] = SchemeValue(std::make_shared<BuiltInProcedure>(div));
-    environment["<="] = SchemeValue(std::make_shared<BuiltInProcedure>(less));
-    environment[">="] = SchemeValue(std::make_shared<BuiltInProcedure>(greater));
-    environment["<"] = SchemeValue(std::make_shared<BuiltInProcedure>(less));
-    environment[">"] = SchemeValue(std::make_shared<BuiltInProcedure>(greater));
-    environment["help"] = SchemeValue(std::make_shared<BuiltInProcedure>(printHelp));
-    environment["map"] = SchemeValue(std::make_shared<BuiltInProcedure>(map));
-    auto eq
-        = std::make_shared<BuiltInProcedure>(equal);
-    environment["="] = SchemeValue(eq);
-    environment["eq?"] = SchemeValue(eq);
-    environment["boolean?"] = SchemeValue(std::make_shared<BuiltInProcedure>(isBooleanProc));
-    environment["open-input-file"] = SchemeValue(std::make_shared<BuiltInProcedure>(openInputFile));
-    environment["open-output-file"] = SchemeValue(std::make_shared<BuiltInProcedure>(openOutputFile));
-    environment["close-port"] = SchemeValue(std::make_shared<BuiltInProcedure>(closePort));
-    environment["read"] = SchemeValue(std::make_shared<BuiltInProcedure>(read));
-    environment["write"] = SchemeValue(std::make_shared<BuiltInProcedure>(write));
-    environment["display"] = SchemeValue(std::make_shared<BuiltInProcedure>(display));
-    environment["newline"] = SchemeValue(std::make_shared<BuiltInProcedure>(newline));
-    environment["eval"] = SchemeValue(std::make_shared<BuiltInProcedure>(eval));
-    environment["list"] = SchemeValue(std::make_shared<BuiltInProcedure>(listProcedure));
-    environment["car"] = SchemeValue(std::make_shared<BuiltInProcedure>(carProcudure));
-    environment["cdr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cdrProcedure));
-    environment["cadr"] = SchemeValue(std::make_shared<BuiltInProcedure>(cadrProcedure));
-    environment["cons"] = SchemeValue(std::make_shared<BuiltInProcedure>(cons));
-    environment["length"] = SchemeValue(std::make_shared<BuiltInProcedure>(length));
-    environment["append"] = SchemeValue(std::make_shared<BuiltInProcedure>(append));
-    environment["revrse"] = SchemeValue(std::make_shared<BuiltInProcedure>(reverse));
-    environment["list-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(listRef));
-    environment["list-tail"] = SchemeValue(std::make_shared<BuiltInProcedure>(listTail));
-    environment["make-vector"] = SchemeValue(std::make_shared<BuiltInProcedure>(makeVector));
-    environment["vector"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorProcedure));
-    environment["vector-ref"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorRef));
-    environment["vector-set!"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorSet));
-    environment["vector-length"] = SchemeValue(std::make_shared<BuiltInProcedure>(vectorLength));
-}
+    auto define = [this](const std::string& name, BuiltInProcedure::Func func) {
+        scope->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
+    };
 
+    define("+", plus);
+    define("-", minus);
+    define("*", mult);
+    define("/", div);
+    define("<=", less);
+    define(">=", greater);
+    define("<", less);
+    define(">", greater);
+
+    // Equality
+    auto eq = std::make_shared<BuiltInProcedure>(equal);
+    scope->define("=", SchemeValue(eq));
+    scope->define("eq?", SchemeValue(eq));
+    define("boolean?", isBooleanProc);
+    define("open-input-file", openInputFile);
+    define("open-output-file", openOutputFile);
+    define("close-port", closePort);
+    define("read", read);
+    define("write", write);
+    define("display", display);
+    define("newline", newline);
+    define("eval", eval);
+    define("help", printHelp);
+    define("map", map);
+    define("list", listProcedure);
+    define("car", carProcudure);
+    define("cdr", cdrProcedure);
+    define("cadr", cadrProcedure);
+    define("cons", cons);
+    define("length", length);
+    define("append", append);
+    define("reverse", reverse);
+    define("list-ref", listRef);
+    define("list-tail", listTail);
+    define("make-vector", makeVector);
+    define("vector", vectorProcedure);
+    define("vector-ref", vectorRef);
+    define("vector-set!", vectorSet);
+    define("vector-length", vectorLength);
+}
 std::optional<SchemeValue> Interpreter::interpretQuoteExpression(const QuoteExpression& qe, const Expression& e)
 {
     return SchemeValue(qe.expression);
@@ -92,12 +97,13 @@ std::optional<SchemeValue> Interpreter::interpretAtom(const AtomExpression& atom
             return SchemeValue(false);
         case Tokentype::SYMBOL:
         case Tokentype::IDENTIFIER:
-            if (auto it = environment.find(token.lexeme); it != environment.end()) {
-                return it->second;
+            if (auto value = scope->get(token.lexeme)) {
+                return value;
             }
-            return SchemeValue(Symbol(token.lexeme));
+            throw InterpreterError("Undefined variable: " + token.lexeme, expr);
         default:
-            throw InterpreterError("Unexpected token type in atom", expr);
+            expr.print();
+            throw InterpreterError("Unexpected token type in atom");
         }
     } catch (const std::exception& e) {
         throw InterpreterError(e.what(), expr);
@@ -134,7 +140,7 @@ std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& 
                 return std::nullopt;
             }
         }
-        return proc->call(*this, args);
+        return *proc->call(*this, args);
     }
 
     throw InterpreterError("Cannot interpret sExpression", expr);
@@ -144,7 +150,7 @@ std::optional<SchemeValue> Interpreter::defineExpression(const DefineExpression&
 {
     std::optional<SchemeValue> exprValue = interpret(de.value);
     if (exprValue) {
-        environment[de.name.lexeme] = *exprValue;
+        scope->define(de.name.lexeme, *exprValue);
         return std::nullopt;
     }
     throw InterpreterError("Cannot interpret define with name " + de.name.lexeme, expr);
@@ -152,10 +158,9 @@ std::optional<SchemeValue> Interpreter::defineExpression(const DefineExpression&
 std::optional<SchemeValue> Interpreter::defineProcedure(DefineProcedure& dp, const Expression&)
 {
     auto proc = std::make_shared<UserProcedure>(
-        std::move(dp.parameters),
-        std::move(dp.body));
-
-    environment[dp.name.lexeme] = SchemeValue(std::move(proc));
+        dp.parameters,
+        (dp.body));
+    scope->define(dp.name.lexeme, SchemeValue { std::move(proc) });
     return std::nullopt;
 }
 void Interpreter::run(const std::vector<std::shared_ptr<Expression>>& expressions)
@@ -224,13 +229,4 @@ std::optional<SchemeValue> Interpreter::interpretVector(const VectorExpression& 
         elements.push_back(*item);
     }
     return SchemeValue(std::move(elements));
-}
-
-std::optional<SchemeValue> Interpreter::lookupVariable(const std::string& name) const
-{
-    auto it = environment.find(name);
-    if (it != environment.end()) {
-        return it->second;
-    }
-    throw InterpreterError("Undefined variable: " + name);
 }
