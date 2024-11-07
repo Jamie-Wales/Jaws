@@ -17,11 +17,9 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
         throw InterpreterError("MAP requires first argument to be procedure");
     }
 
-    std::list<SchemeValue> result;
-    std::vector<std::list<SchemeValue>::const_iterator> iters;
-    std::vector<std::list<SchemeValue>::const_iterator> ends;
-
+    std::vector<std::list<SchemeValue>> lists;
     size_t length = 0;
+
     for (size_t i = 1; i < args.size(); i++) {
         SchemeValue arg = args[i];
         if (arg.isExpr()) {
@@ -30,21 +28,31 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
         if (!arg.isList()) {
             throw InterpreterError("MAP requires list arguments");
         }
-        const auto& list = arg.asList();
+
+        lists.push_back(arg.asList());
+
         if (i == 1) {
-            length = list.size();
-        } else if (list.size() != length) {
+            length = lists.back().size();
+        } else if (lists.back().size() != length) {
             throw InterpreterError("MAP requires lists of equal length");
         }
-        iters.push_back(list.begin());
-        ends.push_back(list.end());
     }
 
-    while (iters[0] != ends[0]) {
+    std::list<SchemeValue> result;
+
+    std::vector<std::list<SchemeValue>::const_iterator> iters;
+    for (const auto& list : lists) {
+        iters.push_back(list.begin());
+    }
+
+    while (!lists.empty() && iters[0] != lists[0].end()) {
         std::vector<SchemeValue> call_args;
-        for (size_t i = 0; i < iters.size(); i++) {
-            call_args.push_back(*iters[i]);
-            ++iters[i];
+
+        for (size_t i = 0; i < lists.size(); i++) {
+            if (iters[i] != lists[i].end()) {
+                call_args.push_back(*iters[i]);
+                ++iters[i];
+            }
         }
 
         auto procResult = proc.call(interp, call_args);
