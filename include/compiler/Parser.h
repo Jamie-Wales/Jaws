@@ -22,7 +22,7 @@ private:
     std::shared_ptr<Expression> lambda();
     std::shared_ptr<Expression> ifExpression();
     std::shared_ptr<Expression> defineExpression();
-
+    std::shared_ptr<Expression> tailExpression();
     Token advance();
     bool isAtEnd() const;
     Token peek() const;

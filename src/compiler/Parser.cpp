@@ -47,13 +47,18 @@ std::shared_ptr<Expression> Parser::vector()
     throw ParseError("Expect list when defining vector", previousToken(), scanner->getLine(previousToken().line));
 }
 
+std::shared_ptr<Expression> Parser::tailExpression()
+{
+    return std::make_shared<Expression>(TailExpression { expression() }, previousToken().line);
+}
+
 std::shared_ptr<Expression> Parser::ifExpression()
 {
     auto condition = expression();
-    auto then = expression();
+    auto then = tailExpression();
     std::optional<std::shared_ptr<Expression>> elseExpr = std::nullopt;
     if (!check(Tokentype::RIGHT_PAREN)) {
-        elseExpr = expression();
+        elseExpr = tailExpression();
     }
     consume(Tokentype::RIGHT_PAREN, "Expect ')' at end of if expression");
 
@@ -188,6 +193,7 @@ std::shared_ptr<Expression> Parser::sexpression()
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         elements.push_back(expression());
     }
+    elements.back() = std::make_shared<Expression>(Expression { TailExpression { elements.back() }, previousToken().line });
     Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after s-expression.");
     return std::make_shared<Expression>(Expression { sExpression { std::move(elements) }, rightParen.line });
 }

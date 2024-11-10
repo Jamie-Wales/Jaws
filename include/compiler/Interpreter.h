@@ -19,7 +19,7 @@ private:
     std::optional<SchemeValue> interpretVector(const VectorExpression& v, const Expression& e);
     std::optional<SchemeValue> ifExpression(const IfExpression& i, const Expression& e);
     std::optional<SchemeValue> interpretQuoteExpression(const QuoteExpression& qe, const Expression& e);
-
+    std::optional<SchemeValue> interpretTailExpression(const TailExpression& t, const Expression& e);
     /* ----- Maths procedures ----- */
     static std::optional<SchemeValue> plus(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& args);
@@ -66,6 +66,7 @@ private:
     static std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> printHelp(Interpreter& interp, const std::vector<SchemeValue>& args);
+    bool tailCallInProgress;
 
 public:
     Interpreter();
@@ -75,4 +76,14 @@ public:
     void run(const std::vector<std::shared_ptr<Expression>>& expressions);
     std::optional<SchemeValue> interpret(const std::shared_ptr<Expression>& e);
     std::optional<SchemeValue> lookupVariable(const std::string& name) const;
+
+    bool isTailCallInProgress() const
+    {
+        return tailCallInProgress;
+    }
+
+    void setTailCallInProgress(bool value)
+    {
+        tailCallInProgress = value;
+    }
 };

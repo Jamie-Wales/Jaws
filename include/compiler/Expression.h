@@ -20,6 +20,15 @@ public:
     }
 };
 
+class TailExpression {
+public:
+    std::shared_ptr<Expression> expression;
+    TailExpression(std::shared_ptr<Expression> expression)
+        : expression(expression)
+    {
+    }
+};
+
 class ListExpression {
 public:
     std::vector<std::shared_ptr<Expression>> elements;
@@ -115,7 +124,9 @@ public:
         VectorExpression,
         LambdaExpression,
         IfExpression,
-        QuoteExpression>
+        QuoteExpression,
+        TailExpression>
+
         as;
     int line;
 
@@ -129,7 +140,8 @@ public:
             VectorExpression,
             LambdaExpression,
             IfExpression,
-            QuoteExpression>
+            QuoteExpression,
+            TailExpression>
             as,
         int line)
         : as(std::move(as))
@@ -141,6 +153,13 @@ public:
     {
         std::string indentation(indent * 2, ' ');
         std::visit(overloaded {
+
+                       [&](const TailExpression& e) {
+                           std::cout << indentation;
+                           e.expression->print();
+                           std::cout << std::endl;
+                       },
+
                        [&](const AtomExpression& e) {
                            std::cout << indentation << e.value.lexeme << std::endl;
                        },
@@ -207,6 +226,10 @@ public:
     std::shared_ptr<Expression> clone() const
     {
         return std::visit(overloaded {
+
+                              [&](const TailExpression& e) -> std::shared_ptr<Expression> {
+                                  return std::make_shared<Expression>(TailExpression { e.expression->clone() }, line);
+                              },
                               [&](const AtomExpression& e) -> std::shared_ptr<Expression> {
                                   return std::make_shared<Expression>(AtomExpression { e.value }, line);
                               },

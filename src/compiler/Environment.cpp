@@ -1,12 +1,15 @@
 #include "Environment.h"
+#include <iostream>
 void Environment::pushFrame()
 {
     frames.push_front(std::make_shared<Frame>());
+    std::cout << "Pushing frame now at " << frames.size() << std::endl;
 }
 
 void Environment::popFrame()
 {
     frames.pop_front();
+    std::cout << "Popping frame now at " << frames.size() << std::endl;
 }
 void Environment::define(const std::string& name, const SchemeValue& value)
 {
@@ -15,6 +18,7 @@ void Environment::define(const std::string& name, const SchemeValue& value)
 
 std::optional<SchemeValue> Environment::get(const std::string& name) const
 {
+
     for (const auto& frame : frames) {
         auto it = frame->bound.find(name);
         if (it != frame->bound.end()) {

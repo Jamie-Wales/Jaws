@@ -16,8 +16,8 @@ Interpreter::Interpreter()
     define("-", minus);
     define("*", mult);
     define("/", div);
-    define("<=", less);
-    define(">=", greater);
+    define("<=", lessOrEqual);
+    define(">=", greaterOrEqual);
     define("<", less);
     define(">", greater);
 
@@ -198,6 +198,45 @@ std::optional<SchemeValue> Interpreter::ifExpression(const IfExpression& i, cons
     }
     return std::nullopt;
 }
+std::optional<SchemeValue> Interpreter::interpretTailExpression(const TailExpression& t, const Expression& expr)
+{
+    std::cout << "Interpreting tail expression" << std::endl;
+    t.expression->print();
+    if (auto se = std::get_if<sExpression>(&t.expression->as)) {
+        if (se->elements.empty()) {
+            throw InterpreterError("Empty procedure call", expr);
+        }
+        auto procVal = interpret(se->elements[0]);
+        if (!procVal || !procVal->isProc()) {
+            throw InterpreterError("First element is not a procedure", expr);
+        } else if (procVal->asProc()->isBuiltin()) {
+
+            std::cout << "Builtin Func" << std::endl;
+            return interpret(t.expression);
+        }
+        auto proc = procVal->asProc();
+
+        std::cout << "Tail call to procedure: " << procVal->toString() << std::endl;
+
+        std::vector<SchemeValue> args;
+        for (size_t i = 1; i < se->elements.size(); ++i) {
+            auto argVal = interpret(se->elements[i]);
+            if (argVal) {
+                args.push_back(*argVal);
+                std::cout << "Argument " << i << ": " << argVal->toString() << std::endl;
+            } else {
+                return std::nullopt;
+            }
+        }
+
+        auto tailCall = std::make_shared<TailCall>(proc, args);
+        std::cout << "Created TailCall" << std::endl;
+        return SchemeValue(tailCall);
+    } else {
+        std::cout << "Expression is not an sExpression. Evaluating normally." << std::endl;
+        return interpret(t.expression);
+    }
+}
 std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expression>& e)
 {
     return std::visit(overloaded {
@@ -210,6 +249,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expressi
                           [this, &e](LambdaExpression& l) -> std::optional<SchemeValue> { return lambda(l, *e); },
                           [this, &e](IfExpression& i) -> std::optional<SchemeValue> { return ifExpression(i, *e); },
                           [this, &e](QuoteExpression& q) -> std::optional<SchemeValue> { return interpretQuoteExpression(q, *e); },
+                          [this, &e](TailExpression& t) -> std::optional<SchemeValue> { return interpretTailExpression(t, *e); },
                           [&e](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type", *e);
                           } },
