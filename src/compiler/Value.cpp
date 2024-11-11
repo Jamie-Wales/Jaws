@@ -157,7 +157,9 @@ SchemeValue expressionToValue(const Expression& expr)
                               }
                               return SchemeValue(std::move(values));
                           },
-
+                          [](const TailExpression& e) -> SchemeValue {
+                              return SchemeValue(expressionToValue(*e.expression));
+                          },
                           [](const auto& a) -> SchemeValue {
                               throw std::runtime_error("Invald Expression");
                           },

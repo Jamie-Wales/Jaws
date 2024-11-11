@@ -10,6 +10,7 @@ class InterpreterError;
 class Interpreter {
 private:
     /* ---- Interpreter Functions */
+
     std::optional<SchemeValue> defineExpression(const DefineExpression& de, const Expression& expr);
     std::optional<SchemeValue> interpretAtom(const AtomExpression& atom, const Expression& expr);
     std::optional<SchemeValue> interpretList(const ListExpression& list, const Expression& expr);
@@ -56,7 +57,7 @@ private:
     static std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> openOutputFile(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> closePort(Interpreter&, const std::vector<SchemeValue>& args);
-
+    static std::optional<SchemeValue> import(Interpreter& interp, const std::vector<SchemeValue>& args);
     /* Vector procedures */
 
     static std::optional<SchemeValue> eval(Interpreter& interp, const std::vector<SchemeValue>& args);

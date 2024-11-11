@@ -6,6 +6,7 @@ enum class Tokentype {
     FLOAT,
     STRING,
     SYMBOL,
+    IMPORT,
     QUOTE_SYMBOL,
     IDENTIFIER,
     LEFT_PAREN,

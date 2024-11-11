@@ -5,7 +5,8 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
-    { "quote", Tokentype::QUOTE }
+    { "quote", Tokentype::QUOTE },
+    { "import", Tokentype::IMPORT },
 };
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(;.*)"), Tokentype::COMMENT },
@@ -40,6 +41,7 @@ std::string Scanner::getLine(int lineNumber) const
     }
     return "";
 }
+
 
 std::vector<Token> Scanner::generateTokens()
 {

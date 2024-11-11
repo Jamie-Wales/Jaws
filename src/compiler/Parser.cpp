@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Error.h"
+#include "run.h"
 #include <optional>
 
 void Parser::initialize(std::shared_ptr<Scanner> s)
@@ -12,6 +13,11 @@ void Parser::load(const std::vector<Token>& t)
     tokens = t;
     current = 0;
     panicMode = false;
+    import();
+   for (auto e :*parse()) {
+     imported->push_back(e) ;
+   }
+
 }
 
 std::optional<std::vector<std::shared_ptr<Expression>>> Parser::parse()
@@ -29,6 +35,26 @@ std::optional<std::vector<std::shared_ptr<Expression>>> Parser::parse()
         e.printFormattedError();
         return std::nullopt;
     }
+}
+
+bool Parser::import()
+{
+    if (peek(1).type == Tokentype::IMPORT) {
+        advance();
+        advance();
+        std::vector<Token> output = {};
+        while (!match(Tokentype::RIGHT_PAREN)) {
+            auto name = consume(Tokentype::IDENTIFIER, "Must import identifier");
+            Scanner sc;
+            for (auto& t : sc.tokenize(readFile(std::format("../lib/{}.scm", name.lexeme)))) {
+                output.emplace_back(t);
+            }
+            toImport.push_back(output);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 std::shared_ptr<Expression> Parser::vector()
@@ -218,6 +244,11 @@ bool Parser::isAtEnd() const
 Token Parser::peek() const
 {
     return tokens[current];
+}
+
+Token Parser::peek(int add) const
+{
+    return tokens[current + add];
 }
 
 Token Parser::previousToken()

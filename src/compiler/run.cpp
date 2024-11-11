@@ -34,7 +34,7 @@ void runFile(const std::string& path)
         Parser parser;
         parser.initialize(scanner);
         parser.load(tokens);
-
+        parser.import();
         auto expr = parser.parse();
         if (!expr) {
             throw std::runtime_error("Parsing failed");
@@ -81,6 +81,9 @@ void runPrompt()
         try {
             std::vector<Token> tokens = scanner->tokenize(input);
             parser.load(tokens);
+            if (parser.import()) {
+                continue;
+            }
             auto expr = parser.parse();
             if (expr) {
                 for (auto& ex : *expr) {
