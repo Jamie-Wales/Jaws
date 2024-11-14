@@ -88,6 +88,11 @@ export const WelcomePage = ({
         );
     };
 
+    const buttonStyles = {
+        backgroundColor: '#dd3f0c',
+        color: 'white',
+    };
+
     const MobileMenu = () => (
         <div className={`
             fixed inset-0 bg-black/50 z-50 transition-opacity duration-200
@@ -131,7 +136,8 @@ export const WelcomePage = ({
                             Examples
                         </Button>
                         <Button
-                            className="w-full justify-start bg-cyan-500 hover:bg-cyan-600"
+                            style={buttonStyles}
+                            className="w-full justify-start hover:opacity-90"
                             onClick={() => {
                                 onGetStarted();
                                 setMobileMenuOpen(false);
@@ -180,7 +186,8 @@ export const WelcomePage = ({
                                 Examples
                             </Button>
                             <Button
-                                className="bg-cyan-500 hover:bg-cyan-600 text-white w-full md:w-auto"
+                                style={buttonStyles}
+                                className="hover:opacity-90 w-full md:w-auto"
                                 onClick={onGetStarted}
                             >
                                 Get Started
@@ -189,7 +196,6 @@ export const WelcomePage = ({
                     </div>
                 </nav>
 
-                {/* Mobile menu overlay */}
                 <MobileMenu />
 
                 <div className="container mx-auto px-4 py-12 md:py-24">
@@ -210,7 +216,8 @@ export const WelcomePage = ({
                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-4 pt-4">
                                 <Button
                                     size="lg"
-                                    className="bg-cyan-500 hover:bg-cyan-600 text-white w-full sm:w-auto"
+                                    style={buttonStyles}
+                                    className="hover:opacity-90 w-full sm:w-auto"
                                     onClick={onTryEditor}
                                 >
                                     Try Online Editor <ArrowRight className="ml-2 h-4 w-4" />
@@ -232,8 +239,6 @@ export const WelcomePage = ({
                 </div>
             </header>
 
-            {/* Rest of the component remains the same */}
-            {/* ... Features section ... */}
             <section className="py-12 md:py-20 bg-slate-50">
                 <div className="container mx-auto px-4">
                     <h2 className="text-2xl md:text-3xl font-bold text-slate-900 text-center mb-8 md:mb-12">
@@ -243,7 +248,7 @@ export const WelcomePage = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                         <Card className="bg-white border-slate-200">
                             <CardContent className="pt-6 text-center">
-                                <Terminal className="h-12 w-12 mb-4 mx-auto text-cyan-600" />
+                                <Terminal className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
                                 <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
                                     Interactive REPL
                                 </h3>
@@ -255,7 +260,7 @@ export const WelcomePage = ({
 
                         <Card className="bg-white border-slate-200">
                             <CardContent className="pt-6 text-center">
-                                <Code className="h-12 w-12 mb-4 mx-auto text-cyan-600" />
+                                <Code className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
                                 <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
                                     Live Examples
                                 </h3>
@@ -267,7 +272,7 @@ export const WelcomePage = ({
 
                         <Card className="bg-white border-slate-200">
                             <CardContent className="pt-6 text-center">
-                                <BookOpen className="h-12 w-12 mb-4 mx-auto text-cyan-600" />
+                                <BookOpen className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
                                 <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
                                     Guided Lessons
                                 </h3>
@@ -279,7 +284,7 @@ export const WelcomePage = ({
 
                         <Card className="bg-white border-slate-200">
                             <CardContent className="pt-6 text-center">
-                                <Users className="h-12 w-12 mb-4 mx-auto text-cyan-600" />
+                                <Users className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
                                 <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
                                     Community
                                 </h3>
@@ -300,7 +305,8 @@ export const WelcomePage = ({
                     <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-4">
                         <Button
                             size="lg"
-                            className="bg-cyan-500 hover:bg-cyan-600 text-white w-full sm:w-auto"
+                            style={buttonStyles}
+                            className="hover:opacity-90 w-full sm:w-auto"
                             onClick={onTryEditor}
                         >
                             Start Coding Now

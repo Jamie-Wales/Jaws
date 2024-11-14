@@ -1,17 +1,19 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <regex>
-#include <optional>
-#include <unordered_map>
 #include "Token.h"
+#include <optional>
+#include <regex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 class Scanner {
 public:
     Scanner() = default;
     std::vector<Token> tokenize(const std::string& input);
     std::string getLine(int lineNumber) const;
+
+    std::optional<std::vector<Token>> import(std::string& input);
 
 private:
     struct RegexInfo {

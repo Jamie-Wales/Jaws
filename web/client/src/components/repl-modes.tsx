@@ -5,6 +5,11 @@ import { Maximize2, Minimize2, Download } from 'lucide-react';
 import { Terminal, TerminalRef } from './terminal';
 import { CodeEditor } from './codeEditor';
 
+const buttonStyles = {
+    backgroundColor: '#dd3f0c',
+    color: 'white',
+};
+
 interface ReplModesProps {
     onCommand: (command: string) => Promise<string>;
     mode: 'repl' | 'editor';
@@ -82,7 +87,8 @@ export const ReplModes = forwardRef<TerminalRef, ReplModesProps>(
                                         variant="default"
                                         size="sm"
                                         onClick={handleLoadCode}
-                                        className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                                        style={buttonStyles}
+                                        className="hover:opacity-90"
                                     >
                                         <Download className="h-4 w-4 mr-2" />
                                         Load into REPL

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Code2, BookOpen, Lightbulb, Rocket, ArrowRight } from "lucide-react";
+import { Code2, BookOpen, Lightbulb, Rocket, ArrowRight, Book, Terminal, Github } from "lucide-react";
 import { TabsContent } from "@/components/ui/tabs";
 import hljs from 'highlight.js/lib/core';
 import schemeLanguage from 'highlight.js/lib/languages/scheme';
@@ -11,6 +11,11 @@ import type { TerminalRef } from './terminal';
 import type { Example } from '../App';
 
 hljs.registerLanguage('scheme', schemeLanguage);
+
+const buttonStyles = {
+    backgroundColor: '#dd3f0c',
+    color: 'white',
+};
 
 const HighlightedCode = ({ code }: { code: string }) => {
     const codeRef = useRef<HTMLElement>(null);
@@ -22,7 +27,7 @@ const HighlightedCode = ({ code }: { code: string }) => {
     }, [code]);
 
     return (
-        <pre className="rounded-md text-sm">
+        <pre className="rounded-md text-sm overflow-x-auto p-4 bg-zinc-900/50">
             <code ref={codeRef} className="language-scheme">
                 {code}
             </code>
@@ -54,12 +59,12 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
     };
 
     return (
-        <TabsContent value="get-started">
+        <TabsContent value="get-started" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-                <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
+                <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white border-none shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-zinc-200">
-                            <Rocket className="h-5 w-5 text-cyan-400" />
+                            <Rocket className="h-5 w-5" style={{ color: '#06b6d4' }} />
                             Quick Start
                         </CardTitle>
                         <CardDescription className="text-slate-400">
@@ -74,10 +79,11 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
                             </p>
                             <HighlightedCode code="(+ 1 2 3)" />
                             <Button
-                                className="w-full mt-2 bg-cyan-500 hover:bg-cyan-600 text-white"
+                                style={buttonStyles}
+                                className="w-full mt-4 hover:opacity-90"
                                 onClick={handleOpenEditor}
                             >
-                                <span className="flex items-center gap-2">
+                                <span className="flex items-center justify-center gap-2">
                                     Try REPL <ArrowRight className="h-4 w-4" />
                                 </span>
                             </Button>
@@ -85,10 +91,10 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
+                <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white border-none shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-zinc-200">
-                            <BookOpen className="h-5 w-5 text-cyan-400" />
+                            <BookOpen className="h-5 w-5" style={{ color: '#06b6d4' }} />
                             Features
                         </CardTitle>
                         <CardDescription className="text-slate-400">
@@ -96,19 +102,26 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-4">
-                            <li className="flex items-start gap-2">
-                                <Code2 className="h-5 w-5 text-cyan-400 shrink-0" />
+                        <ul className="space-y-6">
+                            <li className="flex items-start gap-3">
+                                <Code2 className="h-5 w-5 shrink-0 mt-1" style={{ color: '#06b6d4' }} />
                                 <div>
-                                    <span className="font-medium text-zinc-200">Modern Editor</span>
-                                    <p className="text-sm text-slate-400">Syntax highlighting and auto-completion</p>
+                                    <span className="font-medium text-zinc-200 block mb-1">Modern Editor</span>
+                                    <p className="text-sm text-slate-400">Syntax highlighting and auto-completion for a seamless coding experience</p>
                                 </div>
                             </li>
-                            <li className="flex items-start gap-2">
-                                <Lightbulb className="h-5 w-5 text-cyan-400 shrink-0" />
+                            <li className="flex items-start gap-3">
+                                <Terminal className="h-5 w-5 shrink-0 mt-1" style={{ color: '#06b6d4' }} />
                                 <div>
-                                    <span className="font-medium text-zinc-200">Interactive REPL</span>
-                                    <p className="text-sm text-slate-400">Evaluate code instantly in your browser</p>
+                                    <span className="font-medium text-zinc-200 block mb-1">Interactive REPL</span>
+                                    <p className="text-sm text-slate-400">Evaluate code instantly in your browser with real-time feedback</p>
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <Lightbulb className="h-5 w-5 shrink-0 mt-1" style={{ color: '#06b6d4' }} />
+                                <div>
+                                    <span className="font-medium text-zinc-200 block mb-1">Learning Tools</span>
+                                    <p className="text-sm text-slate-400">Built-in examples and documentation to help you learn Scheme</p>
                                 </div>
                             </li>
                         </ul>
@@ -118,35 +131,41 @@ export function GetStartedTab({ terminalRef, onTabChange }: GetStartedTabProps) 
         </TabsContent>
     );
 }
+
 export function ExamplesTab({ examples, handleTryExample }: ExamplesTabProps) {
     return (
-        <TabsContent value="examples">
-            <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
+        <TabsContent value="examples" className="space-y-4">
+            <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white border-none shadow-lg">
                 <CardHeader>
-                    <CardTitle className="text-zinc-200">Example Programs</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-zinc-200">
+                        <Code2 className="h-5 w-5" style={{ color: '#06b6d4' }} />
+                        Example Programs
+                    </CardTitle>
                     <CardDescription className="text-slate-400">
                         Learn by example with these code snippets
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                         {examples.map((example, index) => (
-                            <div key={index} className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold text-zinc-200">{example.name}</h3>
+                            <div key={index} className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="space-y-1">
+                                        <h3 className="font-semibold text-zinc-200">{example.name}</h3>
+                                        <p className="text-sm text-slate-400">{example.description}</p>
+                                    </div>
                                     <Button
-                                        variant="outline"
+                                        style={buttonStyles}
                                         size="sm"
                                         onClick={() => handleTryExample(example.code)}
-                                        className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white"
+                                        className="hover:opacity-90 border-none w-full sm:w-auto"
                                     >
-                                        Try It <ArrowRight className="h-4 w-4" />
+                                        Try It <ArrowRight className="h-4 w-4 ml-2" />
                                     </Button>
                                 </div>
-                                <p className="text-sm text-slate-400">{example.description}</p>
                                 <HighlightedCode code={example.code} />
                                 {index < examples.length - 1 && (
-                                    <Separator className="mt-4 bg-slate-700/50" />
+                                    <Separator className="mt-6 bg-slate-700/50" />
                                 )}
                             </div>
                         ))}
@@ -159,60 +178,105 @@ export function ExamplesTab({ examples, handleTryExample }: ExamplesTabProps) {
 
 export function DocumentationTab() {
     return (
-        <TabsContent value="documentation">
-            <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
+        <TabsContent value="documentation" className="space-y-4">
+            <Card className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white border-none shadow-lg">
                 <CardHeader>
-                    <CardTitle className="text-zinc-200">Documentation</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-zinc-200">
+                        <Book className="h-5 w-5" style={{ color: '#06b6d4' }} />
+                        Documentation
+                    </CardTitle>
                     <CardDescription className="text-slate-400">
                         Learn more about Jaws Scheme and its features
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <h3 className="font-semibold text-zinc-200">Language Support</h3>
-                        <p className="text-sm text-slate-400">
-                            Jaws implements a subset of R7RS Scheme with support for:
-                        </p>
-                        <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
-                            <li>Basic arithmetic operations</li>
-                            <li>List manipulation</li>
-                            <li>First-class functions</li>
-                            <li>Lexical scoping</li>
-                            <li>Basic I/O operations</li>
-                        </ul>
+                <CardContent className="space-y-8">
+                    <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                            <Code2 className="h-5 w-5 shrink-0 mt-1" style={{ color: '#06b6d4' }} />
+                            <div>
+                                <h3 className="font-semibold text-zinc-200 mb-2">Language Support</h3>
+                                <p className="text-sm text-slate-400 mb-3">
+                                    Jaws implements a subset of R7RS Scheme with support for:
+                                </p>
+                                <ul className="grid gap-2 text-sm text-slate-400">
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Basic arithmetic operations
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        List manipulation
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        First-class functions
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Lexical scoping
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
                     <Separator className="bg-slate-700/50" />
 
-                    <div className="space-y-2">
-                        <h3 className="font-semibold text-zinc-200">Key Features</h3>
-                        <p className="text-sm text-slate-400">
-                            Explore these core features:
-                        </p>
-                        <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
-                            <li>Interactive REPL with syntax highlighting</li>
-                            <li>Built-in code editor for larger programs</li>
-                            <li>Real-time error reporting</li>
-                            <li>Example programs to learn from</li>
-                        </ul>
+                    <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                            <Terminal className="h-5 w-5 shrink-0 mt-1" style={{ color: '#06b6d4' }} />
+                            <div>
+                                <h3 className="font-semibold text-zinc-200 mb-2">Key Features</h3>
+                                <p className="text-sm text-slate-400 mb-3">
+                                    Explore these core features:
+                                </p>
+                                <ul className="grid gap-2 text-sm text-slate-400">
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Interactive REPL with syntax highlighting
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Built-in code editor for larger programs
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Real-time error reporting
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
                     <Separator className="bg-slate-700/50" />
 
-                    <div className="space-y-2">
-                        <h3 className="font-semibold text-zinc-200">Getting Help</h3>
-                        <p className="text-sm text-slate-400">
-                            Need help? Try these resources:
-                        </p>
-                        <ul className="list-disc list-inside text-sm text-slate-400 space-y-1">
-                            <li>Check out the examples tab</li>
-                            <li>Read the language reference</li>
-                            <li>View the source on GitHub</li>
-                        </ul>
+                    <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                            <Github className="h-5 w-5 shrink-0 mt-1" style={{ color: '#06b6d4' }} />
+                            <div>
+                                <h3 className="font-semibold text-zinc-200 mb-2">Getting Help</h3>
+                                <p className="text-sm text-slate-400 mb-3">
+                                    Need help? Try these resources:
+                                </p>
+                                <ul className="grid gap-2 text-sm text-slate-400">
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Check out the examples tab
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        Read the language reference
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#06b6d4' }} />
+                                        View the source on GitHub
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
         </TabsContent>
-
     );
 }

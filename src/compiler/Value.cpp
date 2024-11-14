@@ -167,7 +167,7 @@ SchemeValue expressionToValue(const Expression& expr)
         expr.as);
 }
 SchemeValue::SchemeValue()
-    : value(Number(0))
+    : value(std::list<SchemeValue>())
 {
 }
 

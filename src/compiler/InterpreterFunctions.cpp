@@ -1,10 +1,7 @@
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
-#include "Parser.h"
 #include "Port.h"
-#include "Scanner.h"
-#include "run.h"
 #include <optional>
 
 std::optional<SchemeValue> Interpreter::lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
@@ -355,33 +352,48 @@ std::optional<SchemeValue> Interpreter::read(Interpreter& interp, const std::vec
     if (args.size() > 1) {
         throw InterpreterError("READ accepts at most 1 argument");
     }
+
     std::istream* input;
     if (args.empty()) {
         input = &std::cin;
     } else {
         SchemeValue arg = args[0];
-        if (arg.isExpr())
+        if (arg.isExpr()) {
             arg = expressionToValue(*arg.asExpr());
+        }
         const auto* port = std::get_if<Port>(&arg.value);
         if (!port || port->type != PortType::Input || !port->isOpen()) {
             throw InterpreterError("READ argument must be an open input port");
         }
-        input = port->file.get();
+        input = port->get();
     }
-    std::string line;
-    if (!std::getline(*input, line)) {
-        throw InterpreterError("READ: End of file or error");
+
+    std::string content;
+    if (input == &std::cin) {
+        if (!std::getline(*input, content)) {
+            throw InterpreterError("READ: End of file or error");
+        }
+    } else {
+        // For string streams and files, read until we have a complete expression
+        std::string line;
+        while (std::getline(*input, line)) {
+            content += line + "\n";
+            if (line.find_first_not_of(" \t\n") != std::string::npos) {
+                break;
+            }
+        }
+        if (content.empty()) {
+            throw InterpreterError("READ: End of file or error");
+        }
     }
-    Scanner scan = {};
-    auto tokens = scan.tokenize(line);
-    Parser p = {};
-    p.load(tokens);
-    auto opt = p.parse();
-    if (opt) {
+
+    auto tokens = interp.s->tokenize(content);
+    interp.p->load(tokens);
+    auto opt = interp.p->parse();
+    if (opt && !opt->empty()) {
         auto ele = (*opt)[0];
         return SchemeValue(ele);
     }
-
     return std::nullopt;
 }
 
@@ -392,26 +404,27 @@ std::optional<SchemeValue> Interpreter::write(Interpreter&, const std::vector<Sc
     }
 
     SchemeValue arg = args[0];
-    if (arg.isExpr())
+    if (arg.isExpr()) {
         arg = expressionToValue(*arg.asExpr());
+    }
 
     std::ostream* output;
     if (args.size() == 1) {
         output = &std::cout;
     } else {
         SchemeValue portArg = args[1];
-        if (portArg.isExpr())
+        if (portArg.isExpr()) {
             portArg = expressionToValue(*portArg.asExpr());
+        }
         const auto* port = std::get_if<Port>(&portArg.value);
         if (!port || port->type != PortType::Output || !port->isOpen()) {
             throw InterpreterError("WRITE second argument must be an open output port");
         }
-        output = port->file.get();
+        output = port->getOutput();
     }
     *output << arg.toString();
     return std::nullopt;
 }
-
 std::optional<SchemeValue> Interpreter::display(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() < 1 || args.size() > 2) {
@@ -434,7 +447,7 @@ std::optional<SchemeValue> Interpreter::display(Interpreter& interp, const std::
     if (!port || port->type != PortType::Output || !port->isOpen()) {
         throw InterpreterError("DISPLAY second argument must be an open output port");
     }
-    std::ostream* output = port->file.get();
+    std::ostream* output = port->getOutput();
 
     if (const auto* str = std::get_if<std::string>(&arg.value)) {
         *output << *str;
@@ -460,7 +473,7 @@ std::optional<SchemeValue> Interpreter::newline(Interpreter&, const std::vector<
         if (!port || port->type != PortType::Output || !port->isOpen()) {
             throw InterpreterError("NEWLINE argument must be an open output port");
         }
-        output = port->file.get();
+        output = port->getOutput();
     }
     *output << std::endl;
     return std::nullopt;
@@ -617,4 +630,104 @@ std::optional<SchemeValue> Interpreter::printHelp(Interpreter& interp, const std
                         << "\nEnter Scheme expressions to evaluate them" << std::endl;
 
     return std::nullopt;
+}
+std::optional<SchemeValue> Interpreter::isProcedure(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("procedure?: expected 1 argument");
+    return SchemeValue(args[0].isProc());
+}
+
+std::optional<SchemeValue> Interpreter::isPair(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("pair?: expected 1 argument");
+    return SchemeValue(args[0].isList() && !args[0].asList().empty());
+}
+
+std::optional<SchemeValue> Interpreter::isList(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("list?: expected 1 argument");
+    return SchemeValue(args[0].isList());
+}
+
+std::optional<SchemeValue> Interpreter::isVector(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("vector?: expected 1 argument");
+    return SchemeValue(std::holds_alternative<std::vector<SchemeValue>>(args[0].value));
+}
+
+std::optional<SchemeValue> Interpreter::isSymbol(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("symbol?: expected 1 argument");
+    return SchemeValue(args[0].isSymbol());
+}
+
+std::optional<SchemeValue> Interpreter::isNumber(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("number?: expected 1 argument");
+    return SchemeValue(args[0].isNumber());
+}
+
+std::optional<SchemeValue> Interpreter::isString(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("string?: expected 1 argument");
+    return SchemeValue(std::holds_alternative<std::string>(args[0].value));
+}
+
+std::optional<SchemeValue> Interpreter::isPort(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("port?: expected 1 argument");
+    return SchemeValue(args[0].isPort());
+}
+
+std::optional<SchemeValue> Interpreter::isNull(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1)
+        throw std::runtime_error("null?: expected 1 argument");
+    return SchemeValue(args[0].isList() && args[0].asList().empty());
+}
+
+std::optional<SchemeValue> Interpreter::isEq(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2)
+        throw std::runtime_error("eq?: expected 2 arguments");
+    return SchemeValue(&args[0] == &args[1]);
+}
+
+std::optional<SchemeValue> Interpreter::isEqv(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2)
+        throw std::runtime_error("eqv?: expected 2 arguments");
+    return SchemeValue(args[0] == args[1]);
+}
+
+std::optional<SchemeValue> Interpreter::apply(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 2)
+        throw std::runtime_error("apply: expected at least 2 arguments");
+
+    if (!args[0].isProc())
+        throw std::runtime_error("apply: first argument must be a procedure");
+
+    std::vector<SchemeValue> procArgs;
+    for (size_t i = 1; i < args.size() - 1; i++) {
+        procArgs.push_back(args[i]);
+    }
+
+    const auto& lastArg = args.back();
+    if (!lastArg.isList())
+        throw std::runtime_error("apply: last argument must be a list");
+
+    for (const auto& elem : lastArg.asList()) {
+        procArgs.push_back(elem);
+    }
+
+    return args[0].call(interp, procArgs);
 }

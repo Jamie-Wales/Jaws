@@ -21,11 +21,12 @@ public:
             throw std::runtime_error("Cannot replace the global frame");
         }
     }
-    void pushFrame();
-    void popFrame();
     void define(const std::string& name, const SchemeValue& value);
     std::optional<SchemeValue> get(const std::string& name) const;
     void set(const std::string& name, const SchemeValue& value);
+
+    void pushFrame();
+    void popFrame();
 
 private:
     std::list<std::shared_ptr<Frame>> frames;

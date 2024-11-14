@@ -13,6 +13,7 @@ private:
     size_t current = 0;
     bool panicMode = false;
 
+    std::shared_ptr<Expression> import();
     Token peek(int add) const;
     std::shared_ptr<Expression> expression();
     std::shared_ptr<Expression> atom();
@@ -35,9 +36,11 @@ private:
     void errorAt(const Token& token, const std::string& message);
     std::vector<std::vector<Token>> toImport;
     std::optional<std::vector<Expression>> imported;
+    std::shared_ptr<Expression> syntaxRulesExpression();
+    std::shared_ptr<Expression> defineSyntaxExpression();
+    std::shared_ptr<Expression> syntaxPattern();
 
 public:
-    bool import();
     Parser() = default;
     void load(const std::vector<Token>& t);
     std::optional<std::vector<std::shared_ptr<Expression>>> parse();

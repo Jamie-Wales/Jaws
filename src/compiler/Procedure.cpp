@@ -9,7 +9,9 @@ std::optional<SchemeValue> UserProcedure::operator()(Interpreter& interp,
     if (args.size() != parameters.size()) {
         throw InterpreterError("Expected " + std::to_string(parameters.size()) + " arguments but got " + std::to_string(args.size()));
     }
+
     interp.scope->pushFrame();
+
     for (size_t i = 0; i < args.size(); i++) {
         interp.scope->define(parameters[i].lexeme, args[i]);
     }

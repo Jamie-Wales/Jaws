@@ -30,17 +30,12 @@ void runFile(const std::string& path)
     try {
         std::string sourceCode = readFile(path);
         auto scanner = std::make_shared<Scanner>();
+        auto parser = std::make_shared<Parser>();
+        parser->initialize(scanner);
         std::vector<Token> tokens = scanner->tokenize(sourceCode);
-        Parser parser;
-        parser.initialize(scanner);
-        parser.load(tokens);
-        parser.import();
-        auto expr = parser.parse();
-        if (!expr) {
-            throw std::runtime_error("Parsing failed");
-        }
-        Interpreter i;
-        i.run(*expr);
+        parser->load(tokens);
+        Interpreter i = { scanner, parser };
+        i.init();
         std::cout << i.outputStream.str();
     } catch (const InterpreterError& e) {
         e.printFormattedError();
@@ -54,9 +49,9 @@ void runPrompt()
     std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
 
     auto scanner = std::make_shared<Scanner>();
-    Parser parser;
-    parser.initialize(scanner);
-    Interpreter interpreter;
+    auto parser = std::make_shared<Parser>();
+    parser->initialize(scanner);
+    Interpreter i = { scanner, parser };
 
     std::string input;
     while (true) {
@@ -79,24 +74,11 @@ void runPrompt()
             continue;
 
         try {
-            std::vector<Token> tokens = scanner->tokenize(input);
-            parser.load(tokens);
-            if (parser.import()) {
-                continue;
-            }
-            auto expr = parser.parse();
-            if (expr) {
-                for (auto& ex : *expr) {
-                    std::optional<SchemeValue> result = interpreter.interpret(ex);
-                    auto output = interpreter.outputStream.str();
-                    if (result) {
-                        output += result->toString();
-                    }
-                    std::cout << output << std::endl;
-                }
 
-                interpreter.outputStream.str("");
-            }
+            std::vector<Token> tokens = scanner->tokenize(input);
+            parser->load(tokens);
+            i.init();
+            std::cout << i.outputStream.str();
         } catch (const ParseError& e) {
             e.printFormattedError();
         } catch (const InterpreterError& e) {

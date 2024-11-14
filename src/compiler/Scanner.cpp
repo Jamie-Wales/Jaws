@@ -1,12 +1,17 @@
 #include "Scanner.h"
 #include "Error.h"
+#include "Token.h"
 
 const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
+    { "define-syntax", Tokentype::DEFINE_SYTAX },
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
     { "quote", Tokentype::QUOTE },
     { "import", Tokentype::IMPORT },
+    { "syntax-rules", Tokentype::SYNTAX_RULES },
+    { "=>", Tokentype::ARROW }
+
 };
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(;.*)"), Tokentype::COMMENT },
@@ -20,8 +25,8 @@ const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"([a-zA-Z!$%&*+\-\./:<=>?@^_~][a-zA-Z0-9!$%&*+\-\./:<=>?@^_~]*)"), Tokentype::IDENTIFIER },
     { std::regex(R"(\|(?:[^\\|]|\\.)*\|)"), Tokentype::IDENTIFIER },
     { std::regex(R"(')"), Tokentype::QUOTE },
-    { std::regex(R"(\()"), Tokentype::LEFT_PAREN },
-    { std::regex(R"(\))"), Tokentype::RIGHT_PAREN },
+    { std::regex(R"(\(|\[|\{)"), Tokentype::LEFT_PAREN },
+    { std::regex(R"(\)|\]|\})"), Tokentype::RIGHT_PAREN },
     { std::regex(R"(\#)"), Tokentype::HASH },
     { std::regex(R"([ \t\n\r]+)"), Tokentype::WHITESPACE }
 };
@@ -41,7 +46,6 @@ std::string Scanner::getLine(int lineNumber) const
     }
     return "";
 }
-
 
 std::vector<Token> Scanner::generateTokens()
 {

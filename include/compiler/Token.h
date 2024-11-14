@@ -32,6 +32,9 @@ enum class Tokentype {
     COMMENT,
     EOF_TOKEN,
     HASH,
+    DEFINE_SYTAX,
+    SYNTAX_RULES,
+    ARROW,
     ERROR
 };
 
