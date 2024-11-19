@@ -8,9 +8,11 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
     { "quote", Tokentype::QUOTE },
+    { "letrec", Tokentype::LETREC },
+    { "let", Tokentype::LET },
     { "import", Tokentype::IMPORT },
-    { "syntax-rules", Tokentype::SYNTAX_RULES },
-    { "=>", Tokentype::ARROW }
+    { "syntax-rule", Tokentype::SYNTAX_RULE },
+    { "=>", Tokentype::ARROW },
 
 };
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {

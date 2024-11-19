@@ -436,7 +436,7 @@ std::optional<SchemeValue> Interpreter::display(Interpreter& interp, const std::
         arg = expressionToValue(*arg.asExpr());
 
     if (args.size() == 1) {
-        interp.outputStream << arg.toString();
+        interp.outputStream << arg.toString() << std::endl;
         return std::nullopt;
     }
 

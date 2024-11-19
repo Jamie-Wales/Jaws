@@ -33,8 +33,10 @@ enum class Tokentype {
     EOF_TOKEN,
     HASH,
     DEFINE_SYTAX,
-    SYNTAX_RULES,
+    SYNTAX_RULE,
     ARROW,
+    LET,
+    LETREC,
     ERROR
 };
 

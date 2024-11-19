@@ -36,9 +36,10 @@ private:
     void errorAt(const Token& token, const std::string& message);
     std::vector<std::vector<Token>> toImport;
     std::optional<std::vector<Expression>> imported;
-    std::shared_ptr<Expression> syntaxRulesExpression();
+    std::shared_ptr<Expression> syntaxRuleExpression();
     std::shared_ptr<Expression> defineSyntaxExpression();
-    std::shared_ptr<Expression> syntaxPattern();
+    std::shared_ptr<Expression> letExpression();
+    std::shared_ptr<Expression> letRecExpression();
 
 public:
     Parser() = default;

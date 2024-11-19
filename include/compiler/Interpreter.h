@@ -15,6 +15,7 @@ private:
     /* ---- Interpreter Functions */
     MacroExpander macroExpander;
 
+    std::optional<SchemeValue> interpretLetExpression(const LetExpression& le, const Expression& e);
     std::optional<SchemeValue> defineSyntax(const DefineSyntaxExpression& dse, const Expression& e);
     std::optional<SchemeValue> interpretImport(const ImportExpression& ie, const Expression& expr);
     std::optional<SchemeValue> defineExpression(const DefineExpression& de, const Expression& expr);
@@ -40,7 +41,6 @@ private:
     static std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
-
     /* ----- List procedures ----- */
     static std::optional<SchemeValue> map(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listProcedure(Interpreter&, const std::vector<SchemeValue>& args);
@@ -54,7 +54,6 @@ private:
     static std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>& args);
-
     /* ----- File i/o ----- */
     static std::optional<SchemeValue> write(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> display(Interpreter&, const std::vector<SchemeValue>& args);
@@ -64,7 +63,6 @@ private:
     static std::optional<SchemeValue> closePort(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> import(Interpreter& interp, const std::vector<SchemeValue>& args);
     /* Vector procedures */
-
     static std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args);

@@ -79,6 +79,7 @@ void runPrompt()
             parser->load(tokens);
             i.init();
             std::cout << i.outputStream.str();
+            i.outputStream.clear();
         } catch (const ParseError& e) {
             e.printFormattedError();
         } catch (const InterpreterError& e) {

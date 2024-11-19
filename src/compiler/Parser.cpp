@@ -84,17 +84,56 @@ std::shared_ptr<Expression> Parser::ifExpression()
         previousToken().line });
 }
 
+std::shared_ptr<Expression> Parser::letExpression()
+{
+    LetExpression::Args output;
+    std::optional<Token> token;
+    if (match(Tokentype::IDENTIFIER)) {
+        token = previousToken();
+    }
+
+    consume(Tokentype::LEFT_PAREN, "Expected '(' after let");
+    int count = 1;
+    while (count != 0) {
+        if (match(Tokentype::LEFT_PAREN)) {
+            count++;
+        }
+        auto name = consume(Tokentype::IDENTIFIER, "Expected identifier");
+        auto value = expression();
+        output.push_back({ name, value });
+
+        while (match(Tokentype::RIGHT_PAREN)) {
+            count--;
+        }
+    }
+    std::vector<std::shared_ptr<Expression>> body;
+    while (!match(Tokentype::RIGHT_PAREN)) {
+        body.emplace_back(expression());
+    }
+    return std::make_shared<Expression>(
+        LetExpression { token, output, body },
+        previousToken().line);
+}
+
+std::shared_ptr<Expression> Parser::letRecExpression()
+{
+    throw std::runtime_error("Not implemented");
+}
+
 std::shared_ptr<Expression> Parser::expression()
 {
     if (match(Tokentype::LEFT_PAREN)) {
         if (match(Tokentype::DEFINE)) {
             return defineExpression();
-        } else if (match(Tokentype::DEFINE_SYTAX)) { // Add this token type
+        } else if (match(Tokentype::LET)) {
+            return letExpression();
+        } else if (match(Tokentype::LETREC)) {
+            return letRecExpression();
+        } else if (match(Tokentype::DEFINE_SYTAX)) {
             return defineSyntaxExpression();
-        } else if (match(Tokentype::SYNTAX_RULES)) { // Add this token type
-            return syntaxRulesExpression();
+        } else if (match(Tokentype::SYNTAX_RULE)) {
+            return syntaxRuleExpression();
         } else if (match(Tokentype::IMPORT)) {
-            return import();
             return import();
         } else if (match(Tokentype::LAMBDA)) {
             return lambda();
@@ -124,7 +163,6 @@ std::shared_ptr<Expression> Parser::list()
             output.push_back(expression());
         }
     }
-
     return std::make_shared<Expression>(Expression {
         ListExpression {
             std::move(output) },
@@ -256,7 +294,7 @@ Token Parser::consume(Tokentype type, const std::string& message)
 {
     if (check(type))
         return advance();
-    throw ParseError(message, peek(), scanner->getLine(peek().line));
+    throw ParseError(message + " Token: " + previousToken().lexeme + " ", peek(), scanner->getLine(peek().line));
 }
 
 bool Parser::check(Tokentype type) const
@@ -288,59 +326,23 @@ void Parser::errorAt(const Token& token, const std::string& message)
     panicMode = true;
     throw ParseError(message, token, scanner->getLine(token.line));
 }
-std::shared_ptr<Expression> Parser::syntaxPattern()
+std::shared_ptr<Expression> Parser::syntaxRuleExpression()
 {
-    consume(Tokentype::LEFT_PAREN, "Expect pattern rule to start with (");
-    auto pattern = expression(); // Gets the (when test body) pattern
-
+    auto pattern = expression();
     consume(Tokentype::ARROW, "Expect => after pattern");
-
-    auto templ = expression(); // Should get raw (if test body)
-
-    consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern");
-
+    auto templ = expression();
+    consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rule");
     return std::make_shared<Expression>(Expression {
-        SyntaxPattern {
-            std::vector<Token> {}, // no literals for when
-            pattern,
-            templ // Store the raw template
-        },
+        SyntaxRuleExpression { pattern, templ },
         previousToken().line });
 }
 
-std::shared_ptr<Expression> Parser::syntaxRulesExpression()
-{
-    consume(Tokentype::LEFT_PAREN, "Expect literals list");
-    std::vector<Token> literals;
-    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        literals.push_back(consume(Tokentype::IDENTIFIER, "Expect literal identifier"));
-    }
-    consume(Tokentype::RIGHT_PAREN, "Expect ) after literals");
-
-    std::vector<SyntaxPattern> patterns;
-    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        consume(Tokentype::LEFT_PAREN, "Expect pattern to start with (");
-        // Create a pattern with the literals we collected
-        auto pattern = expression();
-        consume(Tokentype::ARROW, "Expect => after pattern"); // You'll need this token
-        auto templ = expression();
-        consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern");
-
-        patterns.emplace_back(literals, pattern, templ);
-    }
-    consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rules");
-
-    return std::make_shared<Expression>(Expression {
-        SyntaxRulesExpression { std::move(patterns) },
-        previousToken().line });
-}
 std::shared_ptr<Expression> Parser::defineSyntaxExpression()
 {
     Token name = consume(Tokentype::IDENTIFIER, "Expect macro name");
-    auto rules = expression();
+    auto rule = expression();
     consume(Tokentype::RIGHT_PAREN, "Expect ) after define-syntax");
-
     return std::make_shared<Expression>(Expression {
-        DefineSyntaxExpression { name, rules },
+        DefineSyntaxExpression { name, rule },
         name.line });
 }

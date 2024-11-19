@@ -4,6 +4,18 @@
 #include "Visit.h"
 #include <stdexcept>
 
+std::shared_ptr<Expression> valueToExpression(const SchemeValue& value, Interpreter& interp)
+{
+    std::string valueStr = value.toString();
+    std::vector<Token> tokens = interp.s->tokenize(valueStr);
+    interp.p->load(tokens);
+    auto expressions = interp.p->parse();
+    if (!expressions || expressions->empty()) {
+        throw std::runtime_error("Failed to parse value: " + valueStr);
+    }
+    return (*expressions)[0];
+}
+
 SchemeValue expressionToValue(const Expression& expr)
 {
     return std::visit(overloaded {
@@ -49,7 +61,7 @@ SchemeValue expressionToValue(const Expression& expr)
                               }
 
                               case Tokentype::STRING:
-                                  return SchemeValue(a.value.lexeme);
+                                  return SchemeValue(a.value.lexeme.substr(1, a.value.lexeme.length() - 2));
 
                               case Tokentype::TRUE:
                                   return SchemeValue(true);
@@ -301,7 +313,7 @@ std::string SchemeValue::toString() const
 {
     return std::visit(overloaded {
                           [](const Number& arg) { return arg.toString(); },
-                          [](const std::string& arg) { return std::string("\"" + arg + "\""); },
+                          [](const std::string& arg) { return std::format("\"{}\"", arg); },
                           [](bool arg) { return arg ? std::string("#t") : "#f"; },
                           [](const Symbol& arg) { return arg.name; },
                           [](const std::vector<SchemeValue>& arg) {
@@ -331,7 +343,7 @@ std::string SchemeValue::toString() const
                               return std::string(p.type == PortType::Input ? "<input-port>" : "<output-port>");
                           },
                           [](const std::shared_ptr<Expression>& e) {
-                              return expressionToValue(*e).toString();
+                              return e->toString();
                           },
                       },
         value);

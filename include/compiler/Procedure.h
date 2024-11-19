@@ -81,17 +81,3 @@ public:
     std::shared_ptr<Procedure> proc;
     std::vector<SchemeValue> args;
 };
-
-class MacroTransformer : public Procedure {
-    std::vector<SyntaxPattern> patterns;
-
-public:
-    explicit MacroTransformer(std::vector<SyntaxPattern> patterns)
-        : patterns(std::move(patterns))
-    {
-    }
-    bool isMacro() override
-    {
-        return true;
-    }
-};

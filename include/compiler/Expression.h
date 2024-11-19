@@ -20,28 +20,29 @@ public:
     {
     }
 };
-class SyntaxPattern {
+
+class LetExpression {
 public:
-    std::vector<Token> literals;
+    std::optional<Token> name;
+    using Args = std::vector<std::pair<Token, std::shared_ptr<Expression>>>;
+    Args arguments;
+    std::vector<std::shared_ptr<Expression>> body;
+    LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body)
+        : name { std::move(name) }
+        , arguments { std::move(arguments) }
+        , body { std::move(body) } { };
+};
+
+class SyntaxRuleExpression {
+public:
     std::shared_ptr<Expression> pattern;
     std::shared_ptr<Expression> template_expr;
 
-    SyntaxPattern(std::vector<Token> literals,
+    SyntaxRuleExpression(
         std::shared_ptr<Expression> pattern,
         std::shared_ptr<Expression> template_expr)
-        : literals(std::move(literals))
-        , pattern(std::move(pattern))
+        : pattern(std::move(pattern))
         , template_expr(std::move(template_expr))
-    {
-    }
-};
-
-class SyntaxRulesExpression {
-public:
-    std::vector<SyntaxPattern> patterns;
-
-    explicit SyntaxRulesExpression(std::vector<SyntaxPattern> patterns)
-        : patterns(std::move(patterns))
     {
     }
 };
@@ -49,11 +50,11 @@ public:
 class DefineSyntaxExpression {
 public:
     Token name;
-    std::shared_ptr<Expression> rules;
+    std::shared_ptr<Expression> rule;
 
-    DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rules)
+    DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule)
         : name(std::move(name))
-        , rules(std::move(rules))
+        , rule(std::move(rule))
     {
     }
 };
@@ -171,9 +172,9 @@ public:
         QuoteExpression,
         TailExpression,
         ImportExpression,
-        SyntaxPattern,
-        SyntaxRulesExpression,
-        DefineSyntaxExpression>
+        SyntaxRuleExpression,
+        DefineSyntaxExpression,
+        LetExpression>
         as;
 
     int line;
@@ -191,9 +192,9 @@ public:
             QuoteExpression,
             TailExpression,
             ImportExpression,
-            SyntaxPattern,
-            SyntaxRulesExpression,
-            DefineSyntaxExpression>
+            SyntaxRuleExpression,
+            DefineSyntaxExpression,
+            LetExpression>
             as,
         int line)
         : as(std::move(as))
@@ -206,41 +207,31 @@ public:
         std::string indentation(indent * 2, ' ');
         std::visit(overloaded {
 
-                       [&](const SyntaxPattern& p) {
+                       [&](const LetExpression& l) {
                            std::cout << indentation << "(" << std::endl;
-                           // Print literals
+                           std::cout << "let" << std::endl;
                            std::cout << indentation << "  (";
-                           for (const auto& literal : p.literals) {
-                               std::cout << literal.lexeme << " ";
+                           for (const auto& [first, second] : l.arguments) {
+                               std::cout << first.lexeme << " ";
+                               second->print(indent);
+                           }
+                           for (const auto& ref : l.body) {
+                               ref->print(indent * 2);
                            }
                            std::cout << ")" << std::endl;
-                           // Print pattern
-                           p.pattern->print(indent + 2);
-                           std::cout << indentation << "  =>" << std::endl;
-                           // Print template
-                           p.template_expr->print(indent + 2);
-                           std::cout << indentation << ")" << std::endl;
                        },
-                       [&](const SyntaxRulesExpression& s) {
-                           std::cout << indentation << "(syntax-rules" << std::endl;
-                           for (const auto& pattern : s.patterns) {
-                               std::cout << indentation << "  (";
-                               for (const auto& literal : pattern.literals) {
-                                   std::cout << literal.lexeme << " ";
-                               }
-                               std::cout << ")" << std::endl;
-                               pattern.pattern->print(indent + 2);
-                               std::cout << indentation << "  =>" << std::endl;
-                               pattern.template_expr->print(indent + 2);
-                           }
+                       [&](const SyntaxRuleExpression& s) {
+                           std::cout << indentation << "(syntax-rule" << std::endl;
+                           s.pattern->print(indent + 2);
+                           std::cout << indentation << "  =>" << std::endl;
+                           s.template_expr->print(indent + 2);
                            std::cout << indentation << ")" << std::endl;
                        },
                        [&](const DefineSyntaxExpression& d) {
                            std::cout << indentation << "(define-syntax " << d.name.lexeme << std::endl;
-                           d.rules->print(indent + 1);
+                           d.rule->print(indent + 2); // Changed from rules to rule
                            std::cout << indentation << ")" << std::endl;
                        },
-
                        [&](const ImportExpression& i) {
                            std::cout << "(import ";
                            for (auto& tok : i.import)
@@ -325,38 +316,32 @@ public:
     void toString(std::stringstream& ss) const
     {
         std::visit(overloaded {
+
+                       [&](const LetExpression& l) {
+                           ss << "(let (";
+                           for (const auto& [first, second] : l.arguments) {
+                               ss << first.lexeme << " ";
+                               second->toString(ss);
+                           }
+                           ss << ")";
+                           for (const auto& ref : l.body) {
+                               ref->toString(ss);
+                           }
+                           ss << ")";
+                       },
                        [&](const AtomExpression& e) {
                            ss << e.value.lexeme;
                        },
-                       [&](const SyntaxPattern& p) {
-                           ss << "(";
-                           ss << "(";
-                           for (const auto& literal : p.literals) {
-                               ss << literal.lexeme << " ";
-                           }
-                           ss << ") ";
-                           p.pattern->toString(ss);
-                           ss << " => ";
-                           p.template_expr->toString(ss);
-                           ss << ")";
-                       },
-                       [&](const SyntaxRulesExpression& s) {
-                           ss << "(syntax-rules ";
-                           for (const auto& pattern : s.patterns) {
-                               ss << "(";
-                               for (const auto& literal : pattern.literals) {
-                                   ss << literal.lexeme << " ";
-                               }
-                               ss << ") ";
-                               pattern.pattern->toString(ss);
-                               ss << " => ";
-                               pattern.template_expr->toString(ss);
-                           }
+                       [&](const SyntaxRuleExpression& s) {
+                           ss << "(syntax-rule ";
+                           s.pattern->toString(ss);
+                           ss << " ";
+                           s.template_expr->toString(ss);
                            ss << ")";
                        },
                        [&](const DefineSyntaxExpression& d) {
                            ss << "(define-syntax " << d.name.lexeme << " ";
-                           d.rules->toString(ss);
+                           d.rule->toString(ss);
                            ss << ")";
                        },
                        [&](const ImportExpression& i) {
@@ -465,31 +450,26 @@ public:
     std::shared_ptr<Expression> clone() const
     {
         return std::visit(overloaded {
-                              [&](const SyntaxPattern& p) -> std::shared_ptr<Expression> {
-                                  return std::make_shared<Expression>(
-                                      SyntaxPattern {
-                                          p.literals,
-                                          p.pattern->clone(),
-                                          p.template_expr->clone() },
-                                      line);
-                              },
-                              [&](const SyntaxRulesExpression& s) -> std::shared_ptr<Expression> {
-                                  std::vector<SyntaxPattern> cloned_patterns;
-                                  for (const auto& pattern : s.patterns) {
-                                      cloned_patterns.emplace_back(
-                                          pattern.literals,
-                                          pattern.pattern->clone(),
-                                          pattern.template_expr->clone());
+                              [&](const LetExpression& p) -> std::shared_ptr<Expression> {
+                                  LetExpression::Args output;
+                                  for (const auto& [first, second] : p.arguments) {
+                                      output.push_back({ first, second->clone() });
                                   }
+                                  return std::make_shared<Expression>(Expression {
+                                      LetExpression {
+                                          p.name, output, p.body },
+                                      line });
+                              },
+                              [&](const SyntaxRuleExpression& s) -> std::shared_ptr<Expression> {
                                   return std::make_shared<Expression>(
-                                      SyntaxRulesExpression { std::move(cloned_patterns) },
+                                      SyntaxRuleExpression { s.pattern->clone(), s.template_expr->clone() },
                                       line);
                               },
                               [&](const DefineSyntaxExpression& d) -> std::shared_ptr<Expression> {
                                   return std::make_shared<Expression>(
                                       DefineSyntaxExpression {
                                           d.name,
-                                          d.rules->clone() },
+                                          d.rule->clone() },
                                       line);
                               },
                               [&](const ImportExpression& i) -> std::shared_ptr<Expression> {

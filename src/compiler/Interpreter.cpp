@@ -4,6 +4,7 @@
 #include "Parser.h"
 #include "Procedure.h"
 #include "Scanner.h"
+#include "Value.h"
 #include "run.h"
 #include <memory>
 #include <optional>
@@ -217,6 +218,7 @@ std::optional<SchemeValue> Interpreter::lambda(LambdaExpression& l, const Expres
     auto proc = std::make_shared<UserProcedure>(
         std::move(l.parameters),
         std::move(l.body));
+
     auto lambda = SchemeValue(std::move(proc));
     return lambda;
 }
@@ -233,6 +235,29 @@ std::optional<SchemeValue> Interpreter::ifExpression(const IfExpression& i, cons
     }
     return std::nullopt;
 }
+
+std::optional<SchemeValue> Interpreter::interpretLetExpression(const LetExpression& le, const Expression& e)
+{
+    scope->pushFrame();
+    auto define = [this, e](const std::string& name, SchemeValue val) {
+        scope->define(name, val);
+    };
+    std::vector<Token> args = {};
+    std::vector<SchemeValue> values = {};
+    for (const auto& [k, v] : le.arguments) {
+        auto val = *interpret(v);
+        define(k.lexeme, val);
+        values.push_back(val);
+        args.push_back(k);
+    }
+    auto proc = std::make_shared<UserProcedure>(
+        args,
+        le.body);
+    auto val = SchemeValue { proc };
+    define(le.name->lexeme, val);
+    return val.call(*this, values);
+};
+
 std::optional<SchemeValue> Interpreter::interpretTailExpression(const TailExpression& t, const Expression& expr)
 {
     if (auto se = std::get_if<sExpression>(&t.expression->as)) {
@@ -286,7 +311,7 @@ std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& 
 
 std::optional<SchemeValue> Interpreter::defineSyntax(const DefineSyntaxExpression& dse, const Expression& e)
 {
-    macroExpander.defineMacro(dse.name.lexeme, dse.rules);
+    macroExpander.defineMacro(dse.name.lexeme, dse.rule);
     return std::nullopt;
 }
 std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expression>& e)
@@ -305,6 +330,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expressi
                           [this, &e](IfExpression& i) -> std::optional<SchemeValue> { return ifExpression(i, *e); },
                           [this, &e](QuoteExpression& q) -> std::optional<SchemeValue> { return interpretQuoteExpression(q, *e); },
                           [this, &e](TailExpression& t) -> std::optional<SchemeValue> { return interpretTailExpression(t, *e); },
+                          [this, &e](LetExpression& t) -> std::optional<SchemeValue> { return interpretLetExpression(t, *e); },
                           [&e](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type", *e);
                           } },

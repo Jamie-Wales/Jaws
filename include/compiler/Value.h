@@ -1,7 +1,9 @@
 // Value.h
 #pragma once
 #include "Number.h"
+#include "Parser.h"
 #include "Port.h"
+#include "Scanner.h"
 #include <compare>
 #include <list>
 #include <memory>
@@ -94,6 +96,11 @@ public:
     {
         return std::get<T>(value);
     }
+    template <typename T>
+    bool isValue() const
+    {
+        return std::holds_alternative<T>(value);
+    }
     Value value;
     template <typename T>
     T getValue() const
@@ -104,15 +111,7 @@ public:
             throw std::runtime_error("Incorrect type for getValue");
         }
     }
-
-    bool getValue() const
-    {
-        if (std::holds_alternative<bool>(value)) {
-            return std::get<bool>(value);
-        } else {
-            throw std::runtime_error("Incorrect type for getValue<bool>");
-        }
-    }
 };
 
 SchemeValue expressionToValue(const Expression& expr);
+std::shared_ptr<Expression> valueToExpression(const SchemeValue& val, Interpreter& interp);

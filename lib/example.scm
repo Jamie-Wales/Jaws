@@ -1,7 +1,3 @@
 (define-syntax when
- (syntax-rules ()
-  ((when test
-    body)
-   =>
-   (if test
-    body))))
+  (syntax-rule (when test body) =>
+               (if test body)))
