@@ -1,6 +1,7 @@
 #include "Interpreter.h"
 #include "Error.h"
 #include "Expression.h"
+#include "Macro.h"
 #include "Parser.h"
 #include "Procedure.h"
 #include "Scanner.h"
@@ -14,17 +15,21 @@ void Interpreter::init()
 {
     auto exprs = p->parse();
     if (exprs) {
-        run(*exprs);
-    } else {
-        throw InterpreterError("Parsing failed");
+        MacroExpander ma = {};
+        auto ast = ma.expand(*exprs);
+        if (ast) {
+            run(*ast);
+            return;
+        }
     }
+
+    throw InterpreterError("Could not pass AST");
 }
 
 Interpreter::Interpreter(std::shared_ptr<Scanner> s, std::shared_ptr<Parser> p)
     : scope(std::make_shared<Environment>())
     , s { s }
     , p { p }
-    , macroExpander { *this }
 {
     auto define = [this](const std::string& name, BuiltInProcedure::Func func) {
         scope->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
@@ -146,19 +151,6 @@ std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& 
     if (se.elements.empty()) {
         throw InterpreterError("Empty procedure call", expr);
     }
-    if (auto atom = std::get_if<AtomExpression>(&se.elements[0]->as)) {
-        if (macroExpander.isMacro(atom->value.lexeme)) {
-            std::vector<std::shared_ptr<Expression>> args(
-                se.elements.begin() + 1,
-                se.elements.end());
-
-            if (auto expanded = macroExpander.expand(atom->value.lexeme, args)) {
-                return interpret(*expanded);
-            }
-            throw InterpreterError("Macro expansion failed", expr);
-        }
-    }
-
     std::optional<SchemeValue> proc = interpret(se.elements[0]);
     if (proc) {
         std::vector<SchemeValue> args;
@@ -301,24 +293,20 @@ std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& 
         p->load(s->tokenize(f));
         auto exprs = p->parse();
         if (exprs) {
-            run(*exprs);
-        } else {
-            throw InterpreterError("Cannot parser import" + tok.lexeme);
+            MacroExpander ma = {};
+            auto ast = ma.expand(*exprs);
+            if (ast) {
+                run(*ast);
+            }
         }
     }
-    return std::nullopt;
-}
 
-std::optional<SchemeValue> Interpreter::defineSyntax(const DefineSyntaxExpression& dse, const Expression& e)
-{
-    macroExpander.defineMacro(dse.name.lexeme, dse.rule);
     return std::nullopt;
 }
 std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expression>& e)
 {
     return std::visit(overloaded {
 
-                          [this, &e](const DefineSyntaxExpression& a) -> std::optional<SchemeValue> { return defineSyntax(a, *e); },
                           [this, &e](const ImportExpression& a) -> std::optional<SchemeValue> { return interpretImport(a, *e); },
                           [this, &e](const AtomExpression& a) -> std::optional<SchemeValue> { return interpretAtom(a, *e); },
                           [this, &e](const ListExpression& l) -> std::optional<SchemeValue> { return interpretList(l, *e); },

@@ -333,7 +333,7 @@ public:
                            ss << e.value.lexeme;
                        },
                        [&](const SyntaxRuleExpression& s) {
-                           ss << "(syntax-rule ";
+                           ss << "(syntax-rule (";
                            s.pattern->toString(ss);
                            ss << " ";
                            s.template_expr->toString(ss);

@@ -1,7 +1,6 @@
 #pragma once
 #include "Environment.h"
 #include "Expression.h"
-#include "MacroExpander.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Value.h"
@@ -13,7 +12,6 @@ class InterpreterError;
 class Interpreter {
 private:
     /* ---- Interpreter Functions */
-    MacroExpander macroExpander;
 
     std::optional<SchemeValue> interpretLetExpression(const LetExpression& le, const Expression& e);
     std::optional<SchemeValue> defineSyntax(const DefineSyntaxExpression& dse, const Expression& e);
