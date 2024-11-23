@@ -74,6 +74,12 @@ Interpreter::Interpreter(std::shared_ptr<Scanner> s, std::shared_ptr<Parser> p)
     define("vector-ref", vectorRef);
     define("vector-set!", vectorSet);
     define("vector-length", vectorLength);
+    define("procedure?", isProcedure);
+    define("null?", isNull);
+    define("port?", isPort);
+    define("eq?", isEq);
+    define("eqv?", isEqv);
+    define("apply", apply);
 }
 std::optional<SchemeValue> Interpreter::interpretQuoteExpression(const QuoteExpression& qe, const Expression& e)
 {

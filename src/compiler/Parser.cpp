@@ -155,20 +155,6 @@ std::shared_ptr<Expression> Parser::expression()
     }
 }
 
-std::shared_ptr<Expression> Parser::list()
-{
-    std::vector<std::shared_ptr<Expression>> output;
-    if (match(Tokentype::LEFT_PAREN)) {
-        while (!match(Tokentype::RIGHT_PAREN)) {
-            output.push_back(expression());
-        }
-    }
-    return std::make_shared<Expression>(Expression {
-        ListExpression {
-            std::move(output) },
-        previousToken().line });
-}
-
 std::shared_ptr<Expression> Parser::defineExpression()
 {
     if (match(Tokentype::LEFT_PAREN)) {
@@ -248,14 +234,14 @@ std::shared_ptr<Expression> Parser::atom()
 
 std::shared_ptr<Expression> Parser::sexpression()
 {
-    std::vector<std::shared_ptr<Expression>> elements;
-    elements.push_back(expression());
-    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+    std::vector<std::shared_ptr<Expression>> elements = {};
+    while (!match(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         elements.push_back(expression());
     }
-    elements.back() = std::make_shared<Expression>(Expression { TailExpression { elements.back() }, previousToken().line });
-    Token rightParen = consume(Tokentype::RIGHT_PAREN, "Expect ')' after s-expression.");
-    return std::make_shared<Expression>(Expression { sExpression { std::move(elements) }, rightParen.line });
+    if (elements.size() > 0) {
+        elements.back() = std::make_shared<Expression>(Expression { TailExpression { elements.back() }, previousToken().line });
+    }
+    return std::make_shared<Expression>(Expression { sExpression { std::move(elements) }, previousToken().line });
 }
 
 std::shared_ptr<Expression> Parser::quoteExpression()

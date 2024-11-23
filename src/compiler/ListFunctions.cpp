@@ -1,6 +1,7 @@
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
+#include "Procedure.h"
 #include <optional>
 
 std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vector<SchemeValue>& args)
@@ -65,7 +66,7 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
     return SchemeValue(result);
 }
 
-std::optional<SchemeValue> Interpreter::cons(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::cons(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("cons requires exactly 2 arguments");
@@ -79,6 +80,10 @@ std::optional<SchemeValue> Interpreter::cons(Interpreter&, const std::vector<Sch
     SchemeValue second = args[1];
     if (second.isExpr()) {
         second = expressionToValue(*second.asExpr());
+    }
+
+    if (second.isProc()) {
+        second.call(interp, std::vector<SchemeValue> { args.begin() + 2, args.end() });
     }
 
     if (second.isList()) {

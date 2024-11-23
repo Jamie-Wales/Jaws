@@ -13,7 +13,6 @@ private:
     size_t current = 0;
     bool panicMode = false;
 
-    std::shared_ptr<Expression> import();
     Token peek(int add) const;
     std::shared_ptr<Expression> expression();
     std::shared_ptr<Expression> atom();
@@ -46,4 +45,5 @@ public:
     void load(const std::vector<Token>& t);
     std::optional<std::vector<std::shared_ptr<Expression>>> parse();
     void initialize(std::shared_ptr<Scanner> s);
+    std::shared_ptr<Expression> import();
 };

@@ -162,19 +162,22 @@ std::optional<SchemeValue> Interpreter::carProcudure(Interpreter&, const std::ve
 std::optional<SchemeValue> Interpreter::cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
-        throw InterpreterError("car requires exactly 1 argument");
+        throw InterpreterError("cdr requires 1 argument");
     }
     SchemeValue arg = args[0];
     if (arg.isExpr())
         arg = expressionToValue(*arg.asExpr());
     if (!arg.isList()) {
-        throw InterpreterError("car: argument must be a list");
+        throw InterpreterError("cdr requires 1 argument");
     }
     const auto& list = arg.asList();
     if (list.empty()) {
         throw InterpreterError("car: empty list");
     }
-    return SchemeValue(std::list<SchemeValue>(list.begin()++, list.end()));
+    auto cdr = arg.asList();
+    auto it = cdr.begin();
+    ++it;
+    return SchemeValue(std::list<SchemeValue>(it, cdr.end()));
 }
 
 std::optional<SchemeValue> Interpreter::cadrProcedure(Interpreter& ele, const std::vector<SchemeValue>& args)

@@ -9,19 +9,23 @@ std::optional<SchemeValue> UserProcedure::operator()(Interpreter& interp,
     if (args.size() != parameters.size()) {
         throw InterpreterError("Expected " + std::to_string(parameters.size()) + " arguments but got " + std::to_string(args.size()));
     }
-
     interp.scope->pushFrame();
 
-    for (size_t i = 0; i < args.size(); i++) {
+    // Bind arguments to parameters
+    for (size_t i = 0; i < parameters.size(); ++i) {
         interp.scope->define(parameters[i].lexeme, args[i]);
     }
 
+    // Execute body expressions
     std::optional<SchemeValue> result;
-    for (auto p : body) {
-        result = interp.interpret(p);
+    for (const auto& expr : body) {
+        result = interp.interpret(expr);
+        if (result && result->isProc() && result->asProc()->isTailCall()) {
+            interp.scope->popFrame();
+            return result; // Return TailCall without executing it
+        }
     }
 
     interp.scope->popFrame();
-
     return result;
 }

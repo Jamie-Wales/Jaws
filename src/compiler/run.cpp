@@ -1,7 +1,6 @@
 #include "run.h"
 #include "Error.h"
 #include "Interpreter.h"
-#include "Macro.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Token.h"
@@ -52,7 +51,6 @@ void runPrompt()
     auto scanner = std::make_shared<Scanner>();
     auto parser = std::make_shared<Parser>();
     parser->initialize(scanner);
-    auto ast = parser->parse();
     Interpreter i = { scanner, parser };
 
     std::string input;
