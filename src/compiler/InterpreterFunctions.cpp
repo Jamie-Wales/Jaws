@@ -731,6 +731,5 @@ std::optional<SchemeValue> Interpreter::apply(Interpreter& interp, const std::ve
     for (const auto& elem : lastArg.asList()) {
         procArgs.push_back(elem);
     }
-
-    return args[0].call(interp, procArgs);
+    return interp.executeProcedure(args[0], procArgs);
 }

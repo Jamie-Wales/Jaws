@@ -75,9 +75,6 @@ public:
     std::list<SchemeValue>& asList();
 
     std::string asSymbol() const;
-
-    std::optional<SchemeValue> call(Interpreter& interp, const std::vector<SchemeValue>& args) const;
-
     bool isTrue() const;
 
     std::string toString() const;

@@ -154,32 +154,12 @@ std::optional<SchemeValue> Interpreter::interpretList(const ListExpression& list
 
 std::optional<SchemeValue> Interpreter::interpretSExpression(const sExpression& se, const Expression& expr)
 {
-    if (se.elements.empty()) {
-        throw InterpreterError("Empty procedure call", expr);
+    auto call = evaluateProcedureCall(se, expr);
+    if (!call) {
+        return std::nullopt;
     }
-    std::optional<SchemeValue> proc = interpret(se.elements[0]);
-    if (proc) {
-        std::vector<SchemeValue> args;
-        args.reserve(se.elements.size() - 1);
-        for (size_t i = 1; i < se.elements.size(); ++i) {
-            auto ele = interpret(se.elements[i]);
-            if (ele) {
-                args.push_back(*ele);
-            } else {
-                return std::nullopt;
-            }
-        }
-        auto ele = proc->call(*this, args);
-        if (ele) {
-            return *ele;
-        } else {
-            return std::nullopt;
-        }
-    }
-
-    throw InterpreterError("Cannot interpret sExpression", expr);
+    return executeProcedure(call->procedure, call->arguments);
 }
-
 std::optional<SchemeValue> Interpreter::defineExpression(const DefineExpression& de, const Expression& expr)
 {
     std::optional<SchemeValue> exprValue = interpret(de.value);
@@ -236,60 +216,49 @@ std::optional<SchemeValue> Interpreter::ifExpression(const IfExpression& i, cons
 
 std::optional<SchemeValue> Interpreter::interpretLetExpression(const LetExpression& le, const Expression& e)
 {
-    scope->pushFrame();
-    auto define = [this, e](const std::string& name, SchemeValue val) {
-        scope->define(name, val);
-    };
-    std::vector<Token> args = {};
-    std::vector<SchemeValue> values = {};
-    for (const auto& [k, v] : le.arguments) {
-        auto val = *interpret(v);
-        define(k.lexeme, val);
-        values.push_back(val);
-        args.push_back(k);
+    scope->pushFrame(); // This frame is for the let bindings
+
+    std::vector<Token> params;
+    std::vector<SchemeValue> args;
+    for (const auto& [param, argExpr] : le.arguments) {
+        auto arg = interpret(argExpr);
+        if (!arg) {
+            scope->popFrame();
+            return std::nullopt;
+        }
+        scope->define(param.lexeme, *arg);
+        params.push_back(param);
+        args.push_back(*arg);
     }
-    auto proc = std::make_shared<UserProcedure>(
-        args,
-        le.body);
-    auto val = SchemeValue { proc };
-    define(le.name->lexeme, val);
-    return val.call(*this, values);
-};
+
+    auto proc = std::make_shared<UserProcedure>(params, le.body);
+
+    if (le.name) {
+        scope->define(le.name->lexeme, SchemeValue(proc));
+    }
+
+    auto result = executeProcedure(SchemeValue(proc), args);
+    scope->popFrame();
+    return result;
+}
 
 std::optional<SchemeValue> Interpreter::interpretTailExpression(const TailExpression& t, const Expression& expr)
 {
     if (auto se = std::get_if<sExpression>(&t.expression->as)) {
-        if (se->elements.empty()) {
-            throw InterpreterError("Empty procedure call", expr);
+        auto call = evaluateProcedureCall(*se, expr);
+        if (!call) {
+            return std::nullopt;
         }
-        auto procVal = interpret(se->elements[0]);
-        if (!procVal || !procVal->isProc()) {
-            throw InterpreterError("First element is not a procedure", expr);
-        } else if (procVal->asProc()->isBuiltin()) {
+
+        if (call->procedure.asProc()->isBuiltin()) {
             return interpret(t.expression);
         }
-        auto proc = procVal->asProc();
 
-        std::cout << "Tail call to procedure: " << procVal->toString() << std::endl;
-
-        std::vector<SchemeValue> args;
-        for (size_t i = 1; i < se->elements.size(); ++i) {
-            auto argVal = interpret(se->elements[i]);
-            if (argVal) {
-                args.push_back(*argVal);
-                std::cout << "Argument " << i << ": " << argVal->toString() << std::endl;
-            } else {
-                return std::nullopt;
-            }
-        }
-
-        auto tailCall = std::make_shared<TailCall>(proc, args);
-        std::cout << "Created TailCall" << std::endl;
+        auto tailCall = std::make_shared<TailCall>(call->procedure.asProc(), call->arguments);
         return SchemeValue(tailCall);
-    } else {
-        std::cout << "Expression is not an sExpression. Evaluating normally." << std::endl;
-        return interpret(t.expression);
     }
+
+    return interpret(t.expression);
 }
 
 std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& im, const Expression& e)
@@ -329,6 +298,69 @@ std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expressi
                               throw InterpreterError("Unknown expression type", *e);
                           } },
         e->as);
+}
+
+std::optional<SchemeValue> Interpreter::executeProcedure(const SchemeValue& proc,
+    const std::vector<SchemeValue>& args)
+{
+    if (!proc.isProc()) {
+        throw InterpreterError("Cannot execute non-procedure value: " + proc.toString());
+    }
+
+    auto procedure = proc.asProc();
+    auto currentArgs = args;
+
+    while (true) {
+        // If it's a tail call, get the actual procedure and args from it
+        if (procedure->isTailCall()) {
+            auto tailCall = std::dynamic_pointer_cast<TailCall>(procedure);
+            procedure = tailCall->proc;
+            currentArgs = tailCall->args;
+        }
+
+        auto result = (*procedure)(*this, currentArgs);
+
+        if (!result) {
+            return std::nullopt;
+        }
+
+        // If result is a tail call, continue loop with that procedure
+        if (result->isProc() && result->asProc()->isTailCall()) {
+            procedure = result->asProc();
+            continue;
+        }
+
+        return result;
+    }
+}
+std::optional<Interpreter::ProcedureCall> Interpreter::evaluateProcedureCall(
+    const sExpression& se, const Expression& expr)
+{
+    if (se.elements.empty()) {
+        throw InterpreterError("Empty procedure call", expr);
+    }
+
+    auto proc = interpret(se.elements[0]);
+    if (!proc) {
+        return std::nullopt;
+    }
+
+    if (!proc->isProc()) {
+        throw InterpreterError("First element is not a procedure: " + proc->toString(), expr);
+    }
+
+    std::vector<SchemeValue> args;
+    args.reserve(se.elements.size() - 1);
+
+    for (size_t i = 1; i < se.elements.size(); ++i) {
+        auto arg = interpret(se.elements[i]);
+        if (!arg) {
+            return std::nullopt;
+        }
+        args.push_back(*arg);
+    }
+
+    return ProcedureCall { *proc, std::move(args) };
 }
 
 std::optional<SchemeValue> Interpreter::interpretVector(const VectorExpression& v, const Expression& e)

@@ -22,7 +22,7 @@ A modern web-based REPL (Read-Eval-Print Loop) for the Jaws Scheme interpreter, 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/jaws-web
+git clone https://github.com/jamie-wales/jaws-web
 cd jaws-web
 ```
 

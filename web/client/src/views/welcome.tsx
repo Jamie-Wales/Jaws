@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MultiLineCode } from '@/components/multilineCode';
+import { MultiLineCode } from '@/components/multilineCode'
 import {
     ArrowRight,
     Code,
@@ -10,11 +10,15 @@ import {
     Users,
     Terminal,
     ParenthesesIcon,
-    GithubIcon,
+    Github,
     Menu,
     X
 } from 'lucide-react';
-import type { CodeLine } from '@/types/types';
+
+type CodeLine = {
+    type: 'input' | 'output';
+    content: string;
+};
 
 export function WelcomePage() {
     const navigate = useNavigate();
@@ -284,7 +288,7 @@ export function WelcomePage() {
                                 asChild
                             >
                                 <a href="https://github.com/jamie-wales/jaws" target="_blank" rel="noopener noreferrer">
-                                    <GithubIcon className="h-5 w-5" />
+                                    <Github className="h-5 w-5" />
                                 </a>
                             </Button>
                             <Button

@@ -18,8 +18,10 @@ private:
 public:
     JawsWrapper()
     {
-        scanner = std::make_shared<Scanner>();
-        parser.initialize(scanner);
+        auto scanner = std::make_shared<Scanner>();
+        auto parser = std::make_shared<Parser>();
+        parser->initialize(scanner);
+        Interpreter i = { scanner, parser };
     }
 
     std::string evaluate(const std::string& input)

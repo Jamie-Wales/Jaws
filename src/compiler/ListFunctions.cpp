@@ -1,7 +1,6 @@
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
-#include "Procedure.h"
 #include <optional>
 
 std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vector<SchemeValue>& args)
@@ -48,21 +47,18 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
 
     while (!lists.empty() && iters[0] != lists[0].end()) {
         std::vector<SchemeValue> call_args;
-
         for (size_t i = 0; i < lists.size(); i++) {
             if (iters[i] != lists[i].end()) {
                 call_args.push_back(*iters[i]);
                 ++iters[i];
             }
         }
-
-        auto procResult = proc.call(interp, call_args);
+        auto procResult = interp.executeProcedure(proc, args);
         if (!procResult) {
             throw InterpreterError("MAP procedure must return a value");
         }
         result.push_back(*procResult);
     }
-
     return SchemeValue(result);
 }
 
@@ -83,7 +79,12 @@ std::optional<SchemeValue> Interpreter::cons(Interpreter& interp, const std::vec
     }
 
     if (second.isProc()) {
-        second.call(interp, std::vector<SchemeValue> { args.begin() + 2, args.end() });
+        // Replace call() with executeProcedure
+        auto result = interp.executeProcedure(second,
+            std::vector<SchemeValue> { args.begin() + 2, args.end() });
+        if (result) {
+            second = *result;
+        }
     }
 
     if (second.isList()) {
@@ -91,12 +92,12 @@ std::optional<SchemeValue> Interpreter::cons(Interpreter& interp, const std::vec
         list.push_front(first);
         return SchemeValue(list);
     }
+
     std::list<SchemeValue> pair;
     pair.push_back(first);
     pair.push_back(second);
     return SchemeValue(std::move(pair));
 }
-
 std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {

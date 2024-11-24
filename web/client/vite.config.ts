@@ -47,7 +47,6 @@ const wasmPlugin = (): Plugin => ({
         }
     }
 });
-
 export default defineConfig(({ command }) => ({
     plugins: [react(), wasmPlugin()],
     base: command === 'serve' ? '/' : './',
@@ -67,21 +66,17 @@ export default defineConfig(({ command }) => ({
                 chunkFileNames: 'assets/[name]-[hash].js',
                 assetFileNames: 'assets/[name]-[hash].[ext]',
                 manualChunks: {
-                    vendor: [
-                        'react',
-                        'react-dom',
-                        'react/jsx-runtime'
-                    ],
+                    vendor: ['react', 'react-dom', 'react/jsx-runtime'],
                     ui: [
                         '@radix-ui/react-icons',
                         '@radix-ui/react-scroll-area',
                         '@radix-ui/react-separator',
                         '@radix-ui/react-slot',
                         '@radix-ui/react-tabs',
-                        'lucide-react'
-                    ]
-                }
-            }
-        }
-    }
-}))
+                        'lucide-react',
+                    ],
+                },
+            },
+        },
+    },
+}));

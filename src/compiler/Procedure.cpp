@@ -11,12 +11,10 @@ std::optional<SchemeValue> UserProcedure::operator()(Interpreter& interp,
     }
     interp.scope->pushFrame();
 
-    // Bind arguments to parameters
     for (size_t i = 0; i < parameters.size(); ++i) {
         interp.scope->define(parameters[i].lexeme, args[i]);
     }
 
-    // Execute body expressions
     std::optional<SchemeValue> result;
     for (const auto& expr : body) {
         result = interp.interpret(expr);

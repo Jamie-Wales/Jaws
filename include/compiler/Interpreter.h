@@ -79,6 +79,13 @@ private:
     static std::optional<SchemeValue> isEq(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> isEqv(Interpreter&, const std::vector<SchemeValue>& args);
     static std::optional<SchemeValue> apply(Interpreter&, const std::vector<SchemeValue>& args);
+    struct ProcedureCall {
+        SchemeValue procedure;
+        std::vector<SchemeValue> arguments;
+    };
+    std::optional<ProcedureCall> evaluateProcedureCall(const sExpression& se, const Expression& expr);
+    std::optional<SchemeValue> executeProcedure(const SchemeValue& proc,
+        const std::vector<SchemeValue>& args);
 
 public:
     Interpreter(std::shared_ptr<Scanner> s, std::shared_ptr<Parser> p);

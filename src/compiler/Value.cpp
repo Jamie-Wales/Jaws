@@ -256,43 +256,6 @@ std::list<SchemeValue>& SchemeValue::asList()
     }
     return std::get<std::list<SchemeValue>>(value);
 }
-std::optional<SchemeValue> SchemeValue::call(Interpreter& interp, const std::vector<SchemeValue>& args) const
-{
-    if (!isProc()) {
-        throw std::runtime_error("Attempt to call non-procedure value: " + toString());
-    }
-
-    auto proc = asProc();
-    if (!proc) {
-        throw std::runtime_error("Null procedure pointer");
-    }
-
-    std::optional<SchemeValue> result;
-
-    std::shared_ptr<Procedure> currentProc = proc;
-    std::vector<SchemeValue> currentArgs = args;
-
-    while (true) {
-        result = currentProc->operator()(interp, currentArgs);
-
-        if (!result) {
-            return std::nullopt;
-        }
-
-        if (result->isProc() && result->asProc()->isTailCall()) {
-            auto tailCallProc = result->asProc();
-            auto tailCall = std::dynamic_pointer_cast<TailCall>(tailCallProc);
-            if (!tailCall) {
-                throw std::runtime_error("Expected TailCall procedure");
-            }
-
-            currentProc = tailCall->proc;
-            currentArgs = tailCall->args;
-        } else {
-            return result;
-        }
-    }
-}
 
 bool SchemeValue::isTrue() const
 {

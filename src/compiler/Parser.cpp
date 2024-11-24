@@ -203,8 +203,14 @@ std::shared_ptr<Expression> Parser::lambda()
     while (!check(Tokentype::RIGHT_PAREN)) {
         body.push_back(expression());
     }
-    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda body");
 
+    if (!body.empty()) {
+        body.back() = std::make_shared<Expression>(
+            Expression { TailExpression { body.back() },
+                previousToken().line });
+    }
+
+    consume(Tokentype::RIGHT_PAREN, "Expect ')' after lambda body");
     return std::make_shared<Expression>(Expression {
         LambdaExpression {
             std::move(parameters),

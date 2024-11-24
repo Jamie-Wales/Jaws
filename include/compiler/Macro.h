@@ -196,7 +196,6 @@ private:
             }
         }
 
-        // Recursively collect macros in nested expressions
         std::visit(overloaded {
                        [&](const sExpression& s) {
                            for (const auto& elem : s.elements) {
@@ -232,7 +231,6 @@ private:
                 }
             }
 
-            // If not a macro, expand children
             std::vector<std::shared_ptr<Expression>> expanded;
             for (const auto& elem : sexp->elements) {
                 expanded.push_back(expandExpr(elem));

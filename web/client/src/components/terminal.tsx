@@ -158,7 +158,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                             <Button
                                 variant="default"
                                 size="sm"
-                                onClick={() => handleCommand(inputValue)}
+                                onClick={async () => await handleCommand(inputValue)}
                                 className="flex items-center gap-2"
                             >
                                 <Play className="h-4 w-4" />

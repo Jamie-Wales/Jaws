@@ -1,9 +1,8 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
  
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   html, 
@@ -82,4 +81,68 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+.card-background {
+  @apply bg-white text-gray-800 border border-gray-200 shadow-lg;
+}
+
+.card-header-border {
+  @apply border-b border-gray-300;
+}
+
+.card-title {
+  @apply text-gray-900;
+}
+
+.card-description {
+  @apply text-gray-600;
+}
+
+.code-block {
+  @apply bg-gray-900 text-white rounded-lg p-4 shadow-inner overflow-x-auto;
+}
+
+/* Keep syntax highlighting styles unchanged */
+/* No changes to highlight.js styles */
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full hover:bg-gray-500;
+}
+
+/* Font settings */
+.code-font {
+  @apply font-mono text-sm;
+}
+
+/* Button styles */
+.primary-button {
+  @apply bg-[#dd3f0c] text-white hover:opacity-90
+         flex items-center gap-2 px-4 py-2 rounded-md
+         transition-opacity duration-200;
+}
+
+/* Difficulty badges */
+.difficulty-badge {
+  @apply px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.difficulty-beginner {
+  @apply text-green-600 bg-green-50;
+}
+
+.difficulty-intermediate {
+  @apply text-blue-600 bg-blue-50;
+}
+
+.difficulty-advanced {
+  @apply text-purple-600 bg-purple-50;
 }
