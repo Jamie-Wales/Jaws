@@ -75,7 +75,7 @@ std::optional<SchemeValue> Interpreter::greaterOrEqual(Interpreter&, const std::
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> Interpreter::plus(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.empty())
         return SchemeValue(Number(0));
@@ -87,8 +87,11 @@ std::optional<SchemeValue> Interpreter::plus(Interpreter&, const std::vector<Sch
         SchemeValue curr = args[i];
         if (curr.isExpr())
             curr = expressionToValue(*curr.asExpr());
-        result = result + curr;
+        if (curr.isProc())
+            curr = *interp.executeProcedure(curr, args);
+        result + curr;
     }
+
     return result;
 }
 

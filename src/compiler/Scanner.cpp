@@ -11,7 +11,7 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "letrec", Tokentype::LETREC },
     { "let", Tokentype::LET },
     { "import", Tokentype::IMPORT },
-    { "syntax-rule", Tokentype::SYNTAX_RULE },
+    { "syntax-rules", Tokentype::SYNTAX_RULE },
     { "=>", Tokentype::ARROW },
 
 };

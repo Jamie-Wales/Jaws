@@ -12,16 +12,15 @@ using namespace emscripten;
 class JawsWrapper {
 private:
     std::shared_ptr<Scanner> scanner;
-    Parser parser;
+    std::shared_ptr<Parser> parser;
     Interpreter interpreter;
 
 public:
     JawsWrapper()
+        : scanner(std::make_shared<Scanner>())
+        , parser(std::make_shared<Parser>())
+        , interpreter { scanner, parser }
     {
-        auto scanner = std::make_shared<Scanner>();
-        auto parser = std::make_shared<Parser>();
-        parser->initialize(scanner);
-        Interpreter i = { scanner, parser };
     }
 
     std::string evaluate(const std::string& input)
@@ -32,8 +31,8 @@ public:
 
         try {
             std::vector<Token> tokens = scanner->tokenize(input);
-            parser.load(tokens);
-            auto expr = parser.parse();
+            parser->load(tokens);
+            auto expr = parser->parse();
             std::optional<SchemeValue> result = std::nullopt;
             std::string str;
             if (expr) {

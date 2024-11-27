@@ -1,8 +1,7 @@
 // src/views/documentation.tsx
-import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Book, Code2, Terminal, Github } from 'lucide-react';
+import { ArrowRight, Book, Code2, Github } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LoadMarkdown } from '@/utils/loadMarkdown';
 import { HighlightedText } from '@/components/highlightedText';
@@ -11,7 +10,7 @@ export function DocsView() {
     const navigate = useNavigate();
 
     function handleTryExample(code: any): void {
-        throw new Error('Function not implemented.');
+        throw new Error(code + 'Function not implemented.');
     }
 
     return (

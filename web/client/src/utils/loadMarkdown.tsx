@@ -1,5 +1,5 @@
 // src/utils/loadMarkdown.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import gfm from 'remark-gfm';
 

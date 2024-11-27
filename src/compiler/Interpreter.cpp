@@ -169,6 +169,7 @@ std::optional<SchemeValue> Interpreter::defineExpression(const DefineExpression&
     }
     throw InterpreterError("Cannot interpret define with name " + de.name.lexeme, expr);
 }
+
 std::optional<SchemeValue> Interpreter::defineProcedure(DefineProcedure& dp, const Expression&)
 {
     auto proc = std::make_shared<UserProcedure>(

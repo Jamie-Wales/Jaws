@@ -2,7 +2,6 @@
 #include "Error.h"
 #include "Expression.h"
 #include "Token.h"
-#include "run.h"
 #include <optional>
 
 void Parser::initialize(std::shared_ptr<Scanner> s)
@@ -132,7 +131,7 @@ std::shared_ptr<Expression> Parser::expression()
         } else if (match(Tokentype::DEFINE_SYTAX)) {
             return defineSyntaxExpression();
         } else if (match(Tokentype::SYNTAX_RULE)) {
-            return syntaxRuleExpression();
+            return syntaxRulesExpression();
         } else if (match(Tokentype::IMPORT)) {
             return import();
         } else if (match(Tokentype::LAMBDA)) {
@@ -318,14 +317,29 @@ void Parser::errorAt(const Token& token, const std::string& message)
     panicMode = true;
     throw ParseError(message, token, scanner->getLine(token.line));
 }
-std::shared_ptr<Expression> Parser::syntaxRuleExpression()
+std::shared_ptr<Expression> Parser::syntaxRulesExpression()
 {
-    auto pattern = expression();
-    consume(Tokentype::ARROW, "Expect => after pattern");
-    auto templ = expression();
-    consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rule");
+    consume(Tokentype::LEFT_PAREN, "Expect ( after syntax-rules");
+    std::vector<Token> literals;
+    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+        literals.push_back(consume(Tokentype::IDENTIFIER, "Expect literal identifier"));
+    }
+    consume(Tokentype::RIGHT_PAREN, "Expect ) after literals list");
+    std::vector<std::shared_ptr<Expression>> patterns;
+    std::vector<std::shared_ptr<Expression>> templates;
+    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+        consume(Tokentype::LEFT_PAREN, "Expect ( before pattern");
+        patterns.push_back(expression());
+        templates.push_back(expression());
+        consume(Tokentype::RIGHT_PAREN, "Expect ) after template");
+    }
+    consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rules");
+
     return std::make_shared<Expression>(Expression {
-        SyntaxRuleExpression { pattern, templ },
+        SyntaxRulesExpression {
+            std::move(literals),
+            std::move(patterns),
+            std::move(templates) },
         previousToken().line });
 }
 

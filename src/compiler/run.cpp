@@ -1,6 +1,7 @@
 #include "run.h"
 #include "Error.h"
 #include "Interpreter.h"
+#include "Macro.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Token.h"
@@ -34,9 +35,12 @@ void runFile(const std::string& path)
         parser->initialize(scanner);
         std::vector<Token> tokens = scanner->tokenize(sourceCode);
         parser->load(tokens);
-        Interpreter i = { scanner, parser };
-        i.init();
-        std::cout << i.outputStream.str();
+        MacroExpander m;
+        m.expand(parser->parse());
+        // Interpreter i = { scanner, parser };
+        //
+        // i.init();
+        // std::cout << i.outputStream.str();
     } catch (const InterpreterError& e) {
         e.printFormattedError();
     }
