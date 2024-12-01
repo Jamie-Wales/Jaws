@@ -80,12 +80,14 @@ public:
 class ListExpression {
 public:
     std::vector<std::shared_ptr<Expression>> elements;
-    ListExpression(std::vector<std::shared_ptr<Expression>> elems)
+    bool isVariadic;
+
+    ListExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic = false)
         : elements(std::move(elems))
+        , isVariadic(variadic)
     {
     }
 };
-
 class LambdaExpression {
 public:
     std::vector<Token> parameters;

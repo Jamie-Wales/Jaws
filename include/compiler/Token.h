@@ -2,6 +2,7 @@
 #include <string>
 
 enum class Tokentype {
+    ELLIPSIS,
     INTEGER,
     FLOAT,
     STRING,

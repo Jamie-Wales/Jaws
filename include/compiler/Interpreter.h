@@ -1,6 +1,7 @@
 #pragma once
 #include "Environment.h"
 #include "Expression.h"
+#include "MacroProcessor.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Value.h"
@@ -100,4 +101,5 @@ public:
     static std::optional<SchemeValue> read(Interpreter&, const std::vector<SchemeValue>& args);
     std::optional<SchemeValue> interpret(const std::shared_ptr<Expression>& e);
     std::optional<SchemeValue> lookupVariable(const std::string& name) const;
+    MacroProcessor macroProcessor;
 };

@@ -13,12 +13,11 @@ private:
     size_t current = 0;
     bool panicMode = false;
 
+    std::shared_ptr<Expression> listPattern();
     Token peek(int add) const;
-    std::shared_ptr<Expression> expression();
     std::shared_ptr<Expression> atom();
     std::shared_ptr<Expression> quoteExpression();
     std::shared_ptr<Expression> sexpression();
-    std::shared_ptr<Expression> list();
     std::shared_ptr<Expression> vector();
     std::shared_ptr<Expression> lambda();
     std::shared_ptr<Expression> ifExpression();
@@ -46,4 +45,7 @@ public:
     std::optional<std::vector<std::shared_ptr<Expression>>> parse();
     void initialize(std::shared_ptr<Scanner> s);
     std::shared_ptr<Expression> import();
+
+    std::shared_ptr<Expression> expression();
+    std::shared_ptr<Expression> list();
 };

@@ -1,22 +1,20 @@
 #include "run.h"
+#include "DebugUtils.h"
 #include "Error.h"
+#include "Expression.h"
 #include "Interpreter.h"
-#include "Macro.h"
 #include "Parser.h"
 #include "Scanner.h"
 #include "Token.h"
 #include "Value.h"
 #include "icons.h"
-#include "run.h"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 
-std::string readFile(const std::string& path)
-{
+std::string readFile(const std::string& path) {
     std::ifstream inputFileStream(path);
     if (!inputFileStream) {
         throw std::runtime_error("Unable to open file: " + path);
@@ -26,8 +24,7 @@ std::string readFile(const std::string& path)
     return buffer.str();
 }
 
-void runFile(const std::string& path)
-{
+void runFile(const std::string& path) {
     try {
         std::string sourceCode = readFile(path);
         auto scanner = std::make_shared<Scanner>();
@@ -35,19 +32,16 @@ void runFile(const std::string& path)
         parser->initialize(scanner);
         std::vector<Token> tokens = scanner->tokenize(sourceCode);
         parser->load(tokens);
-        MacroExpander m;
-        m.expand(parser->parse());
-        // Interpreter i = { scanner, parser };
-        //
-        // i.init();
-        // std::cout << i.outputStream.str();
+        Interpreter i = { scanner, parser };
+        i.init();  // Let interpreter handle parsing, macros and evaluation
+        std::cout << i.outputStream.str();
+        i.outputStream.clear();
     } catch (const InterpreterError& e) {
         e.printFormattedError();
     }
 }
 
-void runPrompt()
-{
+void runPrompt() {
     printJawsLogo();
     std::cout << "Welcome to the Jaws REPL!\n";
     std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
@@ -56,32 +50,30 @@ void runPrompt()
     auto parser = std::make_shared<Parser>();
     parser->initialize(scanner);
     Interpreter i = { scanner, parser };
-
+    
     std::string input;
     while (true) {
         std::cout << "jaws: |> ";
         if (!std::getline(std::cin, input)) {
             break;
         }
-
+        
         if (input == "exit") {
             std::cout << "Fin-ishing up. Goodbye!\n";
             break;
         }
-
+        
         if (input == "jaws") {
             std::cout << jaws2 << std::endl;
             continue;
         }
-
-        if (input.empty())
-            continue;
-
+        
+        if (input.empty()) continue;
+        
         try {
-
             std::vector<Token> tokens = scanner->tokenize(input);
             parser->load(tokens);
-            i.init();
+            i.init();  // Let interpreter handle parsing, macros and evaluation
             std::cout << i.outputStream.str();
             i.outputStream.clear();
         } catch (const ParseError& e) {

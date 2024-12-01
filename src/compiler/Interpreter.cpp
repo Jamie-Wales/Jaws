@@ -1,6 +1,7 @@
 #include "Interpreter.h"
 #include "Error.h"
 #include "Expression.h"
+#include "ExpressionUtils.h"
 #include "Macro.h"
 #include "Parser.h"
 #include "Procedure.h"
@@ -14,18 +15,42 @@
 void Interpreter::init()
 {
     auto exprs = p->parse();
-    if (exprs) {
-        MacroExpander ma = {};
-        auto ast = ma.expand(*exprs);
-        if (ast) {
-            run(*ast);
-            return;
+    if (!exprs) {
+        throw InterpreterError("Could not parse AST");
+    }
+
+    // First pass: collect macros and separate expressions
+    std::vector<std::shared_ptr<Expression>> interpretExprs;
+    for (auto expr : *exprs) {
+        if (auto ele = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+            std::cout << "Collecting " << expr->toString();
+            macroProcessor.collectMacros(expr);
+        } else {
+            interpretExprs.push_back(expr);
         }
     }
 
-    throw InterpreterError("Could not pass AST");
-}
+    for (auto expr : interpretExprs) {
+        if (std::get_if<sExpression>(&expr->as)) {
+            auto expanded = macroProcessor.expandMacros(exprToList(expr));
+            std::string expanded_str = expanded->toString();
+            p->load(s->tokenize(expanded_str));
+            auto processedExpr = p->expression();
 
+            if (processedExpr) {
+                auto result = interpret(processedExpr);
+                if (result) {
+                    outputStream << result->toString() << std::endl;
+                }
+            }
+        } else {
+            auto result = interpret(expr);
+            if (result) {
+                outputStream << result->toString() << std::endl;
+            }
+        }
+    }
+}
 Interpreter::Interpreter(std::shared_ptr<Scanner> s, std::shared_ptr<Parser> p)
     : scope(std::make_shared<Environment>())
     , s { s }
@@ -174,7 +199,7 @@ std::optional<SchemeValue> Interpreter::defineProcedure(DefineProcedure& dp, con
 {
     auto proc = std::make_shared<UserProcedure>(
         dp.parameters,
-        (dp.body));
+        dp.body);
     scope->define(dp.name.lexeme, SchemeValue { std::move(proc) });
     return std::nullopt;
 }
@@ -269,14 +294,40 @@ std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& 
         p->load(s->tokenize(f));
         auto exprs = p->parse();
         if (exprs) {
-            MacroExpander ma = {};
-            auto ast = ma.expand(*exprs);
-            if (ast) {
-                run(*ast);
+            // First pass: collect macros from imported file
+            std::vector<std::shared_ptr<Expression>> interpretExprs;
+            for (auto expr : *exprs) {
+                if (auto ele = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+                    std::cout << "Collecting from import: " << expr->toString();
+                    macroProcessor.collectMacros(expr);
+                } else {
+                    interpretExprs.push_back(expr);
+                }
+            }
+
+            // Second pass: expand macros and interpret remaining expressions
+            for (auto expr : interpretExprs) {
+                if (std::get_if<sExpression>(&expr->as)) {
+                    auto expanded = macroProcessor.expandMacros(exprToList(expr));
+                    std::string expanded_str = expanded->toString();
+                    p->load(s->tokenize(expanded_str));
+                    auto processedExpr = p->expression();
+
+                    if (processedExpr) {
+                        auto result = interpret(processedExpr);
+                        if (result) {
+                            outputStream << result->toString() << std::endl;
+                        }
+                    }
+                } else {
+                    auto result = interpret(expr);
+                    if (result) {
+                        outputStream << result->toString() << std::endl;
+                    }
+                }
             }
         }
     }
-
     return std::nullopt;
 }
 std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expression>& e)
@@ -312,7 +363,6 @@ std::optional<SchemeValue> Interpreter::executeProcedure(const SchemeValue& proc
     auto currentArgs = args;
 
     while (true) {
-        // If it's a tail call, get the actual procedure and args from it
         if (procedure->isTailCall()) {
             auto tailCall = std::dynamic_pointer_cast<TailCall>(procedure);
             procedure = tailCall->proc;
@@ -353,7 +403,7 @@ std::optional<Interpreter::ProcedureCall> Interpreter::evaluateProcedureCall(
     std::vector<SchemeValue> args;
     args.reserve(se.elements.size() - 1);
 
-    for (size_t i = 1; i < se.elements.size(); ++i) {
+    for (size_t i = 1; i < se.elements.size(); i++) {
         auto arg = interpret(se.elements[i]);
         if (!arg) {
             return std::nullopt;

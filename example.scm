@@ -1,6 +1,6 @@
-(define-syntax when
+(define-syntax myLet
   (syntax-rules ()
-    ((when test body ...)
-     (if test (begin body ...) #f))))
+    ((myLet ((var val) ...) body ...)
+     ((lambda (var ...) body ...) val ...))))
 
-(when #t 200 300 4000 500)
+(myLet ((x 10)) (display x))

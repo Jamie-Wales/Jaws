@@ -13,6 +13,7 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "import", Tokentype::IMPORT },
     { "syntax-rules", Tokentype::SYNTAX_RULE },
     { "=>", Tokentype::ARROW },
+    { "...", Tokentype::ELLIPSIS },
 
 };
 const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
