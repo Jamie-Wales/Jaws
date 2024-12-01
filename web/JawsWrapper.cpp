@@ -2,6 +2,7 @@
 #include "Interpreter.h"
 #include "Parser.h"
 #include "Scanner.h"
+#include "Visit.h"
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 #include <memory>
