@@ -64,7 +64,17 @@ https://github.com/highlightjs/highlight.js/issues/2277`),Z=R,w=z),W===void 0&&(
         (begin expr2 ...))))))
 
 (begin (display "Hello, World!") (newline))
-        `,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Syntax with syntax within it",code:`(define-syntax cond
+        `,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Syntax with syntax within it",code:`(define-syntax begin
+    (syntax-rules ()
+        ((begin expr)
+        (expr))
+    ((begin expr expr2 ...)
+        ((let ((dummy expr))
+        (begin expr2 ...))))))
+
+(begin (display "Hello, World!") (newline))
+
+(define-syntax cond
     (syntax-rules(else)
         ((cond)(#f))
         ((cond(else expr ...))
@@ -76,8 +86,7 @@ https://github.com/highlightjs/highlight.js/issues/2277`),Z=R,w=z),W===void 0&&(
 
 (cond ((< 5 3) (display "Impossible!"))
       ((= 5 5) (display "Math works!"))
-      (else (display "Default case")))
-`,description:"Ensure you have loaded begin then you can create syntax which contains other syntax",difficulty:"Advanced"},{name:"Build your own higher order functions",code:`(define map1
+      (else (display "Default case")))`,description:"Ensure you have loaded begin then you can create syntax which contains other syntax",difficulty:"Advanced"},{name:"Build your own higher order functions",code:`(define map1
   (lambda (p ls)
     (if (null? ls)
         ls
