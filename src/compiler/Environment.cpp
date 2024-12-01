@@ -15,7 +15,6 @@ void Environment::define(const std::string& name, const SchemeValue& value)
 {
     frames.front().get()->bound[name] = value;
 }
-
 std::optional<SchemeValue> Environment::get(const std::string& name) const
 {
 
