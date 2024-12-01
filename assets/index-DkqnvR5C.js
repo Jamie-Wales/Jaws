@@ -56,21 +56,20 @@ https://github.com/highlightjs/highlight.js/issues/2277`),Z=R,w=z),W===void 0&&(
         n
         (+ (fib (- n 1))
            (fib (- n 2))))))`,description:"Classic recursive Fibonacci implementation",difficulty:"Advanced"},{name:"Define your own Syntax",code:`(define-syntax begin
-                (syntax-rules ()
-                    ((begin expr)
-                    (expr))
+    (syntax-rules ()
+        ((begin expr)
+            (expr))
                 ((begin expr expr2 ...)
-                    ((let ((dummy expr))
-                    (begin expr2 ...))))))`,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Syntax with syntax within it",code:`
-            (define-syntax cond
+                ((let ((dummy expr))
+            (begin expr2 ...))))))`,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Syntax with syntax within it",code:`(define-syntax cond
                 (syntax-rules(else)
-                ((cond)(#f))
-                ((cond(else expr ...))
-                    (begin expr ...))
-                ((cond(test expr ... ) clause ...)
-                (if test
-                    (begin expr ...)
-                    (cond clause ...)))))
+                    ((cond)(#f))
+                    ((cond(else expr ...))
+                        (begin expr ...))
+                    ((cond(test expr ... ) clause ...)
+                    (if test
+                        (begin expr ...)
+                        (cond clause ...)))))
 `,description:"Ensure you have loaded begin then you can create syntax which contains other syntax",difficulty:"Advanced"},{name:"Define your own Syntax",code:`(define-syntax begin
                 (syntax-rules ()
                     ((begin expr)
