@@ -92,19 +92,13 @@ https://github.com/highlightjs/highlight.js/issues/2277`),Z=R,w=z),W===void 0&&(
         ls
         (cons (p (car ls))
             (map1 p 
-                (cdr ls)))
-    )
-  )
+    (cdr ls)))))
 )
 
 (map1 (lambda (x) (* x x)) '(1 4 8 16))`,description:"If inbuilt map is not your thing build your own!",difficulty:"Advanced"},{name:"Some of the language is actually just syntax-rules",code:`(define-syntax myLet
-    (syntax-rules ()
-        (
-            (myLet ((var val) ...) body ...)
-            (
-                (lambda(var ...) body ...) val ...)
-        )
-    )
+    (syntax-rules () (
+        (myLet ((var val) ...) body ...)
+            ((lambda(var ...) body ...) val ...)))
 )
 
 (myLet ((x 10) (y 20)) ((display (+ x y))))
