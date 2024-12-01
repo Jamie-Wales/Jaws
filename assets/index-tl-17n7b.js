@@ -58,39 +58,24 @@ https://github.com/highlightjs/highlight.js/issues/2277`),Z=R,w=z),W===void 0&&(
            (fib (- n 2))))))`,description:"Classic recursive Fibonacci implementation",difficulty:"Advanced"},{name:"Define your own Syntax",code:`(define-syntax begin
     (syntax-rules ()
         ((begin expr)
-            (expr))
-                ((begin expr expr2 ...)
-                ((let ((dummy expr))
-            (begin expr2 ...))))))`,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Syntax with syntax within it",code:`(define-syntax cond
-                (syntax-rules(else)
-                    ((cond)(#f))
-                    ((cond(else expr ...))
-                        (begin expr ...))
-                    ((cond(test expr ... ) clause ...)
-                    (if test
-                        (begin expr ...)
-                        (cond clause ...)))))
-`,description:"Ensure you have loaded begin then you can create syntax which contains other syntax",difficulty:"Advanced"},{name:"Define your own Syntax",code:`(define-syntax begin
-                (syntax-rules ()
-                    ((begin expr)
-                    (expr))
-                ((begin expr expr2 ...)
-                    ((let ((dummy expr))
-                    (begin expr2 ...))))))`,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Define your own Syntax",code:`(define-syntax cond
+        (expr))
+    ((begin expr expr2 ...)
+        ((let ((dummy expr))
+        (begin expr2 ...))))))`,description:"Scheme allows for defining of own syntax",difficulty:"Advanced"},{name:"Syntax with syntax within it",code:`(define-syntax cond
     (syntax-rules(else)
         ((cond)(#f))
-            ((cond(else expr ...))
-                (begin expr ...))
+        ((cond(else expr ...))
+            (begin expr ...))
         ((cond(test expr ... ) clause ...)
         (if test
             (begin expr ...)
-                (cond clause ...)))))`,description:"Ensure you have loaded begin then you can create syntax which contains other syntax",difficulty:"Advanced"},{name:"Build your own higher order functions",code:`(define map1
+            (cond clause ...)))))
+`,description:"Ensure you have loaded begin then you can create syntax which contains other syntax",difficulty:"Advanced"},{name:"Build your own higher order functions",code:`(define map1
   (lambda (p ls)
     (if (null? ls)
         ls
         (cons (p (car ls))
               (map1 p (cdr ls))))))
-
 (map1 (lambda (x) (* x x)) '(1 4 8 16))`,description:"If inbuilt map is not your thing build your own!",difficulty:"Advanced"},{name:"Some of the language is actually just syntax-rules",code:`(define - syntax myLet
     (syntax - rules()
         ((myLet((var val) ...) body ...)
