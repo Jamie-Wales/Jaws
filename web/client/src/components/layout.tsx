@@ -12,7 +12,7 @@ export function Layout() {
                 <div className="container mx-auto px-4 py-3">
                     <div className="flex justify-between items-center">
                         <Link
-                            to="/"
+                            to="/Jaws"
                             className="flex items-center gap-2 text-xl font-bold text-slate-900"
                         >
                             JAWS
@@ -22,7 +22,7 @@ export function Layout() {
                         {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center gap-4">
                             <NavLink
-                                to="/repl"
+                                to="/Jaws/repl"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
                                     }`
@@ -31,7 +31,7 @@ export function Layout() {
                                 REPL
                             </NavLink>
                             <NavLink
-                                to="/editor"
+                                to="/Jaws/editor"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
                                     }`
@@ -40,7 +40,7 @@ export function Layout() {
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/examples"
+                                to="/Jaws/examples"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
                                     }`
@@ -49,7 +49,7 @@ export function Layout() {
                                 Examples
                             </NavLink>
                             <NavLink
-                                to="/docs"
+                                to="/Jaws/docs"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
                                     }`
@@ -86,7 +86,13 @@ export function Layout() {
                 <div className="fixed inset-0 z-50 bg-black/50 md:hidden">
                     <div className="fixed inset-y-0 right-0 w-64 bg-white p-6 shadow-xl">
                         <div className="flex justify-between items-center mb-8">
-                            <span className="font-semibold text-lg">Menu</span>
+                            <Link
+                                to="/Jaws"
+                                className="flex items-center gap-2 text-xl font-bold text-slate-900"
+                            >
+                                JAWS
+                                <ParenthesesIcon className="text-cyan-600" />
+                            </Link>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -97,7 +103,7 @@ export function Layout() {
                         </div>
                         <div className="space-y-4">
                             <NavLink
-                                to="/repl"
+                                to="/Jaws/repl"
                                 className={({ isActive }) =>
                                     `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
                                     }`
@@ -106,7 +112,37 @@ export function Layout() {
                             >
                                 REPL
                             </NavLink>
-                            {/* Add other mobile menu links */}
+                            <NavLink
+                                to="/Jaws/editor"
+                                className={({ isActive }) =>
+                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
+                                    }`
+                                }
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                Editor
+                            </NavLink>
+                            <NavLink
+                                to="/Jaws/examples"
+                                className={({ isActive }) =>
+                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
+                                    }`
+                                }
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                Examples
+                            </NavLink>
+
+                            <NavLink
+                                to="/Jaws/docs"
+                                className={({ isActive }) =>
+                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
+                                    }`
+                                }
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                Docs
+                            </NavLink>
                         </div>
                     </div>
                 </div>

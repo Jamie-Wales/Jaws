@@ -13,7 +13,7 @@ export function GetStartedView() {
     const navigate = useNavigate();
 
     const handleOpenRepl = () => {
-        navigate('/repl');
+        navigate('/Jaws/repl');
     };
 
     return (

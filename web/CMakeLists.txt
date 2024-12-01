@@ -37,7 +37,6 @@ target_include_directories(jaws_wasm PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../include"
     "${CMAKE_CURRENT_SOURCE_DIR}/../include/compiler"
 )
-
 # Copy to the client directory inside web
 add_custom_command(TARGET jaws_wasm POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/client/public/wasm"

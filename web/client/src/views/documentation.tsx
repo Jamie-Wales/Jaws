@@ -32,7 +32,7 @@ export function DocsView() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="code-block">
-                            <HighlightedText text={"(+ 1 2 3 4"} type="input" />
+                            <HighlightedText text={"(+ 1 2 3 4)"} type="input" />
                         </div>
                         <Button onClick={() => handleTryExample("(+ 1 2 3 4)")} className="primary-button">
                             Try It <ArrowRight className="h-4 w-4" />
@@ -54,7 +54,7 @@ export function DocsView() {
                             <Button
                                 variant="outline"
                                 className="w-full justify-start"
-                                onClick={() => navigate('/examples')}
+                                onClick={() => navigate('/Jaws/examples')}
                             >
                                 <Code2 className="mr-2" />
                                 Browse Examples
@@ -64,7 +64,7 @@ export function DocsView() {
                                 className="w-full justify-start"
                                 asChild
                             >
-                                <a href="https://github.com/yourusername/jaws" target="_blank" rel="noopener noreferrer">
+                                <a href="https://github.com/jamie-wales/Jaws" target="_blank" rel="noopener noreferrer">
                                     <Github className="mr-2" />
                                     View Source
                                 </a>
@@ -80,7 +80,7 @@ export function DocsView() {
                         <CardTitle>Basic Operations</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <LoadMarkdown filePath="/markdown/basic_operations.md" />
+                        <LoadMarkdown filePath="./markdown/basic_operations.md" />
                     </CardContent>
                 </Card>
                 {/* Add more sections as needed */}

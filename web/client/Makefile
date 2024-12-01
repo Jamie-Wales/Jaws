@@ -153,6 +153,30 @@ JawsWrapper.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/JawsWrapper.cpp.s
 .PHONY : JawsWrapper.cpp.s
 
+Users/jamie/dev/jaws/src/compiler/DebugUtils.o: Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/DebugUtils.o
+
+# target to build an object file
+Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.o
+
+Users/jamie/dev/jaws/src/compiler/DebugUtils.i: Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/DebugUtils.i
+
+# target to preprocess a source file
+Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.i
+
+Users/jamie/dev/jaws/src/compiler/DebugUtils.s: Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/DebugUtils.s
+
+# target to generate assembly for a file
+Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/DebugUtils.cpp.s
+
 Users/jamie/dev/jaws/src/compiler/Environment.o: Users/jamie/dev/jaws/src/compiler/Environment.cpp.o
 .PHONY : Users/jamie/dev/jaws/src/compiler/Environment.o
 
@@ -176,6 +200,30 @@ Users/jamie/dev/jaws/src/compiler/Environment.s: Users/jamie/dev/jaws/src/compil
 Users/jamie/dev/jaws/src/compiler/Environment.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/Environment.cpp.s
 .PHONY : Users/jamie/dev/jaws/src/compiler/Environment.cpp.s
+
+Users/jamie/dev/jaws/src/compiler/ExpressionUtils.o: Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/ExpressionUtils.o
+
+# target to build an object file
+Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.o
+
+Users/jamie/dev/jaws/src/compiler/ExpressionUtils.i: Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/ExpressionUtils.i
+
+# target to preprocess a source file
+Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.i
+
+Users/jamie/dev/jaws/src/compiler/ExpressionUtils.s: Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/ExpressionUtils.s
+
+# target to generate assembly for a file
+Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/ExpressionUtils.cpp.s
 
 Users/jamie/dev/jaws/src/compiler/Interpreter.o: Users/jamie/dev/jaws/src/compiler/Interpreter.cpp.o
 .PHONY : Users/jamie/dev/jaws/src/compiler/Interpreter.o
@@ -249,6 +297,30 @@ Users/jamie/dev/jaws/src/compiler/ListFunctions.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/ListFunctions.cpp.s
 .PHONY : Users/jamie/dev/jaws/src/compiler/ListFunctions.cpp.s
 
+Users/jamie/dev/jaws/src/compiler/MacroProcessor.o: Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/MacroProcessor.o
+
+# target to build an object file
+Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.o
+
+Users/jamie/dev/jaws/src/compiler/MacroProcessor.i: Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/MacroProcessor.i
+
+# target to preprocess a source file
+Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.i
+
+Users/jamie/dev/jaws/src/compiler/MacroProcessor.s: Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/MacroProcessor.s
+
+# target to generate assembly for a file
+Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/MacroProcessor.cpp.s
+
 Users/jamie/dev/jaws/src/compiler/Number.o: Users/jamie/dev/jaws/src/compiler/Number.cpp.o
 .PHONY : Users/jamie/dev/jaws/src/compiler/Number.o
 
@@ -296,6 +368,30 @@ Users/jamie/dev/jaws/src/compiler/Parser.s: Users/jamie/dev/jaws/src/compiler/Pa
 Users/jamie/dev/jaws/src/compiler/Parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/Parser.cpp.s
 .PHONY : Users/jamie/dev/jaws/src/compiler/Parser.cpp.s
+
+Users/jamie/dev/jaws/src/compiler/PatternMatching.o: Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/PatternMatching.o
+
+# target to build an object file
+Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.o
+.PHONY : Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.o
+
+Users/jamie/dev/jaws/src/compiler/PatternMatching.i: Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/PatternMatching.i
+
+# target to preprocess a source file
+Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.i
+.PHONY : Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.i
+
+Users/jamie/dev/jaws/src/compiler/PatternMatching.s: Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/PatternMatching.s
+
+# target to generate assembly for a file
+Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/jaws_wasm.dir/build.make CMakeFiles/jaws_wasm.dir/Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.s
+.PHONY : Users/jamie/dev/jaws/src/compiler/PatternMatching.cpp.s
 
 Users/jamie/dev/jaws/src/compiler/Procedure.o: Users/jamie/dev/jaws/src/compiler/Procedure.cpp.o
 .PHONY : Users/jamie/dev/jaws/src/compiler/Procedure.o
@@ -405,9 +501,15 @@ help:
 	@echo "... JawsWrapper.o"
 	@echo "... JawsWrapper.i"
 	@echo "... JawsWrapper.s"
+	@echo "... Users/jamie/dev/jaws/src/compiler/DebugUtils.o"
+	@echo "... Users/jamie/dev/jaws/src/compiler/DebugUtils.i"
+	@echo "... Users/jamie/dev/jaws/src/compiler/DebugUtils.s"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Environment.o"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Environment.i"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Environment.s"
+	@echo "... Users/jamie/dev/jaws/src/compiler/ExpressionUtils.o"
+	@echo "... Users/jamie/dev/jaws/src/compiler/ExpressionUtils.i"
+	@echo "... Users/jamie/dev/jaws/src/compiler/ExpressionUtils.s"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Interpreter.o"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Interpreter.i"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Interpreter.s"
@@ -417,12 +519,18 @@ help:
 	@echo "... Users/jamie/dev/jaws/src/compiler/ListFunctions.o"
 	@echo "... Users/jamie/dev/jaws/src/compiler/ListFunctions.i"
 	@echo "... Users/jamie/dev/jaws/src/compiler/ListFunctions.s"
+	@echo "... Users/jamie/dev/jaws/src/compiler/MacroProcessor.o"
+	@echo "... Users/jamie/dev/jaws/src/compiler/MacroProcessor.i"
+	@echo "... Users/jamie/dev/jaws/src/compiler/MacroProcessor.s"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Number.o"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Number.i"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Number.s"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Parser.o"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Parser.i"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Parser.s"
+	@echo "... Users/jamie/dev/jaws/src/compiler/PatternMatching.o"
+	@echo "... Users/jamie/dev/jaws/src/compiler/PatternMatching.i"
+	@echo "... Users/jamie/dev/jaws/src/compiler/PatternMatching.s"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Procedure.o"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Procedure.i"
 	@echo "... Users/jamie/dev/jaws/src/compiler/Procedure.s"

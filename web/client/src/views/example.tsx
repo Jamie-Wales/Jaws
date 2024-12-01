@@ -6,6 +6,7 @@ import { HighlightedText } from '@/components/highlightedText';
 import type { Example } from '@/types/types';
 
 const examples: (Example & { difficulty: 'Beginner' | 'Intermediate' | 'Advanced' })[] = [
+
     {
         name: "Hello World",
         code: '(display "Hello, World!")',
@@ -40,6 +41,90 @@ const examples: (Example & { difficulty: 'Beginner' | 'Intermediate' | 'Advanced
         description: "Classic recursive Fibonacci implementation",
         difficulty: "Advanced",
     },
+
+    {
+        name: "Define your own Syntax",
+        code:
+            `(define-syntax begin
+    (syntax-rules ()
+        ((begin expr)
+        (expr))
+    ((begin expr expr2 ...)
+        ((let ((dummy expr))
+        (begin expr2 ...))))))
+
+(begin (display "Hello, World!") (newline))
+        `,
+        description: "Scheme allows for defining of own syntax",
+        difficulty: "Advanced"
+    },
+    {
+        name: "Syntax with syntax within it",
+        code:
+            `(define-syntax begin
+    (syntax-rules ()
+        ((begin expr)
+        (expr))
+    ((begin expr expr2 ...)
+        ((let ((dummy expr))
+        (begin expr2 ...))))))
+
+(begin (display "Hello, World!") (newline))
+
+(define-syntax cond
+    (syntax-rules(else)
+        ((cond)(#f))
+        ((cond(else expr ...))
+            (begin expr ...))
+        ((cond(test expr ... ) clause ...)
+        (if test
+            (begin expr ...)
+            (cond clause ...)))))
+
+(cond ((< 5 3) (display "Impossible!"))
+      ((= 5 5) (display "Math works!"))
+      (else (display "Default case")))`,
+        description: "Ensure you have loaded begin then you can create syntax which contains other syntax",
+        difficulty: "Advanced"
+    },
+
+    {
+        name: "Build your own higher order functions",
+        code:
+            `(define map1
+  (lambda (p ls)
+    (if (null? ls)
+        ls
+        (cons (p (car ls))
+            (map1 p 
+                (cdr ls)))
+    )
+  )
+)
+
+(map1 (lambda (x) (* x x)) '(1 4 8 16))`,
+        description: "If inbuilt map is not your thing build your own!",
+        difficulty: "Advanced"
+    },
+
+    {
+        name: "Some of the language is actually just syntax-rules",
+        code:
+            `(define-syntax myLet
+    (syntax-rules ()
+        (
+            (myLet ((var val) ...) body ...)
+            (
+                (lambda(var ...) body ...) val ...)
+        )
+    )
+)
+
+(myLet ((x 10) (y 20)) ((display (+ x y))))
+            `,
+        description: "It can be an down to an implementation of scheme to decide what to implement, however most of the language is syntax definition",
+        difficulty: "Advanced"
+    },
 ];
 
 export function ExamplesView() {
@@ -47,7 +132,7 @@ export function ExamplesView() {
 
     const handleTryExample = (code: string) => {
         localStorage.setItem('editorCode', code);
-        navigate('/editor');
+        navigate('/Jaws/editor');
     };
 
     const getDifficultyColor = (difficulty: Example['difficulty']) => {
@@ -85,7 +170,7 @@ export function ExamplesView() {
                                                 {example.description}
                                             </CardDescription>
                                         </div>
-                                        <span className={`difficulty-badge ${getDifficultyColor(example.difficulty)}`}>
+                                        <span className={`difficulty - badge ${getDifficultyColor(example.difficulty)}`}>
                                             {example.difficulty}
                                         </span>
                                     </div>

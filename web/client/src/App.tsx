@@ -10,15 +10,15 @@ import "@/styles/globals.css"
 
 export default function App() {
     return (
-        <BrowserRouter>
+        <BrowserRouter basename={process.env.PUBLIC_URL}>
             <Routes>
-                <Route path="/" element={<WelcomePage />} />
+                <Route path="/Jaws" element={<WelcomePage />} />
                 <Route element={<Layout />}>
-                    <Route path="/get-started" element={<GetStartedView />} />
-                    <Route path="/repl" element={<ReplView />} />
-                    <Route path="/editor" element={<EditorView />} />
-                    <Route path="/examples" element={<ExamplesView />} />
-                    <Route path="/docs" element={<DocsView />} />
+                    <Route path="/Jaws/get-started" element={<GetStartedView />} />
+                    <Route path="/Jaws/repl" element={<ReplView />} />
+                    <Route path="/Jaws/editor" element={<EditorView />} />
+                    <Route path="/Jaws/examples" element={<ExamplesView />} />
+                    <Route path="/Jaws/docs" element={<DocsView />} />
                 </Route>
             </Routes>
         </BrowserRouter>

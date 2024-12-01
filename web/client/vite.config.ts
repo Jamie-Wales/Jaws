@@ -47,8 +47,17 @@ const wasmPlugin = (): Plugin => ({
         }
     }
 });
+const markdownPlugin = (): Plugin => ({
+    name: 'markdown-plugin',
+    transform(src, id) {
+        if (id.endsWith('.md')) {
+            return `export default ${JSON.stringify(src)}`;
+        }
+    },
+});
+
 export default defineConfig(({ command }) => ({
-    plugins: [react(), wasmPlugin()],
+    plugins: [react(), wasmPlugin(), markdownPlugin()],
     base: command === 'serve' ? '/' : './',
     resolve: {
         alias: {

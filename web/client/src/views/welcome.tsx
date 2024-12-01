@@ -70,7 +70,7 @@ export function WelcomePage() {
                             variant="ghost"
                             className="w-full justify-start text-white hover:bg-slate-800/60"
                             onClick={() => {
-                                navigate('/docs');
+                                navigate('/Jaws/docs');
                                 setMobileMenuOpen(false);
                             }}
                         >
@@ -80,7 +80,7 @@ export function WelcomePage() {
                             variant="ghost"
                             className="w-full justify-start text-white hover:bg-slate-800/60"
                             onClick={() => {
-                                navigate('/examples');
+                                navigate('/Jaws/examples');
                                 setMobileMenuOpen(false);
                             }}
                         >
@@ -90,7 +90,7 @@ export function WelcomePage() {
                             style={buttonStyles}
                             className="w-full justify-start hover:opacity-90"
                             onClick={() => {
-                                navigate('/get-started');
+                                navigate('/Jaws/get-started');
                                 setMobileMenuOpen(false);
                             }}
                         >
@@ -125,21 +125,21 @@ export function WelcomePage() {
                             <Button
                                 variant="ghost"
                                 className="text-white hover:bg-slate-800/60 w-full md:w-auto"
-                                onClick={() => navigate('/docs')}
+                                onClick={() => navigate('/Jaws/docs')}
                             >
                                 Documentation
                             </Button>
                             <Button
                                 variant="ghost"
                                 className="text-white hover:bg-slate-800/60 w-full md:w-auto"
-                                onClick={() => navigate('/examples')}
+                                onClick={() => navigate('/Jaws/examples')}
                             >
                                 Examples
                             </Button>
                             <Button
                                 style={buttonStyles}
                                 className="hover:opacity-90 w-full md:w-auto"
-                                onClick={() => navigate('/get-started')}
+                                onClick={() => navigate('/Jaws/get-started')}
                             >
                                 Get Started
                             </Button>
@@ -169,7 +169,7 @@ export function WelcomePage() {
                                     size="lg"
                                     style={buttonStyles}
                                     className="hover:opacity-90 w-full sm:w-auto"
-                                    onClick={() => navigate('/editor')}
+                                    onClick={() => navigate('/Jaws/editor')}
                                 >
                                     Try Online Editor <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
@@ -177,7 +177,7 @@ export function WelcomePage() {
                                     variant="outline"
                                     size="lg"
                                     className="bg-transparent text-white hover:bg-slate-800/60 border-white hover:border-white w-full sm:w-auto"
-                                    onClick={() => navigate('/examples')}
+                                    onClick={() => navigate('/Jaws/examples')}
                                 >
                                     View Examples
                                 </Button>
@@ -258,7 +258,7 @@ export function WelcomePage() {
                             size="lg"
                             style={buttonStyles}
                             className="hover:opacity-90 w-full sm:w-auto"
-                            onClick={() => navigate('/editor')}
+                            onClick={() => navigate('/Jaws/editor')}
                         >
                             Start Coding Now
                         </Button>
@@ -266,7 +266,7 @@ export function WelcomePage() {
                             variant="outline"
                             size="lg"
                             className="border-slate-800 text-slate-800 hover:bg-slate-100/60 hover:text-slate-900 w-full sm:w-auto"
-                            onClick={() => navigate('/docs')}
+                            onClick={() => navigate('/Jaws/docs')}
                         >
                             Browse Documentation
                         </Button>
@@ -294,14 +294,14 @@ export function WelcomePage() {
                             <Button
                                 variant="ghost"
                                 className="text-slate-300 hover:text-white hover:bg-slate-800/60"
-                                onClick={() => navigate('/docs')}
+                                onClick={() => navigate('/Jaws/docs')}
                             >
                                 Docs
                             </Button>
                             <Button
                                 variant="ghost"
                                 className="text-slate-300 hover:text-white hover:bg-slate-800/60"
-                                onClick={() => navigate('/examples')}
+                                onClick={() => navigate('/Jaws/examples')}
                             >
                                 Examples
                             </Button>
