@@ -26,8 +26,7 @@ var NAVTREE =
 [
   [ "Jaws Awesomely Wrangles Scheme", "index.html", [
     [ "Namespaces", "namespaces.html", null ],
-    [ "Classes", "annotated.html", null ],
-    [ "Files", "files.html", null ]
+    [ "Classes", "annotated.html", null ]
   ] ]
 ];
 

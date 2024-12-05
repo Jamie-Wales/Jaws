@@ -25,5 +25,4 @@
 var menudata={children:[
 {text:"Home",url:"index.html"},
 {text:"Namespaces",url:"namespaces.html"},
-{text:"Classes",url:"annotated.html"},
-{text:"Files",url:"files.html"}]}
+{text:"Classes",url:"annotated.html"}]}
