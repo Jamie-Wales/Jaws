@@ -1,0 +1,32 @@
+<map id="Parser::tailExpression" name="Parser::tailExpression">
+<area shape="rect" id="Node000001" title=" " alt="" coords="627,179,777,204"/>
+<area shape="rect" id="Node000002" href="$class_parser.html#a507996fbfd18b0c4be4a57fda4012b75" title=" " alt="" coords="440,153,579,179"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="611,182,579,178,580,173,612,177"/>
+<area shape="rect" id="Node000003" href="$class_parser.html#ae704727750ceede874835dbb655a2265" title=" " alt="" coords="262,153,392,179"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="425,178,392,177,392,172,425,172"/>
+<area shape="poly" id="edge17_Node000003_Node000001" title=" " alt="" coords="392,180,440,189,537,194,627,193,627,199,537,200,440,194,391,186"/>
+<area shape="poly" id="edge7_Node000003_Node000002" title=" " alt="" coords="407,155,440,155,440,160,407,160"/>
+<area shape="rect" id="Node000004" href="$class_parser.html#a7d2eafb638299e8cb7e216b7ddbe0da6" title=" " alt="" coords="26,5,193,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="301,143,263,98,239,75,212,56,179,43,146,34,147,29,181,38,215,52,242,71,267,94,305,139"/>
+<area shape="rect" id="Node000005" href="$class_parser.html#a19a6e3129cef1f0ce5f6a81b302dee64" title=" " alt="" coords="5,55,214,80"/>
+<area shape="poly" id="edge5_Node000003_Node000005" title=" " alt="" coords="283,147,249,125,213,106,174,93,138,84,139,78,176,88,215,101,252,121,286,142"/>
+<area shape="rect" id="Node000006" href="$class_parser.html#a0ae01d06091ffc62f11ecb69f24c549a" title=" " alt="" coords="55,104,164,130"/>
+<area shape="poly" id="edge8_Node000003_Node000006" title=" " alt="" coords="246,159,140,133,142,128,247,154"/>
+<area shape="rect" id="Node000007" href="$class_parser.html#a100a2e5cd4e1c8fb7c10141bbe3ba6f8" title=" " alt="" coords="36,153,183,179"/>
+<area shape="poly" id="edge10_Node000003_Node000007" title=" " alt="" coords="246,178,183,177,183,172,246,172"/>
+<area shape="rect" id="Node000008" href="$class_parser.html#aca370bb5242a88c179206da4e63b64f0" title=" " alt="" coords="60,203,159,228"/>
+<area shape="poly" id="edge12_Node000003_Node000008" title=" " alt="" coords="253,186,160,207,159,202,252,180"/>
+<area shape="rect" id="Node000009" href="$class_parser.html#a77de18faadd01d531b88baf60adf021b" title=" " alt="" coords="27,252,192,278"/>
+<area shape="poly" id="edge13_Node000003_Node000009" title=" " alt="" coords="308,193,267,226,215,255,193,263,191,258,213,250,264,221,305,188"/>
+<area shape="rect" id="Node000010" href="$class_parser.html#a23aa65dcb01815fb71852971b36758f2" title=" " alt="" coords="41,301,178,327"/>
+<area shape="poly" id="edge15_Node000003_Node000010" title=" " alt="" coords="316,195,276,251,248,280,215,304,179,319,177,314,212,300,244,276,272,248,312,192"/>
+<area shape="rect" id="Node000011" href="$class_parser.html#aea2c445358a4d499f0127cbbda1112c5" title=" " alt="" coords="58,351,161,376"/>
+<area shape="poly" id="edge18_Node000003_Node000011" title=" " alt="" coords="321,195,306,232,284,275,253,318,215,354,190,367,162,373,161,368,188,362,212,349,249,315,279,272,301,230,316,193"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="208,24,215,28,252,56,284,91,308,124,323,152,319,154,304,127,280,94,249,60,212,32,206,29"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="229,84,282,118,319,151,316,155,279,122,226,88"/>
+<area shape="poly" id="edge9_Node000006_Node000003" title=" " alt="" coords="180,122,296,150,295,155,179,127"/>
+<area shape="poly" id="edge11_Node000007_Node000003" title=" " alt="" coords="198,155,261,155,261,161,198,160"/>
+<area shape="poly" id="edge14_Node000009_Node000003" title=" " alt="" coords="152,245,213,226,257,202,295,177,298,182,260,207,215,231,154,250"/>
+<area shape="poly" id="edge16_Node000010_Node000003" title=" " alt="" coords="161,295,187,287,212,276,243,253,270,227,310,178,314,181,274,230,247,257,215,280,189,292,162,300"/>
+<area shape="poly" id="edge19_Node000011_Node000003" title=" " alt="" coords="167,344,191,337,212,325,250,290,279,249,316,178,321,181,284,252,254,294,215,330,193,342,169,349"/>
+</map>
