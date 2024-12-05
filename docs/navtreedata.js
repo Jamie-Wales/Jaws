@@ -22,8 +22,19 @@
 
  @licend  The above is the entire license notice for the JavaScript code in this file
 */
-var menudata={children:[
-{text:"Home",url:"index.html"},
-{text:"Namespaces",url:"namespaces.html"},
-{text:"Classes",url:"annotated.html"},
-{text:"Files",url:"files.html"}]}
+var NAVTREE =
+[
+  [ "Jaws Awesomely Wrangles Scheme", "index.html", [
+    [ "Namespaces", "namespaces.html", null ],
+    [ "Classes", "annotated.html", null ],
+    [ "Files", "files.html", null ]
+  ] ]
+];
+
+var NAVTREEINDEX =
+[
+"index.html"
+];
+
+var SYNCONMSG = 'click to disable panel synchronisation';
+var SYNCOFFMSG = 'click to enable panel synchronisation';
