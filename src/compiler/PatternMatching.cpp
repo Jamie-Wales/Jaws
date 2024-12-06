@@ -1,5 +1,6 @@
 #include "PatternMatching.h"
 #include "DebugUtils.h"
+#include "Visit.h"
 #include <iostream>
 
 void PatternEnvironment::bind(const std::string& identifier, std::shared_ptr<Expression> syntax)

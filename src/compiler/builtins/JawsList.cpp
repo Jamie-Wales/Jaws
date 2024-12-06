@@ -1,9 +1,100 @@
+
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
 #include <optional>
+namespace jaws_list {
 
-std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> listProcedure(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+    std::vector<SchemeValue> evaluated;
+    evaluated.reserve(args.size());
+    for (const auto& arg : args) {
+        if (arg.isExpr()) {
+            evaluated.push_back(expressionToValue(*arg.asExpr()));
+        } else {
+            evaluated.push_back(arg);
+        }
+    }
+    return SchemeValue(std::list<SchemeValue>(evaluated.begin(), evaluated.end()));
+}
+
+std::optional<SchemeValue> carProcudure(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("CAR expects 1 argument");
+    }
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    auto elements = arg.as<std::list<SchemeValue>>();
+    if (elements.size() == 0) {
+        throw InterpreterError("CAR invoked on empty list");
+    }
+    return elements.front();
+}
+
+std::optional<SchemeValue> cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("cdr requires 1 argument");
+    }
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    if (!arg.isList()) {
+        throw InterpreterError("cdr requires 1 argument");
+    }
+    const auto& list = arg.asList();
+    if (list.empty()) {
+        throw InterpreterError("car: empty list");
+    }
+    auto cdr = arg.asList();
+    auto it = cdr.begin();
+    ++it;
+    return SchemeValue(std::list<SchemeValue>(it, cdr.end()));
+}
+
+std::optional<SchemeValue> cadrProcedure(Interpreter& ele, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("cadr requires exactly 1 argument");
+    }
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    if (!arg.isList()) {
+        throw InterpreterError("cadr: argument must be a list");
+    }
+    const auto& list = arg.asList();
+    auto it = std::next(list.begin());
+    if (it == list.end()) {
+        throw InterpreterError("cadr: list too short");
+    }
+    return *it;
+}
+
+std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("OPEN-INPUT-FILE requires exactly 1 argument");
+    }
+    SchemeValue arg = args[0];
+    if (arg.isExpr())
+        arg = expressionToValue(*arg.asExpr());
+    const auto* filename = std::get_if<std::string>(&arg.value);
+    if (!filename) {
+        throw InterpreterError("OPEN-INPUT-FILE argument must be a string");
+    }
+    auto file = std::make_shared<std::fstream>();
+    file->open(*filename, std::ios::in);
+    if (!file->is_open()) {
+        throw InterpreterError("Could not open file: " + *filename);
+    }
+    return SchemeValue(Port(file, PortType::Input));
+}
+
+std::optional<SchemeValue> map(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
         throw InterpreterError("MAP requires procedure and arguments");
@@ -62,7 +153,7 @@ std::optional<SchemeValue> Interpreter::map(Interpreter& interp, const std::vect
     return SchemeValue(result);
 }
 
-std::optional<SchemeValue> Interpreter::cons(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> cons(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("cons requires exactly 2 arguments");
@@ -79,7 +170,6 @@ std::optional<SchemeValue> Interpreter::cons(Interpreter& interp, const std::vec
     }
 
     if (second.isProc()) {
-        // Replace call() with executeProcedure
         auto result = interp.executeProcedure(second,
             std::vector<SchemeValue> { args.begin() + 2, args.end() });
         if (result) {
@@ -98,7 +188,7 @@ std::optional<SchemeValue> Interpreter::cons(Interpreter& interp, const std::vec
     pair.push_back(second);
     return SchemeValue(std::move(pair));
 }
-std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> length(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("length requires exactly 1 argument");
@@ -114,7 +204,7 @@ std::optional<SchemeValue> Interpreter::length(Interpreter&, const std::vector<S
     return SchemeValue(Number(static_cast<int>(arg.asList().size())));
 }
 
-std::optional<SchemeValue> Interpreter::append(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> append(Interpreter&, const std::vector<SchemeValue>& args)
 {
     std::vector<SchemeValue> result;
     for (const auto& arg : args) {
@@ -131,7 +221,7 @@ std::optional<SchemeValue> Interpreter::append(Interpreter&, const std::vector<S
     return SchemeValue(result);
 }
 
-std::optional<SchemeValue> Interpreter::reverse(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> reverse(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("REVERSE requires exactly 1 argument");
@@ -150,7 +240,7 @@ std::optional<SchemeValue> Interpreter::reverse(Interpreter&, const std::vector<
     return SchemeValue(result);
 }
 
-std::optional<SchemeValue> Interpreter::listRef(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("LIST-REF requires exactly 2 arguments");
@@ -179,7 +269,7 @@ std::optional<SchemeValue> Interpreter::listRef(Interpreter&, const std::vector<
     return (*list)[index];
 }
 
-std::optional<SchemeValue> Interpreter::listTail(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("LIST-TAIL requires exactly 2 arguments");
@@ -207,4 +297,5 @@ std::optional<SchemeValue> Interpreter::listTail(Interpreter&, const std::vector
     }
     std::vector<SchemeValue> result(list->begin() + index, list->end());
     return SchemeValue(result);
+}
 }

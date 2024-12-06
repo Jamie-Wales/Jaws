@@ -368,7 +368,6 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
     consume(Tokentype::LEFT_PAREN, "Expect ( after syntax-rules");
 
     // Parse literals list
-    std::cout << "\nParsing literals list\n";
     std::vector<Token> literals;
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         literals.push_back(consume(Tokentype::IDENTIFIER, "Expect literal identifier"));
@@ -381,24 +380,29 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
     std::cout << "\nParsing pattern-template pairs\n";
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         std::cout << "Starting new pattern-template pair\n";
-        consume(Tokentype::LEFT_PAREN, "Expect ( before pattern-template pair");
 
         // Parse pattern
-        std::cout << "Parsing pattern...\n";
-        consume(Tokentype::LEFT_PAREN, "Expect ( before pattern");
-        auto pattern = listPattern(); // Special list parser for patterns
-        consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern");
+        std::shared_ptr<Expression> pattern;
+        if (match(Tokentype::LEFT_PAREN)) {
+            std::cout << "Parsing parenthesized pattern...\n";
+            pattern = listPattern();
+            consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern");
+        } else {
+            std::cout << "Parsing non-parenthesized pattern...\n";
+            std::vector<std::shared_ptr<Expression>> elements;
+            elements.push_back(listPattern());
+
+            bool isVariadic = match(Tokentype::ELLIPSIS);
+            pattern = std::make_shared<Expression>(
+                Expression { ListExpression { std::move(elements), isVariadic },
+                    previousToken().line });
+        }
         patterns.push_back(pattern);
 
-        // Parse template
+        // Parse template - always as a list
         std::cout << "Parsing template...\n";
-        consume(Tokentype::LEFT_PAREN, "Expect ( before template");
-        auto templ = listPattern(); // Use same parser for template
-        consume(Tokentype::RIGHT_PAREN, "Expect ) after template");
+        auto templ = listPattern();
         templates.push_back(templ);
-
-        consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern-template pair");
-        std::cout << "Finished pattern-template pair\n";
     }
 
     consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rules");
@@ -410,8 +414,6 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
             std::move(templates) },
         previousToken().line });
 }
-
-// Special list parser that handles pattern/template specific parsing
 std::shared_ptr<Expression> Parser::listPattern()
 {
     std::vector<std::shared_ptr<Expression>> elements;
@@ -455,6 +457,7 @@ std::shared_ptr<Expression> Parser::listPattern()
         ListExpression { std::move(elements), isVariadic },
         previousToken().line);
 }
+
 std::shared_ptr<Expression> Parser::defineSyntaxExpression()
 {
     Token name = consume(Tokentype::IDENTIFIER, "Expect macro name");

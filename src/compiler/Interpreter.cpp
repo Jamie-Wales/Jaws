@@ -7,6 +7,12 @@
 #include "Procedure.h"
 #include "Scanner.h"
 #include "Value.h"
+#include "builtins/JawsEq.h"
+#include "builtins/JawsHof.h"
+#include "builtins/JawsIO.h"
+#include "builtins/JawsList.h"
+#include "builtins/JawsMath.h"
+#include "builtins/JawsVector.h"
 #include "run.h"
 #include <memory>
 #include <optional>
@@ -19,7 +25,6 @@ void Interpreter::init()
         throw InterpreterError("Could not parse AST");
     }
 
-    // First pass: collect macros and separate expressions
     std::vector<std::shared_ptr<Expression>> interpretExprs;
     for (auto expr : *exprs) {
         if (auto ele = std::get_if<DefineSyntaxExpression>(&expr->as)) {
@@ -59,52 +64,49 @@ Interpreter::Interpreter(std::shared_ptr<Scanner> s, std::shared_ptr<Parser> p)
     auto define = [this](const std::string& name, BuiltInProcedure::Func func) {
         scope->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
     };
-
-    define("+", plus);
-    define("-", minus);
-    define("*", mult);
-    define("/", div);
-    define("<=", lessOrEqual);
-    define(">=", greaterOrEqual);
-    define("<", less);
-    define(">", greater);
-
-    // Equality
-    auto eq = std::make_shared<BuiltInProcedure>(equal);
+    define("+", jaws_math::plus);
+    define("-", jaws_math::minus);
+    define("*", jaws_math::mult);
+    define("/", jaws_math::div);
+    define("<=", jaws_math::lessOrEqual);
+    define(">=", jaws_math::greaterOrEqual);
+    define("<", jaws_math::less);
+    define(">", jaws_math::greater);
+    auto eq = std::make_shared<BuiltInProcedure>(jaws_math::equal);
     scope->define("=", SchemeValue(eq));
     scope->define("eq?", SchemeValue(eq));
-    define("boolean?", isBooleanProc);
-    define("open-input-file", openInputFile);
-    define("open-output-file", openOutputFile);
-    define("close-port", closePort);
-    define("read", read);
-    define("write", write);
-    define("display", display);
-    define("newline", newline);
-    define("eval", eval);
-    define("help", printHelp);
-    define("map", map);
-    define("list", listProcedure);
-    define("car", carProcudure);
-    define("cdr", cdrProcedure);
-    define("cadr", cadrProcedure);
-    define("cons", cons);
-    define("length", length);
-    define("append", append);
-    define("reverse", reverse);
-    define("list-ref", listRef);
-    define("list-tail", listTail);
-    define("make-vector", makeVector);
-    define("vector", vectorProcedure);
-    define("vector-ref", vectorRef);
-    define("vector-set!", vectorSet);
-    define("vector-length", vectorLength);
-    define("procedure?", isProcedure);
-    define("null?", isNull);
-    define("port?", isPort);
-    define("eq?", isEq);
-    define("eqv?", isEqv);
-    define("apply", apply);
+    define("boolean?", jaws_eq::isBooleanProc);
+    define("open-input-file", jaws_io::openInputFile);
+    define("open-output-file", jaws_io::openOutputFile);
+    define("close-port", jaws_io::closePort);
+    define("read", jaws_io::read);
+    define("write", jaws_io::write);
+    define("display", jaws_io::display);
+    define("newline", jaws_io::newline);
+    define("eval", jaws_hof::eval);
+    define("help", jaws_hof::printHelp);
+    define("map", jaws_list::map);
+    define("list", jaws_list::listProcedure);
+    define("car", jaws_list::carProcudure);
+    define("cdr", jaws_list::cdrProcedure);
+    define("cadr", jaws_list::cadrProcedure);
+    define("cons", jaws_list::cons);
+    define("length", jaws_list::length);
+    define("append", jaws_list::append);
+    define("reverse", jaws_list::reverse);
+    define("list-ref", jaws_list::listRef);
+    define("list-tail", jaws_list::listTail);
+    define("make-vector", jaws_vec::makeVector);
+    define("vector", jaws_vec::vectorProcedure);
+    define("vector-ref", jaws_vec::vectorRef);
+    define("vector-set!", jaws_vec::vectorSet);
+    define("vector-length", jaws_vec::vectorLength);
+    define("procedure?", jaws_eq::isProcedure);
+    define("null?", jaws_eq::isNull);
+    define("port?", jaws_eq::isPort);
+    define("eq?", jaws_eq::isEq);
+    define("eqv?", jaws_eq::isEqv);
+    define("apply", jaws_hof::apply);
 }
 std::optional<SchemeValue> Interpreter::interpretQuoteExpression(const QuoteExpression& qe, const Expression& e)
 {
@@ -242,8 +244,7 @@ std::optional<SchemeValue> Interpreter::ifExpression(const IfExpression& i, cons
 
 std::optional<SchemeValue> Interpreter::interpretLetExpression(const LetExpression& le, const Expression& e)
 {
-    scope->pushFrame(); // This frame is for the let bindings
-
+    scope->pushFrame();
     std::vector<Token> params;
     std::vector<SchemeValue> args;
     for (const auto& [param, argExpr] : le.arguments) {
@@ -256,13 +257,7 @@ std::optional<SchemeValue> Interpreter::interpretLetExpression(const LetExpressi
         params.push_back(param);
         args.push_back(*arg);
     }
-
     auto proc = std::make_shared<UserProcedure>(params, le.body);
-
-    if (le.name) {
-        scope->define(le.name->lexeme, SchemeValue(proc));
-    }
-
     auto result = executeProcedure(SchemeValue(proc), args);
     scope->popFrame();
     return result;
@@ -275,15 +270,12 @@ std::optional<SchemeValue> Interpreter::interpretTailExpression(const TailExpres
         if (!call) {
             return std::nullopt;
         }
-
         if (call->procedure.asProc()->isBuiltin()) {
             return interpret(t.expression);
         }
-
         auto tailCall = std::make_shared<TailCall>(call->procedure.asProc(), call->arguments);
         return SchemeValue(tailCall);
     }
-
     return interpret(t.expression);
 }
 
@@ -294,7 +286,6 @@ std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& 
         p->load(s->tokenize(f));
         auto exprs = p->parse();
         if (exprs) {
-            // First pass: collect macros from imported file
             std::vector<std::shared_ptr<Expression>> interpretExprs;
             for (auto expr : *exprs) {
                 if (auto ele = std::get_if<DefineSyntaxExpression>(&expr->as)) {
@@ -304,8 +295,6 @@ std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& 
                     interpretExprs.push_back(expr);
                 }
             }
-
-            // Second pass: expand macros and interpret remaining expressions
             for (auto expr : interpretExprs) {
                 if (std::get_if<sExpression>(&expr->as)) {
                     auto expanded = macroProcessor.expandMacros(exprToList(expr));
@@ -368,41 +357,33 @@ std::optional<SchemeValue> Interpreter::executeProcedure(const SchemeValue& proc
             procedure = tailCall->proc;
             currentArgs = tailCall->args;
         }
-
         auto result = (*procedure)(*this, currentArgs);
-
         if (!result) {
             return std::nullopt;
         }
-
-        // If result is a tail call, continue loop with that procedure
         if (result->isProc() && result->asProc()->isTailCall()) {
             procedure = result->asProc();
             continue;
         }
-
         return result;
     }
 }
+
 std::optional<Interpreter::ProcedureCall> Interpreter::evaluateProcedureCall(
     const sExpression& se, const Expression& expr)
 {
     if (se.elements.empty()) {
         throw InterpreterError("Empty procedure call", expr);
     }
-
     auto proc = interpret(se.elements[0]);
     if (!proc) {
         return std::nullopt;
     }
-
     if (!proc->isProc()) {
         throw InterpreterError("First element is not a procedure: " + proc->toString(), expr);
     }
-
     std::vector<SchemeValue> args;
     args.reserve(se.elements.size() - 1);
-
     for (size_t i = 1; i < se.elements.size(); i++) {
         auto arg = interpret(se.elements[i]);
         if (!arg) {
@@ -410,7 +391,6 @@ std::optional<Interpreter::ProcedureCall> Interpreter::evaluateProcedureCall(
         }
         args.push_back(*arg);
     }
-
     return ProcedureCall { *proc, std::move(args) };
 }
 

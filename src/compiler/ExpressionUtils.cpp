@@ -1,4 +1,5 @@
 #include "ExpressionUtils.h"
+#include "Visit.h"
 
 std::shared_ptr<Expression> makeAtom(const std::string& lexeme, Tokentype type)
 {

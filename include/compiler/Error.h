@@ -66,7 +66,7 @@ private:
     {
         std::ostringstream oss;
         if (expr) {
-            oss << "Interpreter error at linew " << expr->get().line << ": ";
+            oss << "Interpreter error at line " << expr->get().line << ": " << (expr ? (*expr).get().toString() : "") << std::endl;
         } else {
             oss << "Interpreter error: ";
         }

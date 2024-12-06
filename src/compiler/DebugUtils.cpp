@@ -1,4 +1,6 @@
 #include "DebugUtils.h"
+
+#include "Visit.h"
 #include <iostream>
 #include <string>
 

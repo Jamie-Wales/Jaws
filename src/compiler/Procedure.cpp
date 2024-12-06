@@ -20,7 +20,7 @@ std::optional<SchemeValue> UserProcedure::operator()(Interpreter& interp,
         result = interp.interpret(expr);
         if (result && result->isProc() && result->asProc()->isTailCall()) {
             interp.scope->popFrame();
-            return result; // Return TailCall without executing it
+            return result;
         }
     }
 

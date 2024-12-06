@@ -1,6 +1,7 @@
 #include "MacroProcessor.h"
 #include "DebugUtils.h"
 #include "ExpressionUtils.h"
+#include "Visit.h"
 #include <iostream>
 
 void MacroProcessor::collectMacros(std::shared_ptr<Expression> expr)

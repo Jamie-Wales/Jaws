@@ -8,7 +8,6 @@ const std::unordered_map<std::string, Tokentype> Scanner::keywords = {
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
     { "quote", Tokentype::QUOTE },
-    { "letrec", Tokentype::LETREC },
     { "let", Tokentype::LET },
     { "import", Tokentype::IMPORT },
     { "syntax-rules", Tokentype::SYNTAX_RULE },
