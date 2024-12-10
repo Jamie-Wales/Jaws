@@ -1,0 +1,21 @@
+<map id="jaws_math::plus" name="jaws_math::plus">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,107,122,132"/>
+<area shape="rect" id="Node000002" href="$class_scheme_value.html#ad2f08a680d2b5ed19ae74d8b786cbda4" title=" " alt="" coords="191,5,342,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="80,104,119,76,168,48,202,34,204,39,171,53,122,81,83,108"/>
+<area shape="rect" id="Node000003" href="$class_scheme_value.html#ae7fe4d1f95f7fafbbf9f88a923659a35" title=" " alt="" coords="415,5,561,31"/>
+<area shape="poly" id="edge10_Node000001_Node000003" title=" " alt="" coords="120,103,169,92,415,33,417,38,170,97,121,109"/>
+<area shape="rect" id="Node000004" href="$class_interpreter.html#acb2f03bf25561f73ceb0506e7376f423" title="Executes a procedure with given arguments." alt="" coords="170,107,363,132"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="122,117,154,117,154,122,122,122"/>
+<area shape="rect" id="Node000006" href="$class_scheme_value.html#ad7e9e65bcfa9d96ea386346533cadd64" title=" " alt="" coords="613,105,760,131"/>
+<area shape="poly" id="edge11_Node000001_Node000006" title=" " alt="" coords="96,130,179,161,296,192,362,203,430,208,498,205,565,192,591,182,615,168,657,139,660,143,618,173,593,187,566,197,499,210,430,213,361,208,294,197,177,166,94,135"/>
+<area shape="rect" id="Node000008" href="$_value_8cpp.html#a7b493a4583793ef1da75b5f126e5417d" title=" " alt="" coords="201,281,332,307"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="76,131,115,180,171,236,225,271,222,276,168,240,111,184,72,135"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="342,16,400,16,400,21,342,21"/>
+<area shape="rect" id="Node000005" href="$class_scheme_value.html#a693c8fe5f58bc3dc09ab9c20754664a0" title=" " alt="" coords="413,55,563,80"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="323,104,415,82,416,87,325,109"/>
+<area shape="poly" id="edge6_Node000004_Node000006" title=" " alt="" coords="363,117,598,116,598,121,363,122"/>
+<area shape="rect" id="Node000007" href="$class_scheme_value.html#ac4c1c8076a954de3420f95c2ac65d05c" title=" " alt="" coords="411,156,565,182"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="328,130,413,149,412,155,327,136"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="542,78,619,98,618,103,541,84"/>
+<area shape="poly" id="edge9_Node000008_Node000008" title=" " alt="" coords="232,283,226,273,230,263,244,257,266,255,291,257,304,264,301,269,290,262,266,260,245,262,234,267,231,272,237,279"/>
+</map>

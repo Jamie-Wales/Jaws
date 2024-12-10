@@ -12,8 +12,9 @@ const buttonStyles = {
 export function GetStartedView() {
     const navigate = useNavigate();
 
-    const handleOpenRepl = () => {
-        navigate('/Jaws/repl');
+    const handleTryExample = (code: string) => {
+        localStorage.setItem('editorCode', code);
+        navigate('/Jaws/editor');
     };
 
     return (
@@ -41,7 +42,7 @@ export function GetStartedView() {
                             <Button
                                 style={buttonStyles}
                                 className="w-full mt-4 hover:opacity-90"
-                                onClick={handleOpenRepl}
+                                onClick={() => handleTryExample("(+ 1 2 3)")}
                             >
                                 <span className="flex items-center justify-center gap-2">
                                     Try REPL <ArrowRight className="h-4 w-4" />

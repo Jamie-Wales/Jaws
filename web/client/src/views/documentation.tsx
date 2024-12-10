@@ -12,7 +12,6 @@ export function DocsView() {
     function handleTryExample(code: any): void {
         throw new Error(code + 'Function not implemented.');
     }
-
     return (
         <div className="space-y-8">
             <div className="space-y-2">
@@ -21,7 +20,6 @@ export function DocsView() {
                     Complete guide to JAWS Scheme implementation and features.
                 </p>
             </div>
-
             <div className="grid md:grid-cols-2 gap-6">
                 <Card className="card-background">
                     <CardHeader className="card-header-boarder">
@@ -73,7 +71,6 @@ export function DocsView() {
                     </CardContent>
                 </Card>
             </div >
-            {/* API Documentation */}
             < div className="space-y-6" >
                 <Card>
                     <CardHeader>
@@ -83,7 +80,6 @@ export function DocsView() {
                         <LoadMarkdown filePath="./markdown/basic_operations.md" />
                     </CardContent>
                 </Card>
-                {/* Add more sections as needed */}
             </div >
         </div >
     );

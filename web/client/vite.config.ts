@@ -11,7 +11,6 @@ const wasmPlugin = (): Plugin => ({
         if (!fs.existsSync(devJsDir)) {
             fs.mkdirSync(devJsDir, { recursive: true });
         }
-
         ['jaws.js', 'jaws.wasm'].forEach(file => {
             const sourcePath = path.join('public', 'wasm', file);
             const destPath = path.join(devJsDir, file);
@@ -26,7 +25,6 @@ const wasmPlugin = (): Plugin => ({
         if (!fs.existsSync(jsDir)) {
             fs.mkdirSync(jsDir, { recursive: true });
         }
-
         ['jaws.js', 'jaws.wasm'].forEach(file => {
             const sourcePath = path.join('public', 'wasm', file);
             const destPath = path.join(jsDir, file);
@@ -34,12 +32,10 @@ const wasmPlugin = (): Plugin => ({
                 fs.copyFileSync(sourcePath, destPath);
             }
         });
-
         const wasmDir = path.join(dir, 'wasm');
         if (fs.existsSync(wasmDir)) {
             fs.rmSync(wasmDir, { recursive: true });
         }
-
         const indexPath = path.join(dir, 'index.html');
         const notFoundPath = path.join(dir, '404.html');
         if (fs.existsSync(indexPath)) {
@@ -47,6 +43,7 @@ const wasmPlugin = (): Plugin => ({
         }
     }
 });
+
 const markdownPlugin = (): Plugin => ({
     name: 'markdown-plugin',
     transform(src, id) {
@@ -56,8 +53,45 @@ const markdownPlugin = (): Plugin => ({
     },
 });
 
+const docsPlugin = (): Plugin => ({
+    name: 'docs-plugin',
+    configureServer(server) {
+        const sourceDir = path.join('../../docs/html');
+        const destDir = path.join('public', 'docs');
+        if (fs.existsSync(sourceDir)) {
+            if (!fs.existsSync(destDir)) {
+                fs.mkdirSync(destDir, { recursive: true });
+            }
+            fs.cpSync(sourceDir, destDir, { recursive: true });
+
+            // Copy search directory specifically
+            const searchDir = path.join(sourceDir, 'search');
+            const destSearchDir = path.join(destDir, 'search');
+            if (fs.existsSync(searchDir)) {
+                fs.cpSync(searchDir, destSearchDir, { recursive: true });
+            }
+        }
+    },
+    writeBundle() {
+        // Copy docs to build directory
+        const sourceDir = path.join('../../docs/html');
+        const destDir = path.join('dist', 'docs');
+        if (fs.existsSync(sourceDir)) {
+            if (!fs.existsSync(destDir)) {
+                fs.mkdirSync(destDir, { recursive: true });
+            }
+            fs.cpSync(sourceDir, destDir, { recursive: true });
+        }
+    }
+});
+
 export default defineConfig(({ command }) => ({
-    plugins: [react(), wasmPlugin(), markdownPlugin()],
+    plugins: [
+        react(),
+        wasmPlugin(),
+        markdownPlugin(),
+        docsPlugin()
+    ],
     base: command === 'serve' ? '/' : './',
     resolve: {
         alias: {

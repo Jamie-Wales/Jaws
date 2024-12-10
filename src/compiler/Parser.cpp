@@ -1,5 +1,4 @@
 #include "Parser.h"
-#include "DebugUtils.h"
 #include "Error.h"
 #include "Expression.h"
 #include "Token.h"
@@ -318,56 +317,9 @@ void Parser::errorAt(const Token& token, const std::string& message)
     panicMode = true;
     throw ParseError(message, token, scanner->getLine(token.line));
 }
-
-std::shared_ptr<Expression> Parser::list()
-{
-    std::vector<std::shared_ptr<Expression>> elements;
-    bool isVariadic = false;
-
-    std::cout << "\nStarting list parse at token: " << peek().lexeme << "\n";
-
-    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        std::cout << "Current token: " << peek().lexeme << " (type: " << static_cast<int>(peek().type) << ")\n";
-
-        if (match(Tokentype::LEFT_PAREN)) {
-            std::cout << "Found LEFT_PAREN, recursing...\n";
-            elements.push_back(list());
-            std::cout << "Back from recursion, consuming RIGHT_PAREN\n";
-            consume(Tokentype::RIGHT_PAREN, "Expect ')' after nested list");
-        } else if (match(Tokentype::ELLIPSIS)) {
-            std::cout << "Found ELLIPSIS\n";
-            // Mark the previous element's list as variadic if it exists
-            if (!elements.empty()) {
-                if (auto listExpr = std::get_if<ListExpression>(&elements.back()->as)) {
-                    std::cout << "Marking previous list as variadic\n";
-                    elements.back() = std::make_shared<Expression>(
-                        Expression {
-                            ListExpression { listExpr->elements, true },
-                            previousToken().line });
-                }
-            }
-            isVariadic = true;
-        } else {
-            Token token = advance();
-            std::cout << "Adding atom: " << token.lexeme << "\n";
-            elements.push_back(std::make_shared<Expression>(
-                Expression { AtomExpression { token }, token.line }));
-        }
-    }
-
-    std::cout << "Finished list with " << elements.size() << " elements (variadic="
-              << isVariadic << ")\n";
-
-    return std::make_shared<Expression>(
-        ListExpression { std::move(elements), isVariadic },
-        previousToken().line);
-}
-
 std::shared_ptr<Expression> Parser::syntaxRulesExpression()
 {
     consume(Tokentype::LEFT_PAREN, "Expect ( after syntax-rules");
-
-    // Parse literals list
     std::vector<Token> literals;
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
         literals.push_back(consume(Tokentype::IDENTIFIER, "Expect literal identifier"));
@@ -377,32 +329,13 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
     std::vector<std::shared_ptr<Expression>> patterns;
     std::vector<std::shared_ptr<Expression>> templates;
 
-    std::cout << "\nParsing pattern-template pairs\n";
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        std::cout << "Starting new pattern-template pair\n";
-
-        // Parse pattern
-        std::shared_ptr<Expression> pattern;
-        if (match(Tokentype::LEFT_PAREN)) {
-            std::cout << "Parsing parenthesized pattern...\n";
-            pattern = listPattern();
-            consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern");
-        } else {
-            std::cout << "Parsing non-parenthesized pattern...\n";
-            std::vector<std::shared_ptr<Expression>> elements;
-            elements.push_back(listPattern());
-
-            bool isVariadic = match(Tokentype::ELLIPSIS);
-            pattern = std::make_shared<Expression>(
-                Expression { ListExpression { std::move(elements), isVariadic },
-                    previousToken().line });
-        }
+        consume(Tokentype::LEFT_PAREN, "Expect ( before pattern-template pair");
+        auto pattern = list(); // First element is the pattern
+        auto template_expr = list(); // Second element is the template
         patterns.push_back(pattern);
-
-        // Parse template - always as a list
-        std::cout << "Parsing template...\n";
-        auto templ = listPattern();
-        templates.push_back(templ);
+        templates.push_back(template_expr);
+        consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern-template pair");
     }
 
     consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rules");
@@ -414,27 +347,20 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
             std::move(templates) },
         previousToken().line });
 }
-std::shared_ptr<Expression> Parser::listPattern()
+
+std::shared_ptr<Expression> Parser::list()
 {
     std::vector<std::shared_ptr<Expression>> elements;
     bool isVariadic = false;
 
-    std::cout << "Starting pattern/template list at token: " << peek().lexeme << "\n";
-    bool inEllipsis = false;
-
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        std::cout << "Current token: " << peek().lexeme << " (type: " << static_cast<int>(peek().type) << ")\n";
-
         if (match(Tokentype::LEFT_PAREN)) {
-            std::cout << "Found nested list\n";
-            elements.push_back(listPattern());
+            elements.push_back(list());
             consume(Tokentype::RIGHT_PAREN, "Expect ')' after nested list");
-            std::cout << "Finished nested list\n";
         } else if (match(Tokentype::ELLIPSIS)) {
-            std::cout << "Found ellipsis\n";
             if (!elements.empty()) {
                 if (auto listExpr = std::get_if<ListExpression>(&elements.back()->as)) {
-                    std::cout << "Marking previous list as variadic\n";
+                    // Create a new list expression with variadic flag set
                     elements.back() = std::make_shared<Expression>(
                         Expression {
                             ListExpression { listExpr->elements, true },
@@ -444,14 +370,10 @@ std::shared_ptr<Expression> Parser::listPattern()
             isVariadic = true;
         } else {
             Token token = advance();
-            std::cout << "Adding atom: " << token.lexeme << "\n";
             elements.push_back(std::make_shared<Expression>(
                 Expression { AtomExpression { token }, token.line }));
         }
     }
-
-    std::cout << "Finished list with " << elements.size() << " elements (variadic="
-              << isVariadic << ")\n";
 
     return std::make_shared<Expression>(
         ListExpression { std::move(elements), isVariadic },

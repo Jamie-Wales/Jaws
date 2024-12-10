@@ -1,10 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { WelcomePage } from './views/welcome';
 import { Layout } from '@/components/layout';
 import { ReplView } from './views/repl';
 import { EditorView } from './views/editor';
 import { ExamplesView } from '@/views/example';
-import { DocsView } from '@/views/documentation';
 import { GetStartedView } from '@/views/getStarted';
 import "@/styles/globals.css"
 
@@ -18,7 +17,15 @@ export default function App() {
                     <Route path="/Jaws/repl" element={<ReplView />} />
                     <Route path="/Jaws/editor" element={<EditorView />} />
                     <Route path="/Jaws/examples" element={<ExamplesView />} />
-                    <Route path="/Jaws/docs" element={<DocsView />} />
+                    <Route
+                        path="/Jaws/docs/*"
+                        element={
+                            <Navigate
+                                to="/docs/html/index.html"
+                                replace
+                            />
+                        }
+                    />
                 </Route>
             </Routes>
         </BrowserRouter>

@@ -146,3 +146,197 @@
 .difficulty-advanced {
   @apply text-purple-600 bg-purple-50;
 }
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.terminal-line {
+    transform-origin: top;
+}
+
+.terminal-content {
+    position: relative;
+    overflow: hidden;
+}
+
+.scrollbar-thin {
+    scrollbar-width: thin;
+}
+
+.scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+    background-color: rgb(75, 85, 99);
+    border-radius: 9999px;
+}
+
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.terminal-line pre {
+    margin: 0;
+    padding: 0;
+}
+
+@keyframes floatIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    0% {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Header animations */
+.bg-gradient-to-r {
+    background-size: 200% 200%;
+    animation: gradientFlow 15s ease infinite;
+}
+
+/* Logo and title animations */
+.text-2xl, .text-3xl {
+    animation: slideInRight 0.6s ease-out forwards;
+}
+
+/* Main content animations */
+.space-y-6 {
+    animation: floatIn 0.8s ease-out forwards;
+}
+
+/* Card animations */
+.card {
+    animation: fadeScale 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Button hover animations */
+.hover\:opacity-90 {
+    transition: all 0.3s ease;
+}
+
+.hover\:opacity-90:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Text shimmer effect for the tagline */
+.text-cyan-400 {
+    background: linear-gradient(
+        120deg,
+        #06b6d4 20%,
+        #22d3ee 30%,
+        #06b6d4 70%
+    );
+    background-size: 200% auto;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: shimmer 3s linear infinite;
+}
+
+/* Code block animation */
+.bg-zinc-900 {
+    animation: fadeScale 0.8s ease-out 0.4s forwards;
+    opacity: 0;
+}
+
+/* Card hover effects */
+.card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Icon hover animations */
+.h-12.w-12 {
+    transition: transform 0.3s ease;
+}
+
+.card:hover .h-12.w-12 {
+    transform: scale(1.1);
+}
+
+/* Footer link animations */
+.hover\:text-white {
+    transition: all 0.3s ease;
+}
+
+.hover\:text-white:hover {
+    transform: translateY(-2px);
+}

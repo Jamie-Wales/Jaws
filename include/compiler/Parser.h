@@ -46,6 +46,7 @@ private:
     /** @brief Token stream to be parsed */
     std::vector<Token> tokens;
 
+    std::shared_ptr<Expression> parseAtomOrExpr();
     /** @brief Scanner for error reporting with source context */
     std::shared_ptr<Scanner> scanner;
 

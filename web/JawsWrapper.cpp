@@ -29,10 +29,14 @@ public:
     {
         try {
             parser->initialize(scanner);
+            interpreter.outputStream.clear();
+            interpreter.outputStream.str(""); // Clear the stream before processing
+
             std::vector<Token> tokens = scanner->tokenize(input);
             parser->load(tokens);
             interpreter.init();
             std::string output = interpreter.outputStream.str();
+            interpreter.outputStream.str(""); // Clear it again after getting output
             interpreter.outputStream.clear();
             return output;
         } catch (const InterpreterError& e) {

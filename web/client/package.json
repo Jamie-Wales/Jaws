@@ -4,11 +4,12 @@
     "private": true,
     "version": "0.0.0",
     "scripts": {
-        "dev": "vite",
-        "build": "tsc && vite build",
+        "dev": "cd ../.. && doxygen && cd web/client && vite",
+        "build": "cd ../.. && doxygen && cd web/client && tsc && vite build",
         "preview": "vite preview",
         "predeploy": "npm run build",
-        "deploy": "gh-pages -d dist"
+        "deploy": "gh-pages -d dist",
+        "docs": "cd ../.. && doxygen"
     },
     "homepage": "https://jamie-wales.github.io/jaws/",
     "dependencies": {

@@ -96,7 +96,7 @@ std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeV
 
 std::optional<SchemeValue> map(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
-    if (args.size() < 2) {
+    if (args.size() < 3) {
         throw InterpreterError("MAP requires procedure and arguments");
     }
 

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import hljs from 'highlight.js/lib/core';
 import schemeLanguage from 'highlight.js/lib/languages/scheme';
 import 'highlight.js/styles/github-dark-dimmed.css';
@@ -13,12 +13,27 @@ interface HighlightedTextProps {
 
 export const HighlightedText = ({ text, type }: HighlightedTextProps) => {
     const ref = useRef<HTMLPreElement>(null);
+    const hasHighlighted = useRef(false);
+
+    const highlight = useCallback(() => {
+        if (ref.current && !hasHighlighted.current && (type === 'input' || type === 'output')) {
+            try {
+                hljs.highlightElement(ref.current);
+                hasHighlighted.current = true;
+            } catch (error) {
+                console.error('Highlighting failed:', error);
+            }
+        }
+    }, [type]);
 
     useEffect(() => {
-        if (ref.current && (type === 'input' || type === 'output')) {
-            hljs.highlightElement(ref.current);
-        }
-    }, [text, type]);
+        hasHighlighted.current = false;
+        highlight();
+
+        return () => {
+            hasHighlighted.current = false;
+        };
+    }, [text, highlight]);
 
     if (type === 'system') {
         return (

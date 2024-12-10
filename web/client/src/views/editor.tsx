@@ -25,22 +25,34 @@ export function EditorView() {
     const handleCommand = async (command: string) => {
         try {
             const result = interpreter.evaluate(command);
-            return String(result);
+            return result; // Don't convert to string here, let Terminal component handle it
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : 'An error occurred');
         }
     };
 
     const handleRunCode = async () => {
-        if (!code.trim()) return;
-        terminalRef.current?.writeSystem("Loading code into Scheme environment...");
+        if (!code.trim() || interpreter.loading) return;
+
+        terminalRef.current?.clear();
+        terminalRef.current?.writeSystem("Running code...");
+
         try {
-            const result = await handleCommand(code);
-            terminalRef.current?.writeOutput(result);
+            // Run the entire code as one unit first
+            const fullResult = await handleCommand(code);
+
+            if (fullResult !== undefined && fullResult !== 'undefined') {
+                // Show the full input
+                terminalRef.current?.writeInput(code);
+                // Show the final result
+                terminalRef.current?.writeOutput(String(fullResult));
+            }
+
             if (isLoadedFromExample) {
                 setIsLoadedFromExample(false);
             }
         } catch (err) {
+            terminalRef.current?.writeInput(code);
             terminalRef.current?.writeSystem(`Error: ${(err as Error).message}`);
         }
     };
@@ -58,9 +70,13 @@ export function EditorView() {
                                 </CardDescription>
                             )}
                         </div>
-                        <Button onClick={handleRunCode} className="primary-button">
+                        <Button
+                            onClick={handleRunCode}
+                            className="primary-button"
+                            disabled={interpreter.loading}
+                        >
                             <Play className="h-4 w-4 mr-2" />
-                            Load Code
+                            {interpreter.loading ? 'Initializing...' : 'Run Code'}
                         </Button>
                     </div>
                 </CardHeader>
@@ -75,7 +91,6 @@ export function EditorView() {
                     </div>
                 </CardContent>
             </Card>
-
             <Card className="gradient-card">
                 <CardHeader className="gradient-card-header">
                     <CardTitle className="gradient-title">Output</CardTitle>
@@ -84,7 +99,11 @@ export function EditorView() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <Terminal ref={terminalRef} onCommand={handleCommand} />
+                    <Terminal
+                        ref={terminalRef}
+                        onCommand={handleCommand}
+                        className="min-h-[300px]"
+                    />
                 </CardContent>
             </Card>
         </div>

@@ -109,8 +109,8 @@ export function WelcomePage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <div className="text-2xl md:text-3xl font-bold">JAWS</div>
-                                <ParenthesesIcon />
+                                <div className="text-2xl md:text-3xl font-bold animate-[slideInRight_0.6s_ease-out_forwards]">JAWS</div>
+                                <ParenthesesIcon className="animate-[slideInRight_0.6s_ease-out_forwards]" />
                             </div>
                             <Button
                                 variant="ghost"
@@ -138,7 +138,7 @@ export function WelcomePage() {
                             </Button>
                             <Button
                                 style={buttonStyles}
-                                className="hover:opacity-90 w-full md:w-auto"
+                                className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full md:w-auto"
                                 onClick={() => navigate('/Jaws/get-started')}
                             >
                                 Get Started
@@ -151,12 +151,12 @@ export function WelcomePage() {
 
                 <div className="container mx-auto px-4 py-12 md:py-24">
                     <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-                        <div className="space-y-6">
+                        <div className="space-y-6 animate-[floatIn_0.8s_ease-out_forwards]">
                             <div className="space-y-2">
                                 <h1 className="text-4xl md:text-6xl font-bold leading-tight">
                                     JAWS
                                 </h1>
-                                <p className="text-lg md:text-xl text-cyan-400 font-medium tracking-wide">
+                                <p className="text-lg md:text-xl text-cyan-400 font-medium tracking-wide bg-gradient-text">
                                     Jaws Awesomely Wrangles Scheme
                                 </p>
                             </div>
@@ -168,7 +168,7 @@ export function WelcomePage() {
                                 <Button
                                     size="lg"
                                     style={buttonStyles}
-                                    className="hover:opacity-90 w-full sm:w-auto"
+                                    className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
                                     onClick={() => navigate('/Jaws/editor')}
                                 >
                                     Try Online Editor <ArrowRight className="ml-2 h-4 w-4" />
@@ -183,7 +183,7 @@ export function WelcomePage() {
                                 </Button>
                             </div>
                         </div>
-                        <div className="bg-zinc-900 rounded-lg p-4 md:p-6 shadow-xl ring-1 ring-white/10 overflow-x-auto">
+                        <div className="bg-zinc-900 rounded-lg p-4 md:p-6 shadow-xl ring-1 ring-white/10 overflow-x-auto animate-[fadeScale_0.8s_ease-out_0.4s_forwards] opacity-0">
                             <MultiLineCode code={sampleCode} />
                         </div>
                     </div>
@@ -197,53 +197,44 @@ export function WelcomePage() {
                     </h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-                        <Card className="bg-white border-slate-200">
-                            <CardContent className="pt-6 text-center">
-                                <Terminal className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
-                                <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
-                                    Interactive REPL
-                                </h3>
-                                <p className="text-slate-600">
-                                    Write and test code directly in your browser
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-white border-slate-200">
-                            <CardContent className="pt-6 text-center">
-                                <Code className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
-                                <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
-                                    Live Examples
-                                </h3>
-                                <p className="text-slate-600">
-                                    Learn from practical, runnable code examples
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-white border-slate-200">
-                            <CardContent className="pt-6 text-center">
-                                <BookOpen className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
-                                <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
-                                    Guided Lessons
-                                </h3>
-                                <p className="text-slate-600">
-                                    Step-by-step tutorials and exercises
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-white border-slate-200">
-                            <CardContent className="pt-6 text-center">
-                                <Users className="h-12 w-12 mb-4 mx-auto" style={{ color: '#06b6d4' }} />
-                                <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
-                                    Community
-                                </h3>
-                                <p className="text-slate-600">
-                                    Share and learn with fellow developers
-                                </p>
-                            </CardContent>
-                        </Card>
+                        {[
+                            {
+                                Icon: Terminal,
+                                title: "Interactive REPL",
+                                description: "Write and test code directly in your browser"
+                            },
+                            {
+                                Icon: Code,
+                                title: "Live Examples",
+                                description: "Learn from practical, runnable code examples"
+                            },
+                            {
+                                Icon: BookOpen,
+                                title: "Guided Lessons",
+                                description: "Step-by-step tutorials and exercises"
+                            },
+                            {
+                                Icon: Users,
+                                title: "Community",
+                                description: "Share and learn with fellow developers"
+                            }
+                        ].map((feature, index) => (
+                            <Card
+                                key={feature.title}
+                                className="bg-white border-slate-200 hover:transform hover:-translate-y-1 transition-all duration-300 opacity-0"
+                                style={{ animation: `fadeScale 0.6s ease-out ${index * 0.1}s forwards` }}
+                            >
+                                <CardContent className="pt-6 text-center">
+                                    <feature.Icon className="h-12 w-12 mb-4 mx-auto transition-transform duration-300 text-cyan-500" />
+                                    <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-slate-600">
+                                        {feature.description}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -257,7 +248,7 @@ export function WelcomePage() {
                         <Button
                             size="lg"
                             style={buttonStyles}
-                            className="hover:opacity-90 w-full sm:w-auto"
+                            className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
                             onClick={() => navigate('/Jaws/editor')}
                         >
                             Start Coding Now
@@ -284,7 +275,7 @@ export function WelcomePage() {
                         <div className="flex items-center space-x-4">
                             <Button
                                 variant="ghost"
-                                className="text-slate-300 hover:text-white hover:bg-slate-800/60"
+                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300"
                                 asChild
                             >
                                 <a href="https://github.com/jamie-wales/jaws" target="_blank" rel="noopener noreferrer">
@@ -293,14 +284,14 @@ export function WelcomePage() {
                             </Button>
                             <Button
                                 variant="ghost"
-                                className="text-slate-300 hover:text-white hover:bg-slate-800/60"
+                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300"
                                 onClick={() => navigate('/Jaws/docs')}
                             >
                                 Docs
                             </Button>
                             <Button
                                 variant="ghost"
-                                className="text-slate-300 hover:text-white hover:bg-slate-800/60"
+                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300"
                                 onClick={() => navigate('/Jaws/examples')}
                             >
                                 Examples

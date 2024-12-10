@@ -24,15 +24,9 @@ FetchContent_Declare(
 )
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
-# FTXUI setup
-FetchContent_Declare(ftxui
-    GIT_REPOSITORY https://github.com/ArthurSonzogni/ftxui
-    GIT_TAG main
-    GIT_SHALLOW TRUE
-)
 
 # Make dependencies available
-FetchContent_MakeAvailable(googletest ftxui)
+FetchContent_MakeAvailable(googletest)
 
 # Collect source files
 file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp")
@@ -47,7 +41,6 @@ add_library(compiler_lib STATIC ${COMPILER_SOURCES})
 target_include_directories(compiler_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
-    ${ftxui_SOURCE_DIR}/include
 )
 set_target_properties(compiler_lib PROPERTIES
     CXX_STANDARD 20
@@ -68,11 +61,9 @@ set_target_properties(runtime PROPERTIES
 add_executable(jaws src/compiler/main.cpp)
 target_link_libraries(jaws
     PRIVATE compiler_lib
-    PRIVATE runtime
-    PRIVATE ftxui::screen
-    PRIVATE ftxui::dom
-    PRIVATE ftxui::component
+    runtime
 )
+
 target_include_directories(jaws PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
@@ -114,7 +105,7 @@ set_target_properties(tests PROPERTIES
 )
 target_link_libraries(tests
     PRIVATE compiler_lib
-    PRIVATE runtime
-    PRIVATE gtest_main
+    runtime
+    gtest_main
 )
 add_test(NAME AllTests COMMAND tests)

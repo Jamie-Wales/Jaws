@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(GLOB SOURCES
     "../src/compiler/*.cpp"
+    "../src/compiler/builtins/*.cpp"
 )
 list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
 list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/JawsWrapper.cpp")

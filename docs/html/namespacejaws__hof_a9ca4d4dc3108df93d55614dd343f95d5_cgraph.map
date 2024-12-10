@@ -1,0 +1,12 @@
+<map id="jaws_hof::apply" name="jaws_hof::apply">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,56,118,82"/>
+<area shape="rect" id="Node000002" href="$class_interpreter.html#acb2f03bf25561f73ceb0506e7376f423" title="Executes a procedure with given arguments." alt="" coords="166,56,359,82"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,66,150,66,150,72,118,72"/>
+<area shape="rect" id="Node000003" href="$class_scheme_value.html#a693c8fe5f58bc3dc09ab9c20754664a0" title=" " alt="" coords="409,5,559,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="321,53,410,32,411,38,322,58"/>
+<area shape="rect" id="Node000004" href="$class_scheme_value.html#ad7e9e65bcfa9d96ea386346533cadd64" title=" " alt="" coords="609,31,756,56"/>
+<area shape="poly" id="edge4_Node000002_Node000004" title=" " alt="" coords="359,60,594,46,594,51,360,66"/>
+<area shape="rect" id="Node000005" href="$class_scheme_value.html#ac4c1c8076a954de3420f95c2ac65d05c" title=" " alt="" coords="407,107,561,132"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="322,80,411,100,410,105,321,85"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="560,25,594,30,594,35,559,30"/>
+</map>

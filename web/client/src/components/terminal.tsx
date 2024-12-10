@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle, KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { LiveEditor } from './liveEditor';
 import { HighlightedText } from './highlightedText';
 import { Button } from '@/components/ui/button';
@@ -8,14 +9,17 @@ export interface TerminalLine {
     type: 'input' | 'output' | 'system';
     content: string;
     timestamp: string;
+    id: string;
 }
 
 export interface TerminalRef {
     writeOutput: (content: string) => void;
     writeSystem: (content: string) => void;
+    writeInput: (content: string) => void;
     getCurrentInput: () => string;
     clearInput: () => void;
     setInput: (input: string) => void;
+    clear: () => void;
 }
 
 export interface TerminalProps {
@@ -26,10 +30,51 @@ export interface TerminalProps {
 }
 
 export const Terminal = forwardRef<TerminalRef, TerminalProps>(
-    ({ onCommand, onInputChange, currentInput, className }, ref) => {
+    ({ onCommand, onInputChange, className }, ref) => {
         const [lines, setLines] = useState<TerminalLine[]>([]);
         const [inputValue, setInputValue] = useState('');
+        const [isProcessing, setIsProcessing] = useState(false);
         const terminalRef = useRef<HTMLDivElement>(null);
+        const lastCommandId = useRef<string>('');
+
+        const jawsLogo = `     ██╗ █████╗ ██╗    ██╗███████╗
+     ██║██╔══██╗██║    ██║██╔════╝
+     ██║███████║██║ █╗ ██║███████╗
+██   ██║██╔══██║██║███╗██║╚════██║
+╚█████╔╝██║  ██║╚███╔███╔╝███████║
+ ╚════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
+                                  
+        ⠀ ⢯⠙⠲⢤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+        ⠀⠀⠸⡆⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀
+        ⠀⠀⠀⡇⠀⠀⠀⠀⠈⢳⡀⠀⠀⠀⠀⠀
+        ⠀⠀⢰⠇⠀⠀⠀⠀⠀⠈⢷⠀⠀⠀⠀⠀
+        ⣀⡴⠒⢾⡀⣀⡴⠒⢦⣀⢀⡼⠓⢦⣀
+        ⣩⠴⠒⢶⣉⣉⡴⠒⢦⣉⣉⡴⠒⠶⣌
+        ⠁⠀⠀⠀⠈⠁⠀⠀⠀⠈⠁⠀⠀⠀⠈`;
+
+        useEffect(() => {
+            // Initialize with JAWS logo and welcome message
+            setLines([
+                {
+                    type: 'system',
+                    content: jawsLogo,
+                    timestamp: new Date().toLocaleTimeString(),
+                    id: generateId()
+                },
+                {
+                    type: 'system',
+                    content: 'Welcome to the Jaws REPL!',
+                    timestamp: new Date().toLocaleTimeString(),
+                    id: generateId()
+                },
+                {
+                    type: 'system',
+                    content: "Type 'exit' to quit, '(help)' for commands.\n",
+                    timestamp: new Date().toLocaleTimeString(),
+                    id: generateId()
+                }
+            ]);
+        }, []);
 
         useEffect(() => {
             if (terminalRef.current) {
@@ -37,54 +82,68 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             }
         }, [lines]);
 
-        useEffect(() => {
-            if (currentInput !== undefined) {
-                setInputValue(currentInput);
-            }
-        }, [currentInput]);
-
+        const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         const handleCommand = async (input: string) => {
-            if (!input.trim()) return;
-
-            const cleanedInput = input
-                .split('\n')
-                .map(line => line.trim())
-                .join(' ')
-                .trim();
-
-            setLines(prev => [...prev, {
-                type: 'input',
-                content: cleanedInput,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
+            if (!input.trim() || isProcessing) return;
+            setIsProcessing(true);
+            const commandId = generateId();
+            lastCommandId.current = commandId;
 
             try {
-                const result = await onCommand(cleanedInput);
-                writeOutput(result);
+                const trimmedInput = input.trim();
+                const result = await onCommand(trimmedInput);
+
+                if (lastCommandId.current === commandId) {
+                    // Add input line immediately
+                    setLines(prevLines => [
+                        ...prevLines,
+                        {
+                            type: 'input',
+                            content: trimmedInput,
+                            timestamp: new Date().toLocaleTimeString(),
+                            id: generateId()
+                        }
+                    ]);
+
+                    // Add output line if there's a meaningful result
+                    if (result && result !== 'undefined') {
+                        setLines(prevLines => [
+                            ...prevLines,
+                            {
+                                type: 'output',
+                                content: result,
+                                timestamp: new Date().toLocaleTimeString(),
+                                id: generateId()
+                            }
+                        ]);
+                    }
+                }
             } catch (err) {
                 const error = err as Error;
-                writeSystem(`Error: ${error.message}`);
+                if (lastCommandId.current === commandId) {
+                    setLines(prevLines => [
+                        ...prevLines,
+                        {
+                            type: 'input',
+                            content: input.trim(),
+                            timestamp: new Date().toLocaleTimeString(),
+                            id: generateId()
+                        },
+                        {
+                            type: 'output',
+                            content: `Error: ${error.message}`,
+                            timestamp: new Date().toLocaleTimeString(),
+                            id: generateId()
+                        }
+                    ]);
+                }
             } finally {
-                clearInput();
+                if (lastCommandId.current === commandId) {
+                    setIsProcessing(false);
+                    clearInput();
+                }
             }
-
-        };
-        const writeOutput = (content: string) => {
-            setLines(prev => [...prev, {
-                type: 'output',
-                content,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
-
-        };
-
-        const writeSystem = (content: string) => {
-            setLines(prev => [...prev, {
-                type: 'system',
-                content,
-                timestamp: new Date().toLocaleTimeString()
-            }]);
         };
 
         const getCurrentInput = () => inputValue;
@@ -99,12 +158,76 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             onInputChange?.(input);
         };
 
+        const clear = () => {
+            lastCommandId.current = generateId();
+            setLines([
+                {
+                    type: 'system',
+                    content: jawsLogo,
+                    timestamp: new Date().toLocaleTimeString(),
+                    id: generateId()
+                },
+                {
+                    type: 'system',
+                    content: 'Welcome to the Jaws REPL!',
+                    timestamp: new Date().toLocaleTimeString(),
+                    id: generateId()
+                },
+                {
+                    type: 'system',
+                    content: "Type 'exit' to quit, '(help)' for commands.\n",
+                    timestamp: new Date().toLocaleTimeString(),
+                    id: generateId()
+                }
+            ]);
+        };
+
         useImperativeHandle(ref, () => ({
-            writeOutput,
-            writeSystem,
+            writeOutput: (content: string) => {
+                const commandId = generateId();
+                lastCommandId.current = commandId;
+                if (content && content !== 'undefined') {
+                    setLines(prevLines => [
+                        ...prevLines,
+                        {
+                            type: 'output',
+                            content: content.trim(),
+                            timestamp: new Date().toLocaleTimeString(),
+                            id: generateId()
+                        }
+                    ]);
+                }
+            },
+            writeSystem: (content: string) => {
+                const commandId = generateId();
+                lastCommandId.current = commandId;
+                setLines(prevLines => [
+                    ...prevLines,
+                    {
+                        type: 'system',
+                        content,
+                        timestamp: new Date().toLocaleTimeString(),
+                        id: generateId()
+                    }
+                ]);
+            },
+            writeInput: (content: string) => {
+                const commandId = generateId();
+                lastCommandId.current = commandId;
+                setLines(prevLines => [
+                    ...prevLines,
+                    {
+                        type: 'input',
+                        content,
+                        timestamp: new Date().toLocaleTimeString(),
+                        id: generateId()
+                    }
+                ]);
+            },
             getCurrentInput,
             clearInput,
-            setInput
+            setInput,
+            clear
         }));
 
         const handleInputChange = (value: string) => {
@@ -112,57 +235,78 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             onInputChange?.(value);
         };
 
-        const handleKeyDown = async (e: KeyboardEvent<HTMLDivElement>) => {
+        const handleKeyDown = async (e: ReactKeyboardEvent<HTMLDivElement>) => {
             if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+
                 const openCount = (inputValue.match(/\(/g) || []).length;
                 const closeCount = (inputValue.match(/\)/g) || []).length;
+
                 if (openCount !== closeCount) return;
-                e.preventDefault();
-                await handleCommand(inputValue);
-                clearInput();
+
+                const trimmedInput = inputValue.trim();
+                if (!trimmedInput) return;
+
+                await handleCommand(trimmedInput);
             }
         };
 
         return (
-            <div className={`min-h-[500px] flex flex-col bg-zinc-900 ${className}`}>
+            <div className={`min-h-[500px] flex flex-col bg-zinc-900 transition-all duration-300 ${className}`}>
                 <div
                     ref={terminalRef}
-                    className="flex-1 min-h-[400px] p-4 overflow-y-auto font-mono text-sm"
+                    className="flex-1 min-h-[400px] p-4 overflow-y-auto font-mono text-sm scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent"
                 >
-                    {lines.map((line, i) => (
-                        <div key={i} className="mb-2">
-                            <div className="flex items-start gap-2">
+                    {lines.map((line) => (
+                        <div
+                            key={line.id}
+                            style={{
+                                opacity: 0,
+                                animation: `fadeSlideIn 0.3s ease-out forwards`,
+                                animationDelay: `0.2s`
+                            }}
+                            className={`terminal-line ${line.type !== 'system' ? 'mb-2' : 'mb-0'} group`}
+                        >
+                            <div className={`flex items-start gap-2 rounded-lg ${line.type !== 'system' ? 'p-2' : 'p-0'} transition-all duration-300 ${line.type !== 'system' ? 'hover:bg-zinc-800/30' : ''}`}>
                                 {line.type === 'input' && (
-                                    <span className="text-blue-400 shrink-0">λ</span>
+                                    <span className="text-blue-400 shrink-0" style={{
+                                        opacity: 0,
+                                        animation: 'slideFromLeft 0.3s ease-out forwards',
+                                        animationDelay: `0.2s`
+                                    }}>jaws: {"|>"}</span>
                                 )}
-                                <div className="flex-1">
+                                <div className="flex-1 terminal-content">
                                     <HighlightedText text={line.content} type={line.type} />
                                 </div>
-                                <span className="text-zinc-500 text-xs shrink-0 ml-2">
-                                    {line.timestamp}
-                                </span>
+                                {line.type !== 'system' && (
+                                    <span className="text-zinc-500 text-xs shrink-0 ml-2 opacity-40">
+                                        {line.timestamp}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ))}
                 </div>
-                <div className="border-t border-zinc-700">
-                    <div
-                        className="px-4 py-3 w-full"
-                        onKeyDown={handleKeyDown}
-                    >
+                <div className="border-t border-zinc-700/50">
+                    <div className="px-4 py-3 w-full">
                         <LiveEditor
                             onChange={handleInputChange}
                             value={inputValue}
+                            onKeyDown={handleKeyDown}
                         />
                         <div className="mt-2 flex justify-end">
                             <Button
                                 variant="default"
                                 size="sm"
-                                onClick={async () => await handleCommand(inputValue)}
-                                className="flex items-center gap-2"
+                                onClick={() => handleCommand(inputValue)}
+                                className="flex items-center gap-2 transition-all duration-200 
+                                 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100
+                                 bg-accent hover:bg-accent/90"
+                                disabled={isProcessing}
                             >
-                                <Play className="h-4 w-4" />
-                                Run
+                                <Play className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
+                                {isProcessing ? 'Running...' : 'Run'}
                             </Button>
                         </div>
                     </div>
