@@ -94,15 +94,63 @@ $(function(){initNavTree('_value_8cpp.html',''); initResizable(true); });
 <code>#include &quot;<a class="el" href="_procedure_8h_source.html">Procedure.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="_visit_8h_source.html">Visit.h</a>&quot;</code><br />
 <code>#include &lt;stdexcept&gt;</code><br />
+<code>#include &lt;variant&gt;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a5c1c577fe7a07c802bde221bc1e4f2cb" id="r_a5c1c577fe7a07c802bde221bc1e4f2cb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c1c577fe7a07c802bde221bc1e4f2cb">checkArgCount</a> (const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args, size_t expected, const char *name)</td></tr>
+<tr class="separator:a5c1c577fe7a07c802bde221bc1e4f2cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a338adeecfe90b53cffbe1726c93738ee" id="r_a338adeecfe90b53cffbe1726c93738ee"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_scheme_value.html">SchemeValue</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a338adeecfe90b53cffbe1726c93738ee">ensureSchemeValue</a> (const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;val)</td></tr>
+<tr class="separator:a338adeecfe90b53cffbe1726c93738ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af774d96c183f81034ba5a2b27b23b176" id="r_af774d96c183f81034ba5a2b27b23b176"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="class_expression.html">Expression</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af774d96c183f81034ba5a2b27b23b176">valueToExpression</a> (const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;value, <a class="el" href="class_interpreter.html">Interpreter</a> &amp;interp)</td></tr>
 <tr class="separator:af774d96c183f81034ba5a2b27b23b176"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b493a4583793ef1da75b5f126e5417d" id="r_a7b493a4583793ef1da75b5f126e5417d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_scheme_value.html">SchemeValue</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b493a4583793ef1da75b5f126e5417d">expressionToValue</a> (const <a class="el" href="class_expression.html">Expression</a> &amp;expr)</td></tr>
 <tr class="separator:a7b493a4583793ef1da75b5f126e5417d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a5c1c577fe7a07c802bde221bc1e4f2cb" name="a5c1c577fe7a07c802bde221bc1e4f2cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c1c577fe7a07c802bde221bc1e4f2cb">&#9670;&#160;</a></span>checkArgCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void checkArgCount </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>args</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>expected</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a338adeecfe90b53cffbe1726c93738ee" name="a338adeecfe90b53cffbe1726c93738ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a338adeecfe90b53cffbe1726c93738ee">&#9670;&#160;</a></span>ensureSchemeValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="class_scheme_value.html">SchemeValue</a> ensureSchemeValue </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>val</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a7b493a4583793ef1da75b5f126e5417d" name="a7b493a4583793ef1da75b5f126e5417d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7b493a4583793ef1da75b5f126e5417d">&#9670;&#160;</a></span>expressionToValue()</h2>
 

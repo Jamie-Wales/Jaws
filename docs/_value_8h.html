@@ -90,14 +90,13 @@ $(function(){initNavTree('_value_8h.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">Value.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &quot;<a class="el" href="_number_8h_source.html">Number.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="_parser_8h_source.html">Parser.h</a>&quot;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="_error_8h_source.html">Error.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="_number_8h_source.html">Number.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="_port_8h_source.html">Port.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="_scanner_8h_source.html">Scanner.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="_value_traits_8h_source.html">ValueTraits.h</a>&quot;</code><br />
 <code>#include &lt;compare&gt;</code><br />
 <code>#include &lt;list&gt;</code><br />
 <code>#include &lt;memory&gt;</code><br />
-<code>#include &lt;optional&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;variant&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
@@ -106,19 +105,64 @@ $(function(){initNavTree('_value_8h.html',''); initResizable(true); });
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_symbol.html">Symbol</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_scheme_value.html">SchemeValue</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a5c1c577fe7a07c802bde221bc1e4f2cb" id="r_a5c1c577fe7a07c802bde221bc1e4f2cb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5c1c577fe7a07c802bde221bc1e4f2cb">checkArgCount</a> (const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args, size_t expected, const char *name)</td></tr>
+<tr class="separator:a5c1c577fe7a07c802bde221bc1e4f2cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b493a4583793ef1da75b5f126e5417d" id="r_a7b493a4583793ef1da75b5f126e5417d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_scheme_value.html">SchemeValue</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7b493a4583793ef1da75b5f126e5417d">expressionToValue</a> (const <a class="el" href="class_expression.html">Expression</a> &amp;expr)</td></tr>
 <tr class="separator:a7b493a4583793ef1da75b5f126e5417d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa0c8459c67f46c377d0058a877141ce6" id="r_aa0c8459c67f46c377d0058a877141ce6"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="class_expression.html">Expression</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0c8459c67f46c377d0058a877141ce6">valueToExpression</a> (const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;val, <a class="el" href="class_interpreter.html">Interpreter</a> &amp;interp)</td></tr>
 <tr class="separator:aa0c8459c67f46c377d0058a877141ce6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a338adeecfe90b53cffbe1726c93738ee" id="r_a338adeecfe90b53cffbe1726c93738ee"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_scheme_value.html">SchemeValue</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a338adeecfe90b53cffbe1726c93738ee">ensureSchemeValue</a> (const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;val)</td></tr>
+<tr class="separator:a338adeecfe90b53cffbe1726c93738ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a5c1c577fe7a07c802bde221bc1e4f2cb" name="a5c1c577fe7a07c802bde221bc1e4f2cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c1c577fe7a07c802bde221bc1e4f2cb">&#9670;&#160;</a></span>checkArgCount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void checkArgCount </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>args</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>expected</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>name</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a338adeecfe90b53cffbe1726c93738ee" name="a338adeecfe90b53cffbe1726c93738ee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a338adeecfe90b53cffbe1726c93738ee">&#9670;&#160;</a></span>ensureSchemeValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="class_scheme_value.html">SchemeValue</a> ensureSchemeValue </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>val</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a7b493a4583793ef1da75b5f126e5417d" name="a7b493a4583793ef1da75b5f126e5417d"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a7b493a4583793ef1da75b5f126e5417d">&#9670;&#160;</a></span>expressionToValue()</h2>
 

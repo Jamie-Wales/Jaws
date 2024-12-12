@@ -7,9 +7,8 @@ var searchData=
   ['sexpression_4',['sExpression',['../classs_expression.html#a7a8cc167bcdd9ab3c50927215f4d813f',1,'sExpression']]],
   ['sexpression_5',['sexpression',['../class_parser.html#a23aa65dcb01815fb71852971b36758f2',1,'Parser']]],
   ['simplify_6',['simplify',['../struct_number_1_1_rational.html#a1e69876685ff2ba65d59d30ba3646e86',1,'Number::Rational']]],
-  ['starttui_7',['startTUI',['../main_8cpp.html#aea5e2c097c168b193be5f5ba6a247565',1,'main.cpp']]],
-  ['substitute_8',['substitute',['../class_pattern_substitutor.html#a2680fc0046e3f6955b35a06eea94595e',1,'PatternSubstitutor']]],
-  ['symbol_9',['Symbol',['../struct_symbol.html#a3c013b57af36381c6418205dca648a06',1,'Symbol']]],
-  ['syntaxrulesexpression_10',['SyntaxRulesExpression',['../class_syntax_rules_expression.html#a0d5bb863915d9b4081fc4d8851b4a14b',1,'SyntaxRulesExpression']]],
-  ['syntaxrulesexpression_11',['syntaxRulesExpression',['../class_parser.html#addfd3c48a3a563afce2b0cc30acb259d',1,'Parser']]]
+  ['substitute_7',['substitute',['../class_pattern_substitutor.html#a2680fc0046e3f6955b35a06eea94595e',1,'PatternSubstitutor']]],
+  ['symbol_8',['Symbol',['../struct_symbol.html#a3c013b57af36381c6418205dca648a06',1,'Symbol']]],
+  ['syntaxrulesexpression_9',['SyntaxRulesExpression',['../class_syntax_rules_expression.html#a0d5bb863915d9b4081fc4d8851b4a14b',1,'SyntaxRulesExpression']]],
+  ['syntaxrulesexpression_10',['syntaxRulesExpression',['../class_parser.html#addfd3c48a3a563afce2b0cc30acb259d',1,'Parser']]]
 ];

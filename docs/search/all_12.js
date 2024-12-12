@@ -14,14 +14,13 @@ var searchData=
   ['sexpression_11',['sExpression',['../classs_expression.html',1,'sExpression'],['../classs_expression.html#a7a8cc167bcdd9ab3c50927215f4d813f',1,'sExpression::sExpression()']]],
   ['sexpression_12',['sexpression',['../class_parser.html#a23aa65dcb01815fb71852971b36758f2',1,'Parser']]],
   ['simplify_13',['simplify',['../struct_number_1_1_rational.html#a1e69876685ff2ba65d59d30ba3646e86',1,'Number::Rational']]],
-  ['starttui_14',['startTUI',['../main_8cpp.html#aea5e2c097c168b193be5f5ba6a247565',1,'main.cpp']]],
-  ['stream_15',['stream',['../class_port.html#aa59093a6f627cc9fb481cd6fc1af4f22',1,'Port']]],
-  ['string_16',['STRING',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba63b588d5559f64f89a416e656880b949',1,'Token.h']]],
-  ['substitute_17',['substitute',['../class_pattern_substitutor.html#a2680fc0046e3f6955b35a06eea94595e',1,'PatternSubstitutor']]],
-  ['substitutor_18',['substitutor',['../class_macro_processor.html#a82f7404b5efc80e2e315b4248cf4a38b',1,'MacroProcessor']]],
-  ['symbol_19',['SYMBOL',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba8fc5a0642a90632e8418ca52c3ec761d',1,'Token.h']]],
-  ['symbol_20',['Symbol',['../struct_symbol.html',1,'Symbol'],['../struct_symbol.html#a3c013b57af36381c6418205dca648a06',1,'Symbol::Symbol()']]],
-  ['syntax_5frule_21',['SYNTAX_RULE',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba9cd9495f52bc6c1594913b4c6c46ed75',1,'Token.h']]],
-  ['syntaxrulesexpression_22',['SyntaxRulesExpression',['../class_syntax_rules_expression.html',1,'SyntaxRulesExpression'],['../class_syntax_rules_expression.html#a0d5bb863915d9b4081fc4d8851b4a14b',1,'SyntaxRulesExpression::SyntaxRulesExpression()']]],
-  ['syntaxrulesexpression_23',['syntaxRulesExpression',['../class_parser.html#addfd3c48a3a563afce2b0cc30acb259d',1,'Parser']]]
+  ['stream_14',['stream',['../class_port.html#aa59093a6f627cc9fb481cd6fc1af4f22',1,'Port']]],
+  ['string_15',['STRING',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba63b588d5559f64f89a416e656880b949',1,'Token.h']]],
+  ['substitute_16',['substitute',['../class_pattern_substitutor.html#a2680fc0046e3f6955b35a06eea94595e',1,'PatternSubstitutor']]],
+  ['substitutor_17',['substitutor',['../class_macro_processor.html#a82f7404b5efc80e2e315b4248cf4a38b',1,'MacroProcessor']]],
+  ['symbol_18',['SYMBOL',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba8fc5a0642a90632e8418ca52c3ec761d',1,'Token.h']]],
+  ['symbol_19',['Symbol',['../struct_symbol.html',1,'Symbol'],['../struct_symbol.html#a3c013b57af36381c6418205dca648a06',1,'Symbol::Symbol()']]],
+  ['syntax_5frule_20',['SYNTAX_RULE',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba9cd9495f52bc6c1594913b4c6c46ed75',1,'Token.h']]],
+  ['syntaxrulesexpression_21',['SyntaxRulesExpression',['../class_syntax_rules_expression.html',1,'SyntaxRulesExpression'],['../class_syntax_rules_expression.html#a0d5bb863915d9b4081fc4d8851b4a14b',1,'SyntaxRulesExpression::SyntaxRulesExpression()']]],
+  ['syntaxrulesexpression_22',['syntaxRulesExpression',['../class_parser.html#addfd3c48a3a563afce2b0cc30acb259d',1,'Parser']]]
 ];

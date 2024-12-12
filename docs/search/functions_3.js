@@ -8,7 +8,7 @@ var searchData=
   ['defineprocedure_5',['DefineProcedure',['../class_define_procedure.html#a3783927586fb9759a5324ef9dbbdc57d',1,'DefineProcedure']]],
   ['defineprocedure_6',['defineProcedure',['../class_interpreter.html#a6cf810902e17b37315efb75a25e6c284',1,'Interpreter']]],
   ['definesyntax_7',['defineSyntax',['../class_interpreter.html#a893773f59e583c107597f122cb995e76',1,'Interpreter']]],
-  ['definesyntaxexpression_8',['DefineSyntaxExpression',['../class_define_syntax_expression.html#ae70b4287d47c806c6e9704dc07be6a8f',1,'DefineSyntaxExpression']]],
+  ['definesyntaxexpression_8',['DefineSyntaxExpression',['../class_define_syntax_expression.html#ae70b4287d47c806c6e9704dc07be6a8f',1,'DefineSyntaxExpression::DefineSyntaxExpression()'],['../class_define_syntax_expression_1_1_define_syntax_expression.html#af6acff43c19d1a543e7b854024d5bf08',1,'DefineSyntaxExpression::DefineSyntaxExpression::DefineSyntaxExpression()']]],
   ['definesyntaxexpression_9',['defineSyntaxExpression',['../class_parser.html#a19a6e3129cef1f0ce5f6a81b302dee64',1,'Parser']]],
   ['display_10',['display',['../namespacejaws__io.html#aea452bde0bb8d7badacc5f379fcdd83f',1,'jaws_io']]],
   ['div_11',['div',['../namespacejaws__math.html#a8f49ed0056da2b8bf7bc31577f5fa22c',1,'jaws_math']]]

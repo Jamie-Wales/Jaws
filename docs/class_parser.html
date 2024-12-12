@@ -124,6 +124,8 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pri-methods" name="pri-methods"></a>
 Private Member Functions</h2></td></tr>
+<tr class="memitem:ac90306c652dfedcabca255e3175b564a" id="r_ac90306c652dfedcabca255e3175b564a"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="class_expression.html">Expression</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac90306c652dfedcabca255e3175b564a">parseAtomOrExpr</a> ()</td></tr>
+<tr class="separator:ac90306c652dfedcabca255e3175b564a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af5a329cdb57b910f8fb5f68d3b715c35" id="r_af5a329cdb57b910f8fb5f68d3b715c35"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="class_expression.html">Expression</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5a329cdb57b910f8fb5f68d3b715c35">listPattern</a> ()</td></tr>
 <tr class="memdesc:af5a329cdb57b910f8fb5f68d3b715c35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parses pattern-matching syntax for macro definitions.  <br /></td></tr>
 <tr class="separator:af5a329cdb57b910f8fb5f68d3b715c35"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -239,7 +241,7 @@ Private Attributes</h2></td></tr>
 <div class="line">parser-&gt;load(<a class="code hl_variable" href="#a247983c66efec033f5dab3d57a71baf9">tokens</a>);</div>
 <div class="line"><span class="keyword">auto</span> ast = parser-&gt;parse();</div>
 <div class="ttc" id="aclass_parser_html_a247983c66efec033f5dab3d57a71baf9"><div class="ttname"><a href="#a247983c66efec033f5dab3d57a71baf9">Parser::tokens</a></div><div class="ttdeci">std::vector&lt; Token &gt; tokens</div><div class="ttdoc">Token stream to be parsed.</div><div class="ttdef"><b>Definition</b> Parser.h:47</div></div>
-<div class="ttc" id="aclass_parser_html_afd0cbd01b05443ec701022e77e0aff2d"><div class="ttname"><a href="#afd0cbd01b05443ec701022e77e0aff2d">Parser::scanner</a></div><div class="ttdeci">std::shared_ptr&lt; Scanner &gt; scanner</div><div class="ttdoc">Scanner for error reporting with source context.</div><div class="ttdef"><b>Definition</b> Parser.h:50</div></div>
+<div class="ttc" id="aclass_parser_html_afd0cbd01b05443ec701022e77e0aff2d"><div class="ttname"><a href="#afd0cbd01b05443ec701022e77e0aff2d">Parser::scanner</a></div><div class="ttdeci">std::shared_ptr&lt; Scanner &gt; scanner</div><div class="ttdoc">Scanner for error reporting with source context.</div><div class="ttdef"><b>Definition</b> Parser.h:51</div></div>
 </div><!-- fragment --><p>Error Handling: The parser implements error recovery using panic mode synchronization and provides detailed error messages with source location information. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a5208129b497bfdf7c8ecceeb70e4bba8" name="a5208129b497bfdf7c8ecceeb70e4bba8"></a>
@@ -873,6 +875,31 @@ Private Attributes</h2></td></tr>
 
 <p>Parses loaded tokens into AST. </p>
 <dl class="section return"><dt>Returns</dt><dd>Optional vector of <a class="el" href="class_expression.html" title="Base class representing any Scheme expression.">Expression</a> pointers (nullopt if parsing fails) </dd></dl>
+
+</div>
+</div>
+<a id="ac90306c652dfedcabca255e3175b564a" name="ac90306c652dfedcabca255e3175b564a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac90306c652dfedcabca255e3175b564a">&#9670;&#160;</a></span>parseAtomOrExpr()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; <a class="el" href="class_expression.html">Expression</a> &gt; Parser::parseAtomOrExpr </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
 
 </div>
 </div>

@@ -12,7 +12,7 @@ var searchData=
   ['defineprocedure_9',['DefineProcedure',['../class_define_procedure.html',1,'DefineProcedure'],['../class_define_procedure.html#a3783927586fb9759a5324ef9dbbdc57d',1,'DefineProcedure::DefineProcedure()']]],
   ['defineprocedure_10',['defineProcedure',['../class_interpreter.html#a6cf810902e17b37315efb75a25e6c284',1,'Interpreter']]],
   ['definesyntax_11',['defineSyntax',['../class_interpreter.html#a893773f59e583c107597f122cb995e76',1,'Interpreter']]],
-  ['definesyntaxexpression_12',['DefineSyntaxExpression',['../class_define_syntax_expression.html',1,'DefineSyntaxExpression'],['../class_define_syntax_expression.html#ae70b4287d47c806c6e9704dc07be6a8f',1,'DefineSyntaxExpression::DefineSyntaxExpression()']]],
+  ['definesyntaxexpression_12',['DefineSyntaxExpression',['../class_define_syntax_expression.html',1,'DefineSyntaxExpression'],['../class_define_syntax_expression_1_1_define_syntax_expression.html',1,'DefineSyntaxExpression::DefineSyntaxExpression'],['../class_define_syntax_expression.html#ae70b4287d47c806c6e9704dc07be6a8f',1,'DefineSyntaxExpression::DefineSyntaxExpression(Token name, std::shared_ptr&lt; Expression &gt; rule)'],['../class_define_syntax_expression_1_1_define_syntax_expression.html#af6acff43c19d1a543e7b854024d5bf08',1,'DefineSyntaxExpression::DefineSyntaxExpression::DefineSyntaxExpression()']]],
   ['definesyntaxexpression_13',['defineSyntaxExpression',['../class_parser.html#a19a6e3129cef1f0ce5f6a81b302dee64',1,'Parser']]],
   ['denominator_14',['denominator',['../struct_number_1_1_rational.html#a6f5810cf5c73014f680b9d0028f342ea',1,'Number::Rational']]],
   ['display_15',['display',['../namespacejaws__io.html#aea452bde0bb8d7badacc5f379fcdd83f',1,'jaws_io']]],
