@@ -3,7 +3,19 @@
 #include "Procedure.h"
 #include "Visit.h"
 #include <stdexcept>
+#include <variant>
 
+void checkArgCount(const std::vector<SchemeValue>& args, size_t expected, const char* name)
+{
+    if (args.size() != expected) {
+        throw InterpreterError(std::string(name) + " requires exactly " + std::to_string(expected) + " argument(s)");
+    }
+}
+
+SchemeValue ensureSchemeValue(const SchemeValue& val)
+{
+    return val.ensureValue();
+}
 std::shared_ptr<Expression> valueToExpression(const SchemeValue& value, Interpreter& interp)
 {
     std::string valueStr = value.toString();
@@ -291,6 +303,9 @@ std::string SchemeValue::toString() const
                           },
                           [](const std::list<SchemeValue>& arg) {
                               std::string result = "(";
+                              if (arg.size() == 2) {
+                                  return std::format("({} . {})", arg.front().toString(), arg.back().toString());
+                              }
                               int i = 0;
                               for (auto& val : arg) {
                                   if (i > 0)
@@ -336,6 +351,11 @@ SchemeValue SchemeValue::operator-(const SchemeValue& other) const
                               throw std::runtime_error("Invalid types for subtraction");
                           } },
         value, other.value);
+}
+
+bool SchemeValue::isVector() const
+{
+    return std::holds_alternative<std::vector<SchemeValue>>(value);
 }
 
 SchemeValue SchemeValue::operator*(const SchemeValue& other) const

@@ -1,72 +1,56 @@
-
+#include "builtins/JawsList.h"
 #include "Error.h"
 #include "Interpreter.h"
 #include "Number.h"
-#include <optional>
+#include "Value.h"
+
 namespace jaws_list {
 
-std::optional<SchemeValue> listProcedure(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> listProcedure(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    std::vector<SchemeValue> evaluated;
-    evaluated.reserve(args.size());
+    std::list<SchemeValue> result;
     for (const auto& arg : args) {
-        if (arg.isExpr()) {
-            evaluated.push_back(expressionToValue(*arg.asExpr()));
-        } else {
-            evaluated.push_back(arg);
-        }
+        result.push_back(ensureSchemeValue(arg));
     }
-    return SchemeValue(std::list<SchemeValue>(evaluated.begin(), evaluated.end()));
+    return SchemeValue(std::move(result));
 }
 
 std::optional<SchemeValue> carProcudure(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1) {
-        throw InterpreterError("CAR expects 1 argument");
+    checkArgCount(args, 1, "car");
+    auto val = ensureSchemeValue(args[0]);
+
+    if (!val.isList() || val.asList().empty()) {
+        throw InterpreterError("car: empty list");
     }
-    SchemeValue arg = args[0];
-    if (arg.isExpr())
-        arg = expressionToValue(*arg.asExpr());
-    auto elements = arg.as<std::list<SchemeValue>>();
-    if (elements.size() == 0) {
-        throw InterpreterError("CAR invoked on empty list");
-    }
-    return elements.front();
+    return val.asList().front();
 }
 
 std::optional<SchemeValue> cdrProcedure(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1) {
-        throw InterpreterError("cdr requires 1 argument");
+    checkArgCount(args, 1, "cdr");
+    auto val = ensureSchemeValue(args[0]);
+
+    if (!val.isList() || val.asList().empty()) {
+        throw InterpreterError("cdr: empty list");
     }
-    SchemeValue arg = args[0];
-    if (arg.isExpr())
-        arg = expressionToValue(*arg.asExpr());
-    if (!arg.isList()) {
-        throw InterpreterError("cdr requires 1 argument");
-    }
-    const auto& list = arg.asList();
-    if (list.empty()) {
-        throw InterpreterError("car: empty list");
-    }
-    auto cdr = arg.asList();
-    auto it = cdr.begin();
+
+    auto list = val.asList();
+    auto it = list.begin();
     ++it;
-    return SchemeValue(std::list<SchemeValue>(it, cdr.end()));
+    return SchemeValue(std::list<SchemeValue>(it, list.end()));
 }
 
-std::optional<SchemeValue> cadrProcedure(Interpreter& ele, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> cadrProcedure(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1) {
-        throw InterpreterError("cadr requires exactly 1 argument");
-    }
-    SchemeValue arg = args[0];
-    if (arg.isExpr())
-        arg = expressionToValue(*arg.asExpr());
-    if (!arg.isList()) {
+    checkArgCount(args, 1, "cadr");
+    auto val = ensureSchemeValue(args[0]);
+
+    if (!val.isList()) {
         throw InterpreterError("cadr: argument must be a list");
     }
-    const auto& list = arg.asList();
+
+    const auto& list = val.asList();
     auto it = std::next(list.begin());
     if (it == list.end()) {
         throw InterpreterError("cadr: list too short");
@@ -74,108 +58,59 @@ std::optional<SchemeValue> cadrProcedure(Interpreter& ele, const std::vector<Sch
     return *it;
 }
 
-std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.size() != 1) {
-        throw InterpreterError("OPEN-INPUT-FILE requires exactly 1 argument");
-    }
-    SchemeValue arg = args[0];
-    if (arg.isExpr())
-        arg = expressionToValue(*arg.asExpr());
-    const auto* filename = std::get_if<std::string>(&arg.value);
-    if (!filename) {
-        throw InterpreterError("OPEN-INPUT-FILE argument must be a string");
-    }
-    auto file = std::make_shared<std::fstream>();
-    file->open(*filename, std::ios::in);
-    if (!file->is_open()) {
-        throw InterpreterError("Could not open file: " + *filename);
-    }
-    return SchemeValue(Port(file, PortType::Input));
-}
-
 std::optional<SchemeValue> map(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
-    if (args.size() < 3) {
-        throw InterpreterError("MAP requires procedure and arguments");
+    if (args.size() < 2) {
+        throw InterpreterError("map: requires procedure and at least one list");
     }
 
-    SchemeValue proc = args[0];
-    if (proc.isExpr()) {
-        proc = expressionToValue(*proc.asExpr());
-    }
+    auto proc = ensureSchemeValue(args[0]);
     if (!proc.isProc()) {
-        throw InterpreterError("MAP requires first argument to be procedure");
+        throw InterpreterError("map: first argument must be a procedure");
     }
 
+    // Collect and validate all input lists
     std::vector<std::list<SchemeValue>> lists;
-    size_t length = 0;
+    size_t minLength = SIZE_MAX;
 
     for (size_t i = 1; i < args.size(); i++) {
-        SchemeValue arg = args[i];
-        if (arg.isExpr()) {
-            arg = expressionToValue(*arg.asExpr());
+        auto val = ensureSchemeValue(args[i]);
+        if (!val.isList()) {
+            throw InterpreterError("map: all arguments after procedure must be lists");
         }
-        if (!arg.isList()) {
-            throw InterpreterError("MAP requires list arguments");
-        }
-
-        lists.push_back(arg.asList());
-
-        if (i == 1) {
-            length = lists.back().size();
-        } else if (lists.back().size() != length) {
-            throw InterpreterError("MAP requires lists of equal length");
-        }
+        lists.push_back(val.asList());
+        minLength = std::min(minLength, lists.back().size());
     }
 
     std::list<SchemeValue> result;
-
     std::vector<std::list<SchemeValue>::const_iterator> iters;
     for (const auto& list : lists) {
         iters.push_back(list.begin());
     }
 
-    while (!lists.empty() && iters[0] != lists[0].end()) {
-        std::vector<SchemeValue> call_args;
-        for (size_t i = 0; i < lists.size(); i++) {
-            if (iters[i] != lists[i].end()) {
-                call_args.push_back(*iters[i]);
-                ++iters[i];
-            }
+    // Apply procedure to elements from all lists
+    for (size_t i = 0; i < minLength; i++) {
+        std::vector<SchemeValue> procArgs;
+        for (auto& it : iters) {
+            procArgs.push_back(*it++);
         }
-        auto procResult = interp.executeProcedure(proc, args);
+
+        auto procResult = interp.executeProcedure(proc, procArgs);
         if (!procResult) {
-            throw InterpreterError("MAP procedure must return a value");
+            throw InterpreterError("map: procedure must return a value");
         }
         result.push_back(*procResult);
     }
+
     return SchemeValue(result);
 }
 
-std::optional<SchemeValue> cons(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> cons(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 2) {
-        throw InterpreterError("cons requires exactly 2 arguments");
-    }
+    checkArgCount(args, 2, "cons");
 
-    SchemeValue first = args[0];
-    if (first.isExpr()) {
-        first = expressionToValue(*first.asExpr());
-    }
-
-    SchemeValue second = args[1];
-    if (second.isExpr()) {
-        second = expressionToValue(*second.asExpr());
-    }
-
-    if (second.isProc()) {
-        auto result = interp.executeProcedure(second,
-            std::vector<SchemeValue> { args.begin() + 2, args.end() });
-        if (result) {
-            second = *result;
-        }
-    }
+    auto first = ensureSchemeValue(args[0]);
+    auto second = ensureSchemeValue(args[1]);
 
     if (second.isList()) {
         auto list = second.asList();
@@ -183,119 +118,129 @@ std::optional<SchemeValue> cons(Interpreter& interp, const std::vector<SchemeVal
         return SchemeValue(list);
     }
 
-    std::list<SchemeValue> pair;
-    pair.push_back(first);
-    pair.push_back(second);
-    return SchemeValue(std::move(pair));
+    return SchemeValue(std::list<SchemeValue> { first, second });
 }
+
 std::optional<SchemeValue> length(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1) {
-        throw InterpreterError("length requires exactly 1 argument");
-    }
+    checkArgCount(args, 1, "length");
+    auto val = ensureSchemeValue(args[0]);
 
-    SchemeValue arg = args[0];
-    if (arg.isExpr()) {
-        arg = expressionToValue(*arg.asExpr());
-    }
-    if (!arg.isList()) {
+    if (!val.isList()) {
         throw InterpreterError("length: argument must be a list");
     }
-    return SchemeValue(Number(static_cast<int>(arg.asList().size())));
+    return SchemeValue(Number(static_cast<int>(val.asList().size())));
 }
 
 std::optional<SchemeValue> append(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    std::vector<SchemeValue> result;
+    std::list<SchemeValue> result;
+
     for (const auto& arg : args) {
-        SchemeValue curr = arg;
-        if (curr.isExpr()) {
-            curr = expressionToValue(*curr.asExpr());
+        auto val = ensureSchemeValue(arg);
+        if (!val.isList()) {
+            throw InterpreterError("append: all arguments must be lists");
         }
-        const auto* list = std::get_if<std::list<SchemeValue>>(&curr.value);
-        if (!list) {
-            throw InterpreterError("APPEND arguments must be lists");
-        }
-        result.insert(result.end(), list->begin(), list->end());
+        const auto& list = val.asList();
+        result.insert(result.end(), list.begin(), list.end());
     }
-    return SchemeValue(result);
+
+    return SchemeValue(std::move(result));
 }
 
 std::optional<SchemeValue> reverse(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1) {
-        throw InterpreterError("REVERSE requires exactly 1 argument");
+    checkArgCount(args, 1, "reverse");
+    auto val = ensureSchemeValue(args[0]);
+
+    if (!val.isList()) {
+        throw InterpreterError("reverse: argument must be a list");
     }
 
-    SchemeValue arg = args[0];
-    if (arg.isExpr()) {
-        arg = expressionToValue(*arg.asExpr());
-    }
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&arg.value);
-    if (!list) {
-        throw InterpreterError("REVERSE argument must be a list");
-    }
-    std::vector<SchemeValue> result = *list;
-    std::reverse(result.begin(), result.end());
-    return SchemeValue(result);
+    auto list = val.asList();
+    return SchemeValue(std::list<SchemeValue>(list.rbegin(), list.rend()));
 }
 
 std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 2) {
-        throw InterpreterError("LIST-REF requires exactly 2 arguments");
+    checkArgCount(args, 2, "list-ref");
+
+    auto list = ensureSchemeValue(args[0]);
+    if (!list.isList()) {
+        throw InterpreterError("list-ref: first argument must be a list");
     }
 
-    SchemeValue list_arg = args[0];
-    if (list_arg.isExpr()) {
-        list_arg = expressionToValue(*list_arg.asExpr());
-    }
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&list_arg.value);
-    if (!list) {
-        throw InterpreterError("First argument to LIST-REF must be a list");
+    auto index = ensureSchemeValue(args[1]);
+    if (!index.isNumber()) {
+        throw InterpreterError("list-ref: second argument must be a number");
     }
 
-    SchemeValue index_arg = args[1];
-    if (index_arg.isExpr()) {
-        index_arg = expressionToValue(*index_arg.asExpr());
+    int idx = index.asNumber().toInt();
+    const auto& lst = list.asList();
+
+    if (idx < 0 || static_cast<size_t>(idx) >= lst.size()) {
+        throw InterpreterError("list-ref: index out of bounds");
     }
-    if (!index_arg.isNumber()) {
-        throw InterpreterError("Second argument to LIST-REF must be a number");
-    }
-    int index = index_arg.as<Number>().toInt();
-    if (index < 0 || static_cast<size_t>(index) >= list->size()) {
-        throw InterpreterError("LIST-REF index out of bounds");
-    }
-    return (*list)[index];
+
+    auto it = lst.begin();
+    std::advance(it, idx);
+    return *it;
 }
 
 std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 2) {
-        throw InterpreterError("LIST-TAIL requires exactly 2 arguments");
+    checkArgCount(args, 2, "list-tail");
+
+    auto list = ensureSchemeValue(args[0]);
+    if (!list.isList()) {
+        throw InterpreterError("list-tail: first argument must be a list");
     }
 
-    SchemeValue list_arg = args[0];
-    if (list_arg.isExpr()) {
-        list_arg = expressionToValue(*list_arg.asExpr());
-    }
-    const auto* list = std::get_if<std::vector<SchemeValue>>(&list_arg.value);
-    if (!list) {
-        throw InterpreterError("First argument to LIST-TAIL must be a list");
+    auto index = ensureSchemeValue(args[1]);
+    if (!index.isNumber()) {
+        throw InterpreterError("list-tail: second argument must be a number");
     }
 
-    SchemeValue index_arg = args[1];
-    if (index_arg.isExpr()) {
-        index_arg = expressionToValue(*index_arg.asExpr());
+    int idx = index.asNumber().toInt();
+    const auto& lst = list.asList();
+
+    if (idx < 0 || static_cast<size_t>(idx) > lst.size()) {
+        throw InterpreterError("list-tail: index out of bounds");
     }
-    if (!index_arg.isNumber()) {
-        throw InterpreterError("Second argument to LIST-TAIL must be a number");
-    }
-    int index = index_arg.as<Number>().toInt();
-    if (index < 0 || static_cast<size_t>(index) > list->size()) {
-        throw InterpreterError("LIST-TAIL index out of bounds");
-    }
-    std::vector<SchemeValue> result(list->begin() + index, list->end());
-    return SchemeValue(result);
+
+    auto it = lst.begin();
+    std::advance(it, idx);
+    return SchemeValue(std::list<SchemeValue>(it, lst.end()));
 }
+
+std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 3) {
+        throw InterpreterError("list-set!: requires exactly 3 arguments");
+    }
+
+    auto list = ensureSchemeValue(args[0]);
+    if (!list.isList()) {
+        throw InterpreterError("list-set!: first argument must be a list");
+    }
+
+    auto index = ensureSchemeValue(args[1]);
+    if (!index.isNumber()) {
+        throw InterpreterError("list-set!: second argument must be a number");
+    }
+
+    int idx = index.asNumber().toInt();
+    auto& lst = list.asList();
+
+    if (idx < 0 || static_cast<size_t>(idx) >= lst.size()) {
+        throw InterpreterError("list-set!: index out of bounds");
+    }
+
+    auto it = lst.begin();
+    std::advance(it, idx);
+    *it = ensureSchemeValue(args[2]);
+
+    return std::nullopt; // list-set! returns void in Scheme
+}
+
 }

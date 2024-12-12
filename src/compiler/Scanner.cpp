@@ -26,7 +26,7 @@ const std::vector<Scanner::RegexInfo> Scanner::regexPatterns = {
     { std::regex(R"(#f|#false)"), Tokentype::FALSE },
     { std::regex(R"([a-zA-Z!$%&*+\-\./:<=>?@^_~][a-zA-Z0-9!$%&*+\-\./:<=>?@^_~]*)"), Tokentype::IDENTIFIER },
     { std::regex(R"(\|(?:[^\\|]|\\.)*\|)"), Tokentype::IDENTIFIER },
-    { std::regex(R"(')"), Tokentype::QUOTE },
+    { std::regex(R"('|quote)"), Tokentype::QUOTE },
     { std::regex(R"(\(|\[|\{)"), Tokentype::LEFT_PAREN },
     { std::regex(R"(\)|\]|\})"), Tokentype::RIGHT_PAREN },
     { std::regex(R"(\#)"), Tokentype::HASH },

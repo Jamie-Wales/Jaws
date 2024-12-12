@@ -1,119 +1,108 @@
 #include "builtins/JawsVector.h"
 #include "Error.h"
+#include "Number.h"
+
 namespace jaws_vec {
-std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args)
-{
+
+std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args) {
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("make-vector requires 1 or 2 arguments");
     }
 
-    SchemeValue sizeArg = args[0];
-    if (sizeArg.isExpr())
-        sizeArg = expressionToValue(*sizeArg.asExpr());
-    if (!sizeArg.isNumber()) {
+    auto size = args[0].ensureValue();
+    if (!size.isNumber()) {
         throw InterpreterError("make-vector: first argument must be a number");
     }
-    int k = sizeArg.as<Number>().toInt();
+
+    int k = size.asNumber().toInt();
     if (k < 0) {
         throw InterpreterError("make-vector: length must be non-negative");
     }
 
-    SchemeValue fill = args.size() == 2 ? args[1] : SchemeValue(Number(0));
-    if (fill.isExpr())
-        fill = expressionToValue(*fill.asExpr());
-    std::vector<SchemeValue> vec(k, fill);
-    return SchemeValue(std::move(vec));
+    // Default fill value is 0 if not provided
+    SchemeValue fill = (args.size() == 2) 
+        ? args[1].ensureValue() 
+        : SchemeValue(Number(0));
+
+    return SchemeValue(std::vector<SchemeValue>(k, fill));
 }
 
-std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    std::vector<SchemeValue> evaluated;
-    evaluated.reserve(args.size());
+std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args) {
+    std::vector<SchemeValue> result;
+    result.reserve(args.size());
+    
     for (const auto& arg : args) {
-        if (arg.isExpr()) {
-            evaluated.push_back(expressionToValue(*arg.asExpr()));
-        } else {
-            evaluated.push_back(arg);
-        }
+        result.push_back(arg.ensureValue());
     }
-    return SchemeValue(evaluated);
+    
+    return SchemeValue(std::move(result));
 }
 
-std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args)
-{
+std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args) {
     if (args.size() != 2) {
         throw InterpreterError("vector-ref requires exactly 2 arguments");
     }
 
-    SchemeValue vecArg = args[0];
-    if (vecArg.isExpr())
-        vecArg = expressionToValue(*vecArg.asExpr());
-    const auto* vec = std::get_if<std::vector<SchemeValue>>(&vecArg.value);
-    if (!vec) {
+    auto vec = args[0].ensureValue();
+    if (!vec.isVector()) {
         throw InterpreterError("vector-ref: first argument must be a vector");
     }
 
-    SchemeValue indexArg = args[1];
-    if (indexArg.isExpr())
-        indexArg = expressionToValue(*indexArg.asExpr());
-    if (!indexArg.isNumber()) {
+    auto index = args[1].ensureValue();
+    if (!index.isNumber()) {
         throw InterpreterError("vector-ref: second argument must be a number");
     }
-    int index = indexArg.as<Number>().toInt();
-    if (index < 0 || static_cast<size_t>(index) >= vec->size()) {
+
+    int idx = index.asNumber().toInt();
+    const auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
+    
+    if (idx < 0 || static_cast<size_t>(idx) >= vector.size()) {
         throw InterpreterError("vector-ref: index out of bounds");
     }
 
-    return (*vec)[index];
+    return vector[idx];
 }
 
-std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args)
-{
+std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args) {
     if (args.size() != 3) {
         throw InterpreterError("vector-set! requires exactly 3 arguments");
     }
 
-    SchemeValue vecArg = args[0];
-    if (vecArg.isExpr())
-        vecArg = expressionToValue(*vecArg.asExpr());
-    auto* vec = std::get_if<std::vector<SchemeValue>>(&vecArg.value);
-    if (!vec) {
+    auto vec = args[0].ensureValue();
+    if (!vec.isVector()) {
         throw InterpreterError("vector-set!: first argument must be a vector");
     }
 
-    SchemeValue indexArg = args[1];
-    if (indexArg.isExpr())
-        indexArg = expressionToValue(*indexArg.asExpr());
-    if (!indexArg.isNumber()) {
+    auto index = args[1].ensureValue();
+    if (!index.isNumber()) {
         throw InterpreterError("vector-set!: second argument must be a number");
     }
-    int index = indexArg.as<Number>().toInt();
-    if (index < 0 || static_cast<size_t>(index) >= vec->size()) {
+
+    int idx = index.asNumber().toInt();
+    auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
+    
+    if (idx < 0 || static_cast<size_t>(idx) >= vector.size()) {
         throw InterpreterError("vector-set!: index out of bounds");
     }
 
-    SchemeValue valueArg = args[2];
-    if (valueArg.isExpr())
-        valueArg = expressionToValue(*valueArg.asExpr());
-
-    std::vector<SchemeValue> newVec = *vec;
-    newVec[index] = valueArg;
+    // Create new vector with updated value
+    std::vector<SchemeValue> newVec = vector;
+    newVec[idx] = args[2].ensureValue();
     return SchemeValue(std::move(newVec));
 }
 
-std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args)
-{
+std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args) {
     if (args.size() != 1) {
         throw InterpreterError("vector-length requires exactly 1 argument");
     }
 
-    SchemeValue arg = args[0];
-    if (arg.isExpr())
-        arg = expressionToValue(*arg.asExpr());
-    const auto* vec = std::get_if<std::vector<SchemeValue>>(&arg.value);
-    if (!vec) {
+    auto vec = args[0].ensureValue();
+    if (!vec.isVector()) {
         throw InterpreterError("vector-length: argument must be a vector");
     }
-    return SchemeValue(Number(static_cast<int>(vec->size())));
+
+    return SchemeValue(Number(static_cast<int>(
+        std::get<std::vector<SchemeValue>>(vec.value).size())));
 }
+
 }

@@ -1,48 +1,66 @@
 #include "builtins/JawsMath.h"
 #include "Error.h"
 #include "Interpreter.h"
-#include <optional>
+
 namespace jaws_math {
 
-std::optional<SchemeValue> mult(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.empty())
-        return SchemeValue(Number(1));
-    SchemeValue result = args[0];
-    if (result.isExpr())
-        result = expressionToValue(*result.asExpr());
+std::optional<SchemeValue> plus(Interpreter& interp, const std::vector<SchemeValue>& args) {
+    if (args.empty()) {
+        return SchemeValue(Number(0));
+    }
 
+    SchemeValue result = args[0].ensureValue();
     for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        result = result * curr;
+        SchemeValue curr = args[i].ensureValue();
+        if (curr.isProc()) {
+            curr = *interp.executeProcedure(curr, args);
+        }
+        result = curr + result;
     }
     return result;
 }
 
-std::optional<SchemeValue> div(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.empty())
-        throw InterpreterError("Cannot call procedure / on empty list", std::nullopt);
-
-    if (args.size() == 1) {
-        SchemeValue arg = args[0];
-        if (arg.isExpr())
-            arg = expressionToValue(*arg.asExpr());
-        return SchemeValue(Number(1)) / arg;
+std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& args) {
+    if (args.empty()) {
+        throw InterpreterError("Cannot call procedure - on empty list", std::nullopt);
     }
 
-    SchemeValue result = args[0];
-    if (result.isExpr())
-        result = expressionToValue(*result.asExpr());
+    if (args.size() == 1) {
+        return -args[0].ensureValue();
+    }
 
+    SchemeValue result = args[0].ensureValue();
     for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        auto num = curr.as<Number>();
-        if (num.isZero()) {
+        result = result - args[i].ensureValue();
+    }
+    return result;
+}
+
+std::optional<SchemeValue> mult(Interpreter&, const std::vector<SchemeValue>& args) {
+    if (args.empty()) {
+        return SchemeValue(Number(1));
+    }
+
+    SchemeValue result = args[0].ensureValue();
+    for (size_t i = 1; i < args.size(); ++i) {
+        result = result * args[i].ensureValue();
+    }
+    return result;
+}
+
+std::optional<SchemeValue> div(Interpreter&, const std::vector<SchemeValue>& args) {
+    if (args.empty()) {
+        throw InterpreterError("Cannot call procedure / on empty list", std::nullopt);
+    }
+
+    if (args.size() == 1) {
+        return SchemeValue(Number(1)) / args[0].ensureValue();
+    }
+
+    SchemeValue result = args[0].ensureValue();
+    for (size_t i = 1; i < args.size(); ++i) {
+        auto curr = args[i].ensureValue();
+        if (curr.asNumber().isZero()) {
             throw InterpreterError("Division by zero", std::nullopt);
         }
         result = result / curr;
@@ -50,19 +68,54 @@ std::optional<SchemeValue> div(Interpreter&, const std::vector<SchemeValue>& arg
     return result;
 }
 
-std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
-{
+std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& args) {
+    if (args.size() < 2) {
+        throw InterpreterError("< requires at least two arguments", std::nullopt);
+    }
+
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        auto curr = args[i].ensureValue();
+        auto next = args[i + 1].ensureValue();
+
+        auto comparison = curr <=> next;
+        if (comparison == std::partial_ordering::unordered) {
+            throw InterpreterError("Cannot compare these values", std::nullopt);
+        }
+        if (!(comparison < 0)) {
+            return SchemeValue(false);
+        }
+    }
+    return SchemeValue(true);
+}
+
+std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>& args) {
+    if (args.size() < 2) {
+        throw InterpreterError("> requires at least two arguments", std::nullopt);
+    }
+
+    for (size_t i = 0; i < args.size() - 1; ++i) {
+        auto curr = args[i].ensureValue();
+        auto next = args[i + 1].ensureValue();
+
+        auto comparison = curr <=> next;
+        if (comparison == std::partial_ordering::unordered) {
+            throw InterpreterError("Cannot compare these values", std::nullopt);
+        }
+        if (!(comparison > 0)) {
+            return SchemeValue(false);
+        }
+    }
+    return SchemeValue(true);
+}
+
+std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args) {
     if (args.size() < 2) {
         throw InterpreterError("'<=' requires at least 2 arguments");
     }
 
     for (size_t i = 0; i < args.size() - 1; i++) {
-        SchemeValue curr = args[i], next = args[i + 1];
-
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (next.isExpr())
-            next = expressionToValue(*next.asExpr());
+        auto curr = args[i].ensureValue();
+        auto next = args[i + 1].ensureValue();
 
         if (!curr.isNumber() || !next.isNumber()) {
             throw InterpreterError("Cannot compare non-numeric values with <=");
@@ -79,19 +132,14 @@ std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeVal
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args)
-{
+std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args) {
     if (args.size() < 2) {
         throw InterpreterError("'>=' requires at least 2 arguments");
     }
 
     for (size_t i = 0; i < args.size() - 1; i++) {
-        SchemeValue curr = args[i], next = args[i + 1];
-
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (next.isExpr())
-            next = expressionToValue(*next.asExpr());
+        auto curr = args[i].ensureValue();
+        auto next = args[i + 1].ensureValue();
 
         if (!curr.isNumber() || !next.isNumber()) {
             throw InterpreterError("Cannot compare non-numeric values with >=");
@@ -108,112 +156,18 @@ std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<Scheme
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> plus(Interpreter& interp, const std::vector<SchemeValue>& args)
-{
-    if (args.empty())
-        return SchemeValue(Number(0));
-    SchemeValue result = args[0];
-    if (result.isExpr())
-        result = expressionToValue(*result.asExpr());
-
-    for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (curr.isProc())
-            curr = *interp.executeProcedure(curr, args);
-        result = curr + result;
-    }
-
-    return result;
-}
-
-std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.size() < 2)
+std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& args) {
+    if (args.size() < 2) {
         throw InterpreterError("= requires at least two arguments", std::nullopt);
+    }
 
-    SchemeValue first = args[0];
-    if (first.isExpr())
-        first = expressionToValue(*first.asExpr());
-
+    auto first = args[0].ensureValue();
     for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (!(first == curr)) {
+        if (!(first == args[i].ensureValue())) {
             return SchemeValue(false);
         }
     }
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.empty())
-        throw InterpreterError("Cannot call procedure - on empty list", std::nullopt);
-
-    if (args.size() == 1) {
-        SchemeValue arg = args[0];
-        if (arg.isExpr())
-            arg = expressionToValue(*arg.asExpr());
-        return -arg;
-    }
-
-    SchemeValue result = args[0];
-    if (result.isExpr())
-        result = expressionToValue(*result.asExpr());
-
-    for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        result = result - curr;
-    }
-    return result;
-}
-std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.size() < 2)
-        throw InterpreterError("> requires at least two arguments", std::nullopt);
-
-    for (size_t i = 0; i < args.size() - 1; ++i) {
-        SchemeValue curr = args[i], next = args[i + 1];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (next.isExpr())
-            next = expressionToValue(*next.asExpr());
-
-        auto comparison = curr <=> next;
-        if (comparison == std::partial_ordering::unordered) {
-            throw InterpreterError("Cannot compare these values", std::nullopt);
-        }
-        if (!(comparison > 0)) {
-            return SchemeValue(false);
-        }
-    }
-    return SchemeValue(true);
-}
-std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.size() < 2)
-        throw InterpreterError("< requires at least two arguments", std::nullopt);
-
-    for (size_t i = 0; i < args.size() - 1; ++i) {
-        SchemeValue curr = args[i], next = args[i + 1];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (next.isExpr())
-            next = expressionToValue(*next.asExpr());
-
-        auto comparison = curr <=> next;
-        if (comparison == std::partial_ordering::unordered) {
-            throw InterpreterError("Cannot compare these values", std::nullopt);
-        }
-        if (!(comparison < 0)) {
-            return SchemeValue(false);
-        }
-    }
-    return SchemeValue(true);
-}
 }

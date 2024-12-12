@@ -1,3 +1,4 @@
+#pragma once
 #include "Expression.h"
 #include "Token.h"
 #include <iostream>

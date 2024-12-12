@@ -1,13 +1,12 @@
 // Value.h
 #pragma once
+#include "Error.h"
 #include "Number.h"
-#include "Parser.h"
 #include "Port.h"
-#include "Scanner.h"
+#include "ValueTraits.h"
 #include <compare>
 #include <list>
 #include <memory>
-#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -15,15 +14,6 @@
 class Procedure;
 class Interpreter;
 class Expression;
-
-struct Symbol {
-    std::string name;
-    explicit Symbol(std::string n)
-        : name(std::move(n))
-    {
-    }
-    bool operator==(const Symbol& other) const { return name == other.name; }
-};
 
 class SchemeValue {
 public:
@@ -41,7 +31,13 @@ public:
         : value(std::move(other.value))
     {
     }
-
+    SchemeValue ensureValue() const
+    {
+        return std::visit([](const auto& val) -> SchemeValue {
+            return ValueTrait<std::decay_t<decltype(val)>>::toValue(val);
+        },
+            value);
+    }
     SchemeValue& operator=(SchemeValue&& other) noexcept
     {
         value = std::move(other.value);
@@ -68,6 +64,7 @@ public:
     bool isSymbol() const;
     bool isProc() const;
     bool isExpr() const;
+    bool isVector() const;
     std::shared_ptr<Expression> asExpr() const;
     std::shared_ptr<Procedure> asProc() const;
     bool isList() const;
@@ -110,5 +107,7 @@ public:
     }
 };
 
+void checkArgCount(const std::vector<SchemeValue>& args, size_t expected, const char* name);
 SchemeValue expressionToValue(const Expression& expr);
 std::shared_ptr<Expression> valueToExpression(const SchemeValue& val, Interpreter& interp);
+SchemeValue ensureSchemeValue(const SchemeValue& val);

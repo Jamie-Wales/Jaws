@@ -9,12 +9,7 @@ std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& ar
         throw InterpreterError("< requires at least two arguments", std::nullopt);
 
     for (size_t i = 0; i < args.size() - 1; ++i) {
-        SchemeValue curr = args[i], next = args[i + 1];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (next.isExpr())
-            next = expressionToValue(*next.asExpr());
-
+        SchemeValue curr = args[i].ensureValue(), next = args[i + 1].ensureValue();
         auto comparison = curr <=> next;
         if (comparison == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these values", std::nullopt);
@@ -32,12 +27,7 @@ std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>&
         throw InterpreterError("> requires at least two arguments", std::nullopt);
 
     for (size_t i = 0; i < args.size() - 1; ++i) {
-        SchemeValue curr = args[i], next = args[i + 1];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
-        if (next.isExpr())
-            next = expressionToValue(*next.asExpr());
-
+        SchemeValue curr = args[i].ensureValue(), next = args[i + 1].ensureValue();
         auto comparison = curr <=> next;
         if (comparison == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these values", std::nullopt);
@@ -54,14 +44,10 @@ std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& a
     if (args.size() < 2)
         throw InterpreterError("= requires at least two arguments", std::nullopt);
 
-    SchemeValue first = args[0];
-    if (first.isExpr())
-        first = expressionToValue(*first.asExpr());
+    SchemeValue first = args[0].ensureValue();
 
     for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i];
-        if (curr.isExpr())
-            curr = expressionToValue(*curr.asExpr());
+        SchemeValue curr = args[i].ensureValue();
         if (!(first == curr)) {
             return SchemeValue(false);
         }
@@ -73,9 +59,7 @@ std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeV
 {
     if (args.size() != 1)
         throw InterpreterError("Cannot call boolean on multiple arguments", std::nullopt);
-    SchemeValue arg = args[0];
-    if (arg.isExpr())
-        arg = expressionToValue(*arg.asExpr());
+    SchemeValue arg = args[0].ensureValue();
     if (std::holds_alternative<bool>(arg.value)) {
         return SchemeValue(std::get<bool>(arg.value));
     }
