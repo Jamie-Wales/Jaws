@@ -3,6 +3,7 @@
 #include "Interpreter.h"
 #include "Number.h"
 #include "Value.h"
+#include <optional>
 
 namespace jaws_list {
 
@@ -243,17 +244,7 @@ std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>&
     return std::nullopt;
 }
 
-SchemeValue isPair(Interpreter& interp, const std::vector<SchemeValue>& args)
-{
-    checkArgCount(args, 1, "pair?");
-    if (!args[0].isList()) {
-        return SchemeValue(false);
-    }
-    const auto& lst = args[0].asList();
-    return SchemeValue(!lst.empty());
-}
-
-SchemeValue member(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> member(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     checkArgCount(args, 2, "member");
     const auto& item = args[0];
@@ -274,7 +265,7 @@ SchemeValue member(Interpreter& interp, const std::vector<SchemeValue>& args)
     return SchemeValue(false);
 }
 
-SchemeValue assq(Interpreter& interp, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> assq(Interpreter& interp, const std::vector<SchemeValue>& args)
 {
     checkArgCount(args, 2, "assq");
     const auto& key = args[0];

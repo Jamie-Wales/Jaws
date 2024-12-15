@@ -16,4 +16,6 @@ std::optional<SchemeValue> reverse(Interpreter&, const std::vector<SchemeValue>&
 std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>& args);
 std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>& args);
 std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>& args);
+std::optional<SchemeValue> assq(Interpreter&, const std::vector<SchemeValue>& args);
+std::optional<SchemeValue> member(Interpreter&, const std::vector<SchemeValue>& args);
 }
