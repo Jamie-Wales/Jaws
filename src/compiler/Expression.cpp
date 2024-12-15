@@ -115,6 +115,10 @@ void Expression::toString(std::stringstream& ss) const
 {
     std::visit(overloaded {
 
+                   [&](const SetExpression& s) {
+                       ss << "(set! " << std::endl;
+                       ss << s.identifier.lexeme << " " << s.value->toString() << ")" << std::endl;
+                   },
                    [&](const LetExpression& l) {
                        ss << "(let (";
                        for (const auto& [first, second] : l.arguments) {

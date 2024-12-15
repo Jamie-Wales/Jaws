@@ -1,18 +1,23 @@
 #include "builtins/JawsEq.h"
 #include "Error.h"
-#include "Interpreter.h"
+#include "interpret.h"
 namespace jaws_eq {
 
-std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> less(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() < 2)
-        throw InterpreterError("< requires at least two arguments", std::nullopt);
+    if (args.size() < 2) {
+        throw InterpreterError("< requires at least two arguments");
+    }
 
     for (size_t i = 0; i < args.size() - 1; ++i) {
-        SchemeValue curr = args[i].ensureValue(), next = args[i + 1].ensureValue();
+        SchemeValue curr = args[i].ensureValue();
+        SchemeValue next = args[i + 1].ensureValue();
         auto comparison = curr <=> next;
+        
         if (comparison == std::partial_ordering::unordered) {
-            throw InterpreterError("Cannot compare these values", std::nullopt);
+            throw InterpreterError("Cannot compare these values");
         }
         if (!(comparison < 0)) {
             return SchemeValue(false);
@@ -21,16 +26,21 @@ std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& ar
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> greater(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() < 2)
-        throw InterpreterError("> requires at least two arguments", std::nullopt);
+    if (args.size() < 2) {
+        throw InterpreterError("> requires at least two arguments");
+    }
 
     for (size_t i = 0; i < args.size() - 1; ++i) {
-        SchemeValue curr = args[i].ensureValue(), next = args[i + 1].ensureValue();
+        SchemeValue curr = args[i].ensureValue();
+        SchemeValue next = args[i + 1].ensureValue();
         auto comparison = curr <=> next;
+        
         if (comparison == std::partial_ordering::unordered) {
-            throw InterpreterError("Cannot compare these values", std::nullopt);
+            throw InterpreterError("Cannot compare these values");
         }
         if (!(comparison > 0)) {
             return SchemeValue(false);
@@ -39,106 +49,141 @@ std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>&
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> equal(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() < 2)
-        throw InterpreterError("= requires at least two arguments", std::nullopt);
+    if (args.size() < 2) {
+        throw InterpreterError("= requires at least two arguments");
+    }
 
     SchemeValue first = args[0].ensureValue();
-
     for (size_t i = 1; i < args.size(); ++i) {
-        SchemeValue curr = args[i].ensureValue();
-        if (!(first == curr)) {
+        if (!(first == args[i].ensureValue())) {
             return SchemeValue(false);
         }
     }
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isProcedure(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw InterpreterError("Cannot call boolean on multiple arguments", std::nullopt);
-    SchemeValue arg = args[0].ensureValue();
-    if (std::holds_alternative<bool>(arg.value)) {
-        return SchemeValue(std::get<bool>(arg.value));
+    if (args.size() != 1) {
+        throw InterpreterError("procedure?: expected 1 argument");
     }
-    throw InterpreterError("Arg is not a bool", std::nullopt);
-}
-std::optional<SchemeValue> isProcedure(Interpreter&, const std::vector<SchemeValue>& args)
-{
-    if (args.size() != 1)
-        throw std::runtime_error("procedure?: expected 1 argument");
     return SchemeValue(args[0].isProc());
 }
 
-std::optional<SchemeValue> isPair(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isPair(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("pair?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("pair?: expected 1 argument");
+    }
     return SchemeValue(args[0].isList() && !args[0].asList().empty());
 }
 
-std::optional<SchemeValue> isList(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isList(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("list?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("list?: expected 1 argument");
+    }
     return SchemeValue(args[0].isList());
 }
 
-std::optional<SchemeValue> isVector(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isVector(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("vector?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("vector?: expected 1 argument");
+    }
     return SchemeValue(std::holds_alternative<std::vector<SchemeValue>>(args[0].value));
 }
 
-std::optional<SchemeValue> isSymbol(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isSymbol(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("symbol?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("symbol?: expected 1 argument");
+    }
     return SchemeValue(args[0].isSymbol());
 }
 
-std::optional<SchemeValue> isNumber(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isNumber(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("number?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("number?: expected 1 argument");
+    }
     return SchemeValue(args[0].isNumber());
 }
 
-std::optional<SchemeValue> isString(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isString(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("string?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("string?: expected 1 argument");
+    }
     return SchemeValue(std::holds_alternative<std::string>(args[0].value));
 }
 
-std::optional<SchemeValue> isPort(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isPort(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("port?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("port?: expected 1 argument");
+    }
     return SchemeValue(args[0].isPort());
 }
 
-std::optional<SchemeValue> isNull(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isNull(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 1)
-        throw std::runtime_error("null?: expected 1 argument");
+    if (args.size() != 1) {
+        throw InterpreterError("null?: expected 1 argument");
+    }
     return SchemeValue(args[0].isList() && args[0].asList().empty());
 }
 
-std::optional<SchemeValue> isEq(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isEq(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 2)
-        throw std::runtime_error("eq?: expected 2 arguments");
+    if (args.size() != 2) {
+        throw InterpreterError("eq?: expected 2 arguments");
+    }
     return SchemeValue(&args[0] == &args[1]);
 }
 
-std::optional<SchemeValue> isEqv(Interpreter&, const std::vector<SchemeValue>& args)
+std::optional<SchemeValue> isEqv(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
 {
-    if (args.size() != 2)
-        throw std::runtime_error("eqv?: expected 2 arguments");
+    if (args.size() != 2) {
+        throw InterpreterError("eqv?: expected 2 arguments");
+    }
     return SchemeValue(args[0] == args[1]);
 }
+
+std::optional<SchemeValue> isBooleanProc(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("boolean?: expected 1 argument");
+    }
+    return SchemeValue(std::holds_alternative<bool>(args[0].value));
 }
+
+} // namespace jaws_eq

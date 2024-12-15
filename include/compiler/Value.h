@@ -109,5 +109,5 @@ public:
 
 void checkArgCount(const std::vector<SchemeValue>& args, size_t expected, const char* name);
 SchemeValue expressionToValue(const Expression& expr);
-std::shared_ptr<Expression> valueToExpression(const SchemeValue& val, Interpreter& interp);
+std::shared_ptr<Expression> valueToExpression(const SchemeValue& val);
 SchemeValue ensureSchemeValue(const SchemeValue& val);

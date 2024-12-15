@@ -4,7 +4,10 @@
 
 namespace jaws_vec {
 
-std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> makeVector(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("make-vector requires 1 or 2 arguments");
     }
@@ -19,7 +22,6 @@ std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValu
         throw InterpreterError("make-vector: length must be non-negative");
     }
 
-    // Default fill value is 0 if not provided
     SchemeValue fill = (args.size() == 2) 
         ? args[1].ensureValue() 
         : SchemeValue(Number(0));
@@ -27,7 +29,10 @@ std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValu
     return SchemeValue(std::vector<SchemeValue>(k, fill));
 }
 
-std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> vectorProcedure(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     std::vector<SchemeValue> result;
     result.reserve(args.size());
     
@@ -38,7 +43,10 @@ std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<Schem
     return SchemeValue(std::move(result));
 }
 
-std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> vectorRef(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() != 2) {
         throw InterpreterError("vector-ref requires exactly 2 arguments");
     }
@@ -63,7 +71,10 @@ std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue
     return vector[idx];
 }
 
-std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> vectorSet(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() != 3) {
         throw InterpreterError("vector-set! requires exactly 3 arguments");
     }
@@ -91,7 +102,10 @@ std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue
     return SchemeValue(std::move(newVec));
 }
 
-std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> vectorLength(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() != 1) {
         throw InterpreterError("vector-length requires exactly 1 argument");
     }
@@ -105,4 +119,4 @@ std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeVa
         std::get<std::vector<SchemeValue>>(vec.value).size())));
 }
 
-}
+} // namespace jaws_vec

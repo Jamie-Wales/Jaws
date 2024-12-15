@@ -173,6 +173,7 @@ public:
         LambdaExpression,
         IfExpression,
         QuoteExpression,
+        SetExpression,
         TailExpression,
         ImportExpression,
         SyntaxRulesExpression,

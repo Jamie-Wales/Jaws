@@ -1,9 +1,29 @@
 #pragma once
+#include "interpret.h"
 #include "Value.h"
+#include <optional>
+#include <vector>
+
 namespace jaws_vec {
-std::optional<SchemeValue> makeVector(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> vectorProcedure(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> vectorRef(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> vectorSet(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> vectorLength(Interpreter&, const std::vector<SchemeValue>& args);
-}
+
+std::optional<SchemeValue> makeVector(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+    
+std::optional<SchemeValue> vectorProcedure(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+    
+std::optional<SchemeValue> vectorRef(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+    
+std::optional<SchemeValue> vectorSet(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+    
+std::optional<SchemeValue> vectorLength(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+} 

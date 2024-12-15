@@ -1,81 +1,102 @@
 #include "run.h"
-#include "DebugUtils.h"
 #include "Error.h"
-#include "Expression.h"
-#include "Interpreter.h"
-#include "Parser.h"
-#include "Scanner.h"
-#include "Token.h"
-#include "Value.h"
+#include "ExpressionUtils.h"
+#include "Procedure.h"
 #include "icons.h"
-#include <cstdlib>
+#include "interpret.h"
+#include "parse.h"
+#include "scan.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <string>
 
-std::string readFile(const std::string& path) {
-    std::ifstream inputFileStream(path);
-    if (!inputFileStream) {
+std::string readFile(const std::string& path)
+{
+    std::ifstream file(path);
+    if (!file) {
         throw std::runtime_error("Unable to open file: " + path);
     }
     std::stringstream buffer;
-    buffer << inputFileStream.rdbuf();
+    buffer << file.rdbuf();
     return buffer.str();
 }
 
-void runFile(const std::string& path) {
-    try {
-        std::string sourceCode = readFile(path);
-        auto scanner = std::make_shared<Scanner>();
-        auto parser = std::make_shared<Parser>();
-        parser->initialize(scanner);
-        std::vector<Token> tokens = scanner->tokenize(sourceCode);
-        parser->load(tokens);
-        Interpreter i = { scanner, parser };
-        i.init();  // Let interpreter handle parsing, macros and evaluation
-        std::cout << i.outputStream.str();
-        i.outputStream.clear();
-    } catch (const InterpreterError& e) {
-        e.printFormattedError();
+void evaluate(interpret::InterpreterState& state, const std::string& input)
+{
+    auto file = readFile("../example.scm");
+    auto tokens = scanner::tokenize(file);
+    auto expressions = parse::parse(std::move(tokens));
+    for (const auto& expr : *expressions) {
+        interpret::interpret(state, expr);
+    }
+
+    tokens = scanner::tokenize(input);
+    expressions = parse::parse(std::move(tokens));
+    for (auto expr : *expressions) {
+        auto exprValue = expressionToValue(*expr);
+
+        auto expandResult = state.env->get("expand-expression");
+        if (!expandResult) {
+            throw InterpreterError("Could not find expand-expression");
+        }
+
+        auto expanded = (*expandResult->asProc())(state, { exprValue });
+
+        auto processedExpr = valueToExpression(*expanded);
+        auto result = interpret::interpret(state, processedExpr);
     }
 }
 
-void runPrompt() {
+void runFile(const std::string& path)
+{
+    try {
+        auto state = interpret::createInterpreter();
+        evaluate(state, readFile(path));
+        std::cout << state.output.str();
+    } catch (const ParseError& e) {
+        e.printFormattedError();
+    } catch (const InterpreterError& e) {
+        e.printFormattedError();
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+}
+
+void runPrompt()
+{
     printJawsLogo();
     std::cout << "Welcome to the Jaws REPL!\n";
     std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
 
-    auto scanner = std::make_shared<Scanner>();
-    auto parser = std::make_shared<Parser>();
-    parser->initialize(scanner);
-    Interpreter i = { scanner, parser };
-    
+    // Create a single interpreter state that persists throughout the REPL session
+    auto state = interpret::createInterpreter();
     std::string input;
+
     while (true) {
         std::cout << "jaws: |> ";
         if (!std::getline(std::cin, input)) {
             break;
         }
-        
+
         if (input == "exit") {
             std::cout << "Fin-ishing up. Goodbye!\n";
             break;
         }
-        
+
         if (input == "jaws") {
             std::cout << jaws2 << std::endl;
             continue;
         }
-        
-        if (input.empty()) continue;
-        
+
+        if (input.empty()) {
+            continue;
+        }
+
         try {
-            std::vector<Token> tokens = scanner->tokenize(input);
-            parser->load(tokens);
-            i.init();  // Let interpreter handle parsing, macros and evaluation
-            std::cout << i.outputStream.str();
-            i.outputStream.clear();
+            evaluate(state, input);
+            std::cout << state.output.str();
+            state.output.str("");
+            state.output.clear();
         } catch (const ParseError& e) {
             e.printFormattedError();
         } catch (const InterpreterError& e) {

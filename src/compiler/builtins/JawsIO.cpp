@@ -1,11 +1,15 @@
 #include "builtins/JawsIO.h"
 #include "Error.h"
-#include "Interpreter.h"
+#include "parse.h"
+#include "scan.h"
+#include <fstream>
+#include <iostream>
 
 namespace jaws_io {
 
 namespace {
-    std::ostream* getOutputStream(const std::vector<SchemeValue>& args, size_t portArgIndex = 0) {
+    std::ostream* getOutputStream(const std::vector<SchemeValue>& args, size_t portArgIndex = 0)
+    {
         if (args.size() <= portArgIndex) {
             return &std::cout;
         }
@@ -18,7 +22,8 @@ namespace {
         return port->getOutput();
     }
 
-    std::string getStringArg(const SchemeValue& arg, const char* funcName) {
+    std::string getStringArg(const SchemeValue& arg, const char* funcName)
+    {
         auto val = arg.ensureValue();
         const auto* str = std::get_if<std::string>(&val.value);
         if (!str) {
@@ -28,7 +33,10 @@ namespace {
     }
 }
 
-std::optional<SchemeValue> openOutputFile(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> openOutputFile(
+    interpret::InterpreterState&,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() != 1) {
         throw InterpreterError("open-output-file requires exactly 1 argument");
     }
@@ -36,15 +44,18 @@ std::optional<SchemeValue> openOutputFile(Interpreter&, const std::vector<Scheme
     std::string filename = getStringArg(args[0], "open-output-file");
     auto file = std::make_shared<std::fstream>();
     file->open(filename, std::ios::out);
-    
+
     if (!file->is_open()) {
         throw InterpreterError("Could not open file: " + filename);
     }
-    
+
     return SchemeValue(Port(file, PortType::Output));
 }
 
-std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> openInputFile(
+    interpret::InterpreterState&,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() != 1) {
         throw InterpreterError("open-input-file requires exactly 1 argument");
     }
@@ -52,15 +63,18 @@ std::optional<SchemeValue> openInputFile(Interpreter&, const std::vector<SchemeV
     std::string filename = getStringArg(args[0], "open-input-file");
     auto file = std::make_shared<std::fstream>();
     file->open(filename, std::ios::in);
-    
+
     if (!file->is_open()) {
         throw InterpreterError("Could not open file: " + filename);
     }
-    
+
     return SchemeValue(Port(file, PortType::Input));
 }
 
-std::optional<SchemeValue> read(Interpreter& interp, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> read(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() > 1) {
         throw InterpreterError("read accepts at most 1 argument");
     }
@@ -95,16 +109,20 @@ std::optional<SchemeValue> read(Interpreter& interp, const std::vector<SchemeVal
         }
     }
 
-    auto tokens = interp.s->tokenize(content);
-    interp.p->load(tokens);
-    auto opt = interp.p->parse();
-    if (opt && !opt->empty()) {
-        return SchemeValue((*opt)[0]);
+    // Parse the content
+    auto tokens = scanner::tokenize(content);
+    auto expressions = parse::parse(std::move(tokens));
+
+    if (expressions && !expressions->empty()) {
+        return SchemeValue((*expressions)[0]);
     }
     return std::nullopt;
 }
 
-std::optional<SchemeValue> write(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> write(
+    interpret::InterpreterState&,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("write requires 1 or 2 arguments");
     }
@@ -112,18 +130,21 @@ std::optional<SchemeValue> write(Interpreter&, const std::vector<SchemeValue>& a
     auto val = args[0].ensureValue();
     auto* output = getOutputStream(args, 1);
     *output << val.toString();
-    
+
     return std::nullopt;
 }
 
-std::optional<SchemeValue> display(Interpreter& interp, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> display(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("display requires 1 or 2 arguments");
     }
 
     auto val = args[0].ensureValue();
     if (args.size() == 1) {
-        interp.outputStream << val.toString() << std::endl;
+        state.output << val.toString() << std::endl;
         return std::nullopt;
     }
 
@@ -133,22 +154,28 @@ std::optional<SchemeValue> display(Interpreter& interp, const std::vector<Scheme
     } else {
         *output << val.toString();
     }
-    
+
     return std::nullopt;
 }
 
-std::optional<SchemeValue> newline(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> newline(
+    interpret::InterpreterState&,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() > 1) {
         throw InterpreterError("newline accepts at most 1 argument");
     }
 
     auto* output = getOutputStream(args);
     *output << std::endl;
-    
+
     return std::nullopt;
 }
 
-std::optional<SchemeValue> closePort(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> closePort(
+    interpret::InterpreterState&,
+    const std::vector<SchemeValue>& args)
+{
     if (args.size() != 1) {
         throw InterpreterError("close-port requires exactly 1 argument");
     }
@@ -158,12 +185,12 @@ std::optional<SchemeValue> closePort(Interpreter&, const std::vector<SchemeValue
     if (!port) {
         throw InterpreterError("close-port argument must be a port");
     }
-    
+
     if (port->isOpen()) {
         port->close();
     }
-    
+
     return std::nullopt;
 }
 
-}
+} // namespace jaws_io

@@ -1,7 +1,8 @@
 #include "Value.h"
-#include "Interpreter.h"
 #include "Procedure.h"
 #include "Visit.h"
+#include "parse.h"
+#include "scan.h"
 #include <stdexcept>
 #include <variant>
 
@@ -16,12 +17,11 @@ SchemeValue ensureSchemeValue(const SchemeValue& val)
 {
     return val.ensureValue();
 }
-std::shared_ptr<Expression> valueToExpression(const SchemeValue& value, Interpreter& interp)
+std::shared_ptr<Expression> valueToExpression(const SchemeValue& value)
 {
     std::string valueStr = value.toString();
-    std::vector<Token> tokens = interp.s->tokenize(valueStr);
-    interp.p->load(tokens);
-    auto expressions = interp.p->parse();
+    std::vector<Token> tokens = scanner::tokenize(valueStr);
+    auto expressions = parse::parse(tokens);
     if (!expressions || expressions->empty()) {
         throw std::runtime_error("Failed to parse value: " + valueStr);
     }

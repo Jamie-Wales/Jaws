@@ -1,5 +1,5 @@
-#include "builtins/JawsHof.h"
 #include "Error.h"
+#include "builtins/JawsHof.h"
 
 namespace jaws_hof {
 
@@ -10,7 +10,7 @@ std::optional<SchemeValue> eval(
     if (args.size() != 1) {
         throw InterpreterError("eval expects one argument");
     }
-    
+
     SchemeValue arg = args[0];
     if (arg.isExpr()) {
         return interpret::interpret(state, arg.asExpr());
@@ -23,19 +23,19 @@ std::optional<SchemeValue> printHelp(
     const std::vector<SchemeValue>& args)
 {
     state.output << "Available commands:\n"
-              << "  exit       - Exit the Jaws REPL\n"
-              << "  help       - Display this help message\n"
-              << "\nBasic Jaws syntax:\n"
-              << "  Numbers    - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
-              << "  Strings    - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
-              << "  Lists      - Enclosed in parentheses (e.g., (+ 1 2))\n"
-              << "  Symbols    - Identifiers for variables and functions\n"
-              << "\nBuilt-in functions:\n"
-              << "  +          - Addition (e.g., (+ 1 2 3))\n"
-              << "  define     - Define variables (e.g., (define x 10))\n"
-              << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
-              << "\nEnter Scheme expressions to evaluate them\n";
-              
+                 << "  exit       - Exit the Jaws REPL\n"
+                 << "  help       - Display this help message\n"
+                 << "\nBasic Jaws syntax:\n"
+                 << "  Numbers    - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
+                 << "  Strings    - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
+                 << "  Lists      - Enclosed in parentheses (e.g., (+ 1 2))\n"
+                 << "  Symbols    - Identifiers for variables and functions\n"
+                 << "\nBuilt-in functions:\n"
+                 << "  +          - Addition (e.g., (+ 1 2 3))\n"
+                 << "  define     - Define variables (e.g., (define x 10))\n"
+                 << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
+                 << "\nEnter Scheme expressions to evaluate them\n";
+
     return std::nullopt;
 }
 
@@ -71,4 +71,4 @@ std::optional<SchemeValue> apply(
     return interpret::executeProcedure(state, args[0], procArgs);
 }
 
-} // namespace jaws_hof
+}

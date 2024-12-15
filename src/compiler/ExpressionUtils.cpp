@@ -128,6 +128,15 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },
+
+                          [&](const SetExpression& se) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("set!"));
+                              elements.push_back(makeAtom(se.identifier.lexeme));
+                              elements.push_back(exprToList(se.value));
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
                           [&](const LetExpression& l) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("let"));

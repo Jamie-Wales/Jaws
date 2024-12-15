@@ -1,10 +1,13 @@
 #include "builtins/JawsMath.h"
 #include "Error.h"
-#include "Interpreter.h"
+#include "interpret.h"
 
 namespace jaws_math {
 
-std::optional<SchemeValue> plus(Interpreter& interp, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> plus(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.empty()) {
         return SchemeValue(Number(0));
     }
@@ -13,16 +16,19 @@ std::optional<SchemeValue> plus(Interpreter& interp, const std::vector<SchemeVal
     for (size_t i = 1; i < args.size(); ++i) {
         SchemeValue curr = args[i].ensureValue();
         if (curr.isProc()) {
-            curr = *interp.executeProcedure(curr, args);
+            curr = *interpret::executeProcedure(state, curr, args);
         }
         result = curr + result;
     }
     return result;
 }
 
-std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> minus(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.empty()) {
-        throw InterpreterError("Cannot call procedure - on empty list", std::nullopt);
+        throw InterpreterError("Cannot call procedure - on empty list");
     }
 
     if (args.size() == 1) {
@@ -36,7 +42,10 @@ std::optional<SchemeValue> minus(Interpreter&, const std::vector<SchemeValue>& a
     return result;
 }
 
-std::optional<SchemeValue> mult(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> mult(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.empty()) {
         return SchemeValue(Number(1));
     }
@@ -48,9 +57,12 @@ std::optional<SchemeValue> mult(Interpreter&, const std::vector<SchemeValue>& ar
     return result;
 }
 
-std::optional<SchemeValue> div(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> div(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.empty()) {
-        throw InterpreterError("Cannot call procedure / on empty list", std::nullopt);
+        throw InterpreterError("Cannot call procedure / on empty list");
     }
 
     if (args.size() == 1) {
@@ -61,16 +73,19 @@ std::optional<SchemeValue> div(Interpreter&, const std::vector<SchemeValue>& arg
     for (size_t i = 1; i < args.size(); ++i) {
         auto curr = args[i].ensureValue();
         if (curr.asNumber().isZero()) {
-            throw InterpreterError("Division by zero", std::nullopt);
+            throw InterpreterError("Division by zero");
         }
         result = result / curr;
     }
     return result;
 }
 
-std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> less(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() < 2) {
-        throw InterpreterError("< requires at least two arguments", std::nullopt);
+        throw InterpreterError("< requires at least two arguments");
     }
 
     for (size_t i = 0; i < args.size() - 1; ++i) {
@@ -79,7 +94,7 @@ std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& ar
 
         auto comparison = curr <=> next;
         if (comparison == std::partial_ordering::unordered) {
-            throw InterpreterError("Cannot compare these values", std::nullopt);
+            throw InterpreterError("Cannot compare these values");
         }
         if (!(comparison < 0)) {
             return SchemeValue(false);
@@ -88,9 +103,12 @@ std::optional<SchemeValue> less(Interpreter&, const std::vector<SchemeValue>& ar
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> greater(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() < 2) {
-        throw InterpreterError("> requires at least two arguments", std::nullopt);
+        throw InterpreterError("> requires at least two arguments");
     }
 
     for (size_t i = 0; i < args.size() - 1; ++i) {
@@ -99,7 +117,7 @@ std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>&
 
         auto comparison = curr <=> next;
         if (comparison == std::partial_ordering::unordered) {
-            throw InterpreterError("Cannot compare these values", std::nullopt);
+            throw InterpreterError("Cannot compare these values");
         }
         if (!(comparison > 0)) {
             return SchemeValue(false);
@@ -108,7 +126,10 @@ std::optional<SchemeValue> greater(Interpreter&, const std::vector<SchemeValue>&
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> lessOrEqual(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() < 2) {
         throw InterpreterError("'<=' requires at least 2 arguments");
     }
@@ -132,7 +153,10 @@ std::optional<SchemeValue> lessOrEqual(Interpreter&, const std::vector<SchemeVal
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> greaterOrEqual(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() < 2) {
         throw InterpreterError("'>=' requires at least 2 arguments");
     }
@@ -156,9 +180,12 @@ std::optional<SchemeValue> greaterOrEqual(Interpreter&, const std::vector<Scheme
     return SchemeValue(true);
 }
 
-std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& args) {
+std::optional<SchemeValue> equal(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args) 
+{
     if (args.size() < 2) {
-        throw InterpreterError("= requires at least two arguments", std::nullopt);
+        throw InterpreterError("= requires at least two arguments");
     }
 
     auto first = args[0].ensureValue();
@@ -170,4 +197,4 @@ std::optional<SchemeValue> equal(Interpreter&, const std::vector<SchemeValue>& a
     return SchemeValue(true);
 }
 
-}
+} // namespace jaws_math

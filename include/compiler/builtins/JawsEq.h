@@ -1,19 +1,68 @@
 #pragma once
-#include <optional>
+#include "interpret.h"
+#include "Value.h"
+#include "Error.h"
 
-class Interpreter;
-class SchemeValue;
 namespace jaws_eq {
-std::optional<SchemeValue> isProcedure(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isPair(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isList(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isVector(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isSymbol(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isNumber(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isString(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isPort(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isNull(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isEq(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isEqv(Interpreter&, const std::vector<SchemeValue>& args);
-std::optional<SchemeValue> isBooleanProc(Interpreter&, const std::vector<SchemeValue>& args);
-}
+
+std::optional<SchemeValue> less(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> greater(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> equal(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isProcedure(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isPair(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isList(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isVector(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isSymbol(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isNumber(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isString(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isPort(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isNull(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isEq(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isEqv(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> isBooleanProc(
+    interpret::InterpreterState&, 
+    const std::vector<SchemeValue>& args);
+
+} // namespace jaws_eq
