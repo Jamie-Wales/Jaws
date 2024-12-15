@@ -16,6 +16,13 @@ public:
     void toString(std::stringstream& ss) const;
 };
 
+class SetExpression {
+public:
+    Token identifier;
+    std::shared_ptr<Expression> value;
+    SetExpression(const Token& token, std::shared_ptr<Expression>);
+    void toString(std::stringstream& ss) const;
+};
 /**
  * @brief Represents let expressions for local variable bindings
  */

@@ -1,7 +1,7 @@
 /**
  * @file Interpreter.h
  * Core interpreter for the Jaws Scheme implementation
- * 
+ *
  * Copyright (c) 2024. All rights reserved.
  * Licensed under the MIT license. See LICENSE file in the project root.
  */
@@ -20,7 +20,7 @@ class InterpreterError;
 
 /**
  * @brief Core interpreter class for evaluating Scheme expressions
- * 
+ *
  * Handles the evaluation of Scheme expressions, maintains the execution environment,
  * and manages variable bindings and procedure calls.
  */
@@ -30,10 +30,11 @@ private:
      * @brief Helper structure for procedure calls
      */
     struct ProcedureCall {
-        SchemeValue procedure;        ///< The procedure to be called
-        std::vector<SchemeValue> arguments;  ///< Evaluated arguments for the procedure
+        SchemeValue procedure; ///< The procedure to be called
+        std::vector<SchemeValue> arguments; ///< Evaluated arguments for the procedure
     };
 
+    std::optional<SchemeValue> interpretSetExpression(const SetExpression& s, const Expression& e);
     /**
      * @brief Evaluates a let expression
      * @param le The let expression to evaluate
@@ -118,11 +119,11 @@ public:
      */
     Interpreter(std::shared_ptr<Scanner> s, std::shared_ptr<Parser> p);
 
-    std::shared_ptr<Scanner> s;              ///< Scanner instance for tokenizing
-    std::shared_ptr<Parser> p;              ///< Parser instance for AST creation
-    std::shared_ptr<Environment> scope;      ///< Current execution environment
-    std::stringstream outputStream;         ///< Output stream for results
-    MacroProcessor macroProcessor;          ///< Handles macro expansion
+    std::shared_ptr<Scanner> s; ///< Scanner instance for tokenizing
+    std::shared_ptr<Parser> p; ///< Parser instance for AST creation
+    std::shared_ptr<Environment> scope; ///< Current execution environment
+    std::stringstream outputStream; ///< Output stream for results
+    MacroProcessor macroProcessor; ///< Handles macro expansion
 
     /**
      * @brief Initializes the interpreter
@@ -147,7 +148,7 @@ public:
 
     /**
      * @brief Interprets a single expression
-     * @param e Expression to interpret 
+     * @param e Expression to interpret
      * @return Result of the interpretation
      */
     std::optional<SchemeValue> interpret(const std::shared_ptr<Expression>& e);

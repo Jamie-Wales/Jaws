@@ -104,6 +104,8 @@ Public Types</h2></td></tr>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:aae04c51d732a3507030a44c69bb5ba33" id="r_aae04c51d732a3507030a44c69bb5ba33"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aae04c51d732a3507030a44c69bb5ba33">SchemeValue</a> (<a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;&amp;other) noexcept</td></tr>
 <tr class="separator:aae04c51d732a3507030a44c69bb5ba33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e02be69c7b9eadf2b9575e1006de80e" id="r_a3e02be69c7b9eadf2b9575e1006de80e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_scheme_value.html">SchemeValue</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e02be69c7b9eadf2b9575e1006de80e">ensureValue</a> () const</td></tr>
+<tr class="separator:a3e02be69c7b9eadf2b9575e1006de80e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4c5020116d95383521a0ac79e95a38f2" id="r_a4c5020116d95383521a0ac79e95a38f2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c5020116d95383521a0ac79e95a38f2">operator=</a> (<a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;&amp;other) noexcept</td></tr>
 <tr class="separator:a4c5020116d95383521a0ac79e95a38f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a14955139f7cab36eb328b08ae445c9d8" id="r_a14955139f7cab36eb328b08ae445c9d8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a14955139f7cab36eb328b08ae445c9d8">SchemeValue</a> (const <a class="el" href="class_scheme_value.html">SchemeValue</a> &amp;other)</td></tr>
@@ -126,6 +128,8 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ad7e9e65bcfa9d96ea386346533cadd64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae7fe4d1f95f7fafbbf9f88a923659a35" id="r_ae7fe4d1f95f7fafbbf9f88a923659a35"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7fe4d1f95f7fafbbf9f88a923659a35">isExpr</a> () const</td></tr>
 <tr class="separator:ae7fe4d1f95f7fafbbf9f88a923659a35"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a2adaa03cf41ac52c55b887d83c9280" id="r_a2a2adaa03cf41ac52c55b887d83c9280"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a2adaa03cf41ac52c55b887d83c9280">isVector</a> () const</td></tr>
+<tr class="separator:a2a2adaa03cf41ac52c55b887d83c9280"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad2f08a680d2b5ed19ae74d8b786cbda4" id="r_ad2f08a680d2b5ed19ae74d8b786cbda4"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="class_expression.html">Expression</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad2f08a680d2b5ed19ae74d8b786cbda4">asExpr</a> () const</td></tr>
 <tr class="separator:ad2f08a680d2b5ed19ae74d8b786cbda4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a693c8fe5f58bc3dc09ab9c20754664a0" id="r_a693c8fe5f58bc3dc09ab9c20754664a0"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="class_procedure.html">Procedure</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a693c8fe5f58bc3dc09ab9c20754664a0">asProc</a> () const</td></tr>
@@ -195,7 +199,7 @@ Public Attributes</h2></td></tr>
 <div class="line">        std::shared_ptr&lt;Expression&gt;&gt;</div>
 <div class="ttc" id="aclass_number_html"><div class="ttname"><a href="class_number.html">Number</a></div><div class="ttdef"><b>Definition</b> Number.h:7</div></div>
 <div class="ttc" id="aclass_port_html"><div class="ttname"><a href="class_port.html">Port</a></div><div class="ttdef"><b>Definition</b> Port.h:13</div></div>
-<div class="ttc" id="astruct_symbol_html"><div class="ttname"><a href="struct_symbol.html">Symbol</a></div><div class="ttdef"><b>Definition</b> Value.h:19</div></div>
+<div class="ttc" id="astruct_symbol_html"><div class="ttname"><a href="struct_symbol.html">Symbol</a></div><div class="ttdef"><b>Definition</b> ForwardDecs.h:8</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -422,6 +426,31 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
+<a id="a3e02be69c7b9eadf2b9575e1006de80e" name="a3e02be69c7b9eadf2b9575e1006de80e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e02be69c7b9eadf2b9575e1006de80e">&#9670;&#160;</a></span>ensureValue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="class_scheme_value.html">SchemeValue</a> SchemeValue::ensureValue </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a6a0962bcb5a07c7ba4674a4c4ff33108" name="a6a0962bcb5a07c7ba4674a4c4ff33108"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a6a0962bcb5a07c7ba4674a4c4ff33108">&#9670;&#160;</a></span>getValue()</h2>
 
@@ -591,6 +620,23 @@ template&lt;typename T &gt; </div>
 <span class="mlabels"><span class="mlabel">inline</span></span>  </td>
   </tr>
 </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2a2adaa03cf41ac52c55b887d83c9280" name="a2a2adaa03cf41ac52c55b887d83c9280"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a2adaa03cf41ac52c55b887d83c9280">&#9670;&#160;</a></span>isVector()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool SchemeValue::isVector </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
 </div><div class="memdoc">
 
 </div>

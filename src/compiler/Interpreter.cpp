@@ -319,6 +319,15 @@ std::optional<SchemeValue> Interpreter::interpretImport(const ImportExpression& 
     }
     return std::nullopt;
 }
+std::optional<SchemeValue> Interpreter::interpretSetExpression(const SetExpression& s, const Expression& e)
+{
+    if (auto val = interpret(s.value)) {
+        this->scope->set(s.identifier.lexeme, *val);
+    }
+
+    throw std::runtime_error("Cannot set null value");
+}
+
 std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expression>& e)
 {
     return std::visit(overloaded {
@@ -326,6 +335,7 @@ std::optional<SchemeValue> Interpreter::interpret(const std::shared_ptr<Expressi
                           [this, &e](const ImportExpression& a) -> std::optional<SchemeValue> { return interpretImport(a, *e); },
                           [this, &e](const AtomExpression& a) -> std::optional<SchemeValue> { return interpretAtom(a, *e); },
                           [this, &e](const ListExpression& l) -> std::optional<SchemeValue> { return interpretList(l, *e); },
+                          [this, &e](const SetExpression& s) -> std::optional<SchemeValue> { return interpretSetExpression(s, *e); },
                           [this, &e](const sExpression& se) -> std::optional<SchemeValue> { return interpretSExpression(se, *e); },
                           [this, &e](const DefineExpression& de) -> std::optional<SchemeValue> { return defineExpression(de, *e); },
                           [this, &e](const VectorExpression& v) -> std::optional<SchemeValue> { return interpretVector(v, *e); },

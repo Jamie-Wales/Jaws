@@ -325,21 +325,20 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
         literals.push_back(consume(Tokentype::IDENTIFIER, "Expect literal identifier"));
     }
     consume(Tokentype::RIGHT_PAREN, "Expect ) after literals list");
-
     std::vector<std::shared_ptr<Expression>> patterns;
     std::vector<std::shared_ptr<Expression>> templates;
-
     while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        consume(Tokentype::LEFT_PAREN, "Expect ( before pattern-template pair");
-        auto pattern = list(); // First element is the pattern
-        auto template_expr = list(); // Second element is the template
-        patterns.push_back(pattern);
-        templates.push_back(template_expr);
-        consume(Tokentype::RIGHT_PAREN, "Expect ) after pattern-template pair");
+        consume(Tokentype::LEFT_PAREN, "Expect ( before pattern");
+        std::shared_ptr<Expression> list = Parser::list();
+        auto aslist = std::get<ListExpression>(list->as);
+        for (int i = 0; i < aslist.elements.size() - 1; i++) {
+            patterns.push_back(aslist.elements[i]);
+            templates.push_back(aslist.elements[i + 1]);
+        }
+
+        consume(Tokentype::RIGHT_PAREN, "Expect ) after template");
     }
-
     consume(Tokentype::RIGHT_PAREN, "Expect ) after syntax-rules");
-
     return std::make_shared<Expression>(Expression {
         SyntaxRulesExpression {
             std::move(literals),
@@ -347,44 +346,31 @@ std::shared_ptr<Expression> Parser::syntaxRulesExpression()
             std::move(templates) },
         previousToken().line });
 }
-
-std::shared_ptr<Expression> Parser::list()
-{
-    std::vector<std::shared_ptr<Expression>> elements;
-    bool isVariadic = false;
-
-    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
-        if (match(Tokentype::LEFT_PAREN)) {
-            elements.push_back(list());
-            consume(Tokentype::RIGHT_PAREN, "Expect ')' after nested list");
-        } else if (match(Tokentype::ELLIPSIS)) {
-            if (!elements.empty()) {
-                if (auto listExpr = std::get_if<ListExpression>(&elements.back()->as)) {
-                    // Create a new list expression with variadic flag set
-                    elements.back() = std::make_shared<Expression>(
-                        Expression {
-                            ListExpression { listExpr->elements, true },
-                            previousToken().line });
-                }
-            }
-            isVariadic = true;
-        } else {
-            Token token = advance();
-            elements.push_back(std::make_shared<Expression>(
-                Expression { AtomExpression { token }, token.line }));
-        }
-    }
-
-    return std::make_shared<Expression>(
-        ListExpression { std::move(elements), isVariadic },
-        previousToken().line);
-}
-
 std::shared_ptr<Expression> Parser::defineSyntaxExpression()
 {
     Token name = consume(Tokentype::IDENTIFIER, "Expect macro name");
     auto rule = expression();
     consume(Tokentype::RIGHT_PAREN, "Expect ) after define-syntax");
+    return std::make_shared<Expression>(Expression {
+        DefineSyntaxExpression { name, rule },
+        name.line });
+}
+std::shared_ptr<Expression> Parser::list()
+{
+    std::vector<std::shared_ptr<Expression>> elements;
+    bool isVariadic = false;
+    while (!check(Tokentype::RIGHT_PAREN) && !isAtEnd()) {
+        if (match(Tokentype::LEFT_PAREN)) {
+            elements.push_back(list());
+            consume(Tokentype::RIGHT_PAREN, "Expect ')' after nested list");
+        } else if (match(Tokentype::ELLIPSIS)) {
+            isVariadic = true; // Mark the current list as variadic
+        } else {
+            Token token = advance();
+            elements.push_back(std::make_shared<Expression>(Expression { AtomExpression { token }, token.line }));
+        }
+    }
     return std::make_shared<Expression>(
-        Expression { DefineSyntaxExpression { name, rule }, name.line });
+        ListExpression { std::move(elements), isVariadic },
+        previousToken().line);
 }

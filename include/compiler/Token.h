@@ -4,6 +4,7 @@
 enum class Tokentype {
     ELLIPSIS,
     INTEGER,
+    SET,
     FLOAT,
     STRING,
     SYMBOL,

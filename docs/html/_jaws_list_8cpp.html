@@ -90,10 +90,11 @@ $(function(){initNavTree('_jaws_list_8cpp.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">JawsList.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &quot;<a class="el" href="_error_8h_source.html">Error.h</a>&quot;</code><br />
+<div class="textblock"><code>#include &quot;<a class="el" href="_jaws_list_8h_source.html">builtins/JawsList.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="_error_8h_source.html">Error.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="_interpreter_8h_source.html">Interpreter.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="_number_8h_source.html">Number.h</a>&quot;</code><br />
-<code>#include &lt;optional&gt;</code><br />
+<code>#include &quot;<a class="el" href="_value_8h_source.html">Value.h</a>&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
 Namespaces</h2></td></tr>
@@ -110,8 +111,6 @@ Functions</h2></td></tr>
 <tr class="separator:adb20b108d289fbf48c4aec6239d7ae8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af92dae2688bd7d556e3d24ab6440ffd1" id="r_af92dae2688bd7d556e3d24ab6440ffd1"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejaws__list.html#af92dae2688bd7d556e3d24ab6440ffd1">jaws_list::cadrProcedure</a> (<a class="el" href="class_interpreter.html">Interpreter</a> &amp;, const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args)</td></tr>
 <tr class="separator:af92dae2688bd7d556e3d24ab6440ffd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afced244ae79c7dbaeb0f7ba243a1e5f7" id="r_afced244ae79c7dbaeb0f7ba243a1e5f7"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejaws__list.html#afced244ae79c7dbaeb0f7ba243a1e5f7">jaws_list::openInputFile</a> (<a class="el" href="class_interpreter.html">Interpreter</a> &amp;, const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args)</td></tr>
-<tr class="separator:afced244ae79c7dbaeb0f7ba243a1e5f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a33b0916df3d5d73ed59daa1bf1a28f83" id="r_a33b0916df3d5d73ed59daa1bf1a28f83"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejaws__list.html#a33b0916df3d5d73ed59daa1bf1a28f83">jaws_list::map</a> (<a class="el" href="class_interpreter.html">Interpreter</a> &amp;, const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args)</td></tr>
 <tr class="separator:a33b0916df3d5d73ed59daa1bf1a28f83"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0fb1bc1672388347235831ce8b49aa2b" id="r_a0fb1bc1672388347235831ce8b49aa2b"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejaws__list.html#a0fb1bc1672388347235831ce8b49aa2b">jaws_list::cons</a> (<a class="el" href="class_interpreter.html">Interpreter</a> &amp;, const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args)</td></tr>
@@ -126,6 +125,8 @@ Functions</h2></td></tr>
 <tr class="separator:abf1d99006ab2c665d18c7992e5d2e732"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae1ecb576186efe6c043eb66f99790434" id="r_ae1ecb576186efe6c043eb66f99790434"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejaws__list.html#ae1ecb576186efe6c043eb66f99790434">jaws_list::listTail</a> (<a class="el" href="class_interpreter.html">Interpreter</a> &amp;, const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args)</td></tr>
 <tr class="separator:ae1ecb576186efe6c043eb66f99790434"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfef1ed8db805fb7874ad07065daab5b" id="r_adfef1ed8db805fb7874ad07065daab5b"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacejaws__list.html#adfef1ed8db805fb7874ad07065daab5b">jaws_list::listSet</a> (<a class="el" href="class_interpreter.html">Interpreter</a> &amp;, const std::vector&lt; <a class="el" href="class_scheme_value.html">SchemeValue</a> &gt; &amp;args)</td></tr>
+<tr class="separator:adfef1ed8db805fb7874ad07065daab5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 </div><!-- doc-content -->

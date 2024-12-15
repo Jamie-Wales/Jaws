@@ -44,6 +44,6 @@ var searchData=
   ['istailcall_41',['isTailCall',['../class_procedure.html#aa9b7ccf51ab4caa06bb201ec34d67f8f',1,'Procedure::isTailCall()'],['../class_tail_call.html#a1572232e0f165b1a59d2a734fa31e08f',1,'TailCall::isTailCall()']]],
   ['istrue_42',['isTrue',['../class_scheme_value.html#ac32c9b77df27903c9ace62d2bd4d1feb',1,'SchemeValue']]],
   ['isvalue_43',['isValue',['../class_scheme_value.html#a420bf262b6dfaa852d404d0bdcd8bfc9',1,'SchemeValue']]],
-  ['isvector_44',['isVector',['../namespacejaws__eq.html#a995244a4c5caafdfc73ca13c843bdfda',1,'jaws_eq']]],
+  ['isvector_44',['isVector',['../class_scheme_value.html#a2a2adaa03cf41ac52c55b887d83c9280',1,'SchemeValue::isVector()'],['../namespacejaws__eq.html#a995244a4c5caafdfc73ca13c843bdfda',1,'jaws_eq::isVector()']]],
   ['iszero_45',['isZero',['../class_number.html#a81a3c3689b85c8fe4ad70a275c8ba1b6',1,'Number']]]
 ];

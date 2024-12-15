@@ -56,6 +56,6 @@ var searchData=
   ['istrue_53',['isTrue',['../class_scheme_value.html#ac32c9b77df27903c9ace62d2bd4d1feb',1,'SchemeValue']]],
   ['isvalue_54',['isValue',['../class_scheme_value.html#a420bf262b6dfaa852d404d0bdcd8bfc9',1,'SchemeValue']]],
   ['isvariadic_55',['isVariadic',['../class_list_expression.html#a50ff370079311c806d3a3670526790a5',1,'ListExpression']]],
-  ['isvector_56',['isVector',['../namespacejaws__eq.html#a995244a4c5caafdfc73ca13c843bdfda',1,'jaws_eq']]],
+  ['isvector_56',['isVector',['../class_scheme_value.html#a2a2adaa03cf41ac52c55b887d83c9280',1,'SchemeValue::isVector()'],['../namespacejaws__eq.html#a995244a4c5caafdfc73ca13c843bdfda',1,'jaws_eq::isVector()']]],
   ['iszero_57',['isZero',['../class_number.html#a81a3c3689b85c8fe4ad70a275c8ba1b6',1,'Number']]]
 ];

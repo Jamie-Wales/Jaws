@@ -19,6 +19,12 @@ sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems)
     : elements(std::move(elems))
 {
 }
+
+SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression> value)
+    : identifier(std::move(identifier))
+    , value(std::move(value))
+{
+}
 DefineSyntaxExpression::DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule)
     : name(std::move(name))
     , rule(std::move(rule))
@@ -291,6 +297,14 @@ std::shared_ptr<Expression> Expression::clone() const
                                       d.rule->clone() },
                                   line);
                           },
+
+                          [&](const SetExpression& d) -> std::shared_ptr<Expression> {
+                              return std::make_shared<Expression>(
+                                  SetExpression {
+                                      d.identifier,
+                                      d.value->clone() },
+                                  line);
+                          },
                           [&](const ImportExpression& i) -> std::shared_ptr<Expression> {
                               return std::make_shared<Expression>(ImportExpression { i.import }, line);
                           },
@@ -387,6 +401,12 @@ void Expression::print(int indent) const
                    [&](const DefineSyntaxExpression& d) {
                        std::cout << indentation << "(define-syntax " << d.name.lexeme << std::endl;
                        d.rule->print(indent + 2); // Changed from rules to rule
+                       std::cout << indentation << ")" << std::endl;
+                   },
+                   [&](const SetExpression& d) {
+                       std::cout << indentation << "(set!"
+                                 << d.identifier.lexeme << std::endl;
+                       d.value->print(indent + 2);
                        std::cout << indentation << ")" << std::endl;
                    },
                    [&](const ImportExpression& i) {

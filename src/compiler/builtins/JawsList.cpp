@@ -178,7 +178,7 @@ std::optional<SchemeValue> listRef(Interpreter&, const std::vector<SchemeValue>&
     int idx = index.asNumber().toInt();
     const auto& lst = list.asList();
 
-    if (idx < 0 || static_cast<size_t>(idx) >= lst.size()) {
+    if (idx < 0 || static_cast<size_t>(idx) > lst.size() - 1) {
         throw InterpreterError("list-ref: index out of bounds");
     }
 
@@ -204,7 +204,7 @@ std::optional<SchemeValue> listTail(Interpreter&, const std::vector<SchemeValue>
     int idx = index.asNumber().toInt();
     const auto& lst = list.asList();
 
-    if (idx < 0 || static_cast<size_t>(idx) > lst.size()) {
+    if (idx < 0 || static_cast<size_t>(idx) > lst.size() - 1) {
         throw InterpreterError("list-tail: index out of bounds");
     }
 
@@ -232,7 +232,7 @@ std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>&
     int idx = index.asNumber().toInt();
     auto& lst = list.asList();
 
-    if (idx < 0 || static_cast<size_t>(idx) >= lst.size()) {
+    if (idx < 0 || static_cast<size_t>(idx) > lst.size() - 1) {
         throw InterpreterError("list-set!: index out of bounds");
     }
 
@@ -240,7 +240,65 @@ std::optional<SchemeValue> listSet(Interpreter&, const std::vector<SchemeValue>&
     std::advance(it, idx);
     *it = ensureSchemeValue(args[2]);
 
-    return std::nullopt; // list-set! returns void in Scheme
+    return std::nullopt;
+}
+
+SchemeValue isPair(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+    checkArgCount(args, 1, "pair?");
+    if (!args[0].isList()) {
+        return SchemeValue(false);
+    }
+    const auto& lst = args[0].asList();
+    return SchemeValue(!lst.empty());
+}
+
+SchemeValue member(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+    checkArgCount(args, 2, "member");
+    const auto& item = args[0];
+    if (!args[1].isList()) {
+        throw InterpreterError("Second argument to member must be a list");
+    }
+
+    const auto& lst = args[1].asList();
+    auto it = lst.begin();
+    while (it != lst.end()) {
+        if (*it == item) {
+            // Create new list from this point to end
+            std::list<SchemeValue> result(it, lst.end());
+            return SchemeValue(result);
+        }
+        ++it;
+    }
+    return SchemeValue(false);
+}
+
+SchemeValue assq(Interpreter& interp, const std::vector<SchemeValue>& args)
+{
+    checkArgCount(args, 2, "assq");
+    const auto& key = args[0];
+    if (!args[1].isList()) {
+        throw InterpreterError("Second argument to assq must be a list");
+    }
+
+    const auto& lst = args[1].asList();
+    for (const auto& pair : lst) {
+        if (!pair.isList()) {
+            continue; // Skip non-pairs
+        }
+        const auto& pairList = pair.asList();
+        if (pairList.empty()) {
+            continue;
+        }
+        if (key.isSymbol() && pairList.front().isSymbol() && key.asSymbol() == pairList.front().asSymbol()) {
+            return SchemeValue(pair);
+        }
+        if (key == pairList.front()) {
+            return SchemeValue(pair);
+        }
+    }
+    return SchemeValue(false);
 }
 
 }
