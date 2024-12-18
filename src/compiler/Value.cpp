@@ -129,7 +129,66 @@ SchemeValue expressionToValue(const Expression& expr)
                               }
                               return SchemeValue(std::move(values));
                           },
+                          [](const LetExpression& l) -> SchemeValue {
+                              std::list<SchemeValue> values;
+                              values.push_back(SchemeValue(Symbol { "let" }));
 
+                              // Build bindings list
+                              std::list<SchemeValue> bindings;
+                              for (const auto& [param, val] : l.arguments) {
+                                  std::list<SchemeValue> binding;
+                                  binding.push_back(SchemeValue(Symbol { param.lexeme }));
+                                  binding.push_back(expressionToValue(*val));
+                                  bindings.push_back(SchemeValue(std::move(binding)));
+                              }
+                              values.push_back(SchemeValue(std::move(bindings)));
+
+                              // Add body expressions
+                              for (const auto& expr : l.body) {
+                                  values.push_back(expressionToValue(*expr));
+                              }
+
+                              return SchemeValue(std::move(values));
+                          },
+
+                          [](const ImportExpression& i) -> SchemeValue {
+                              std::list<SchemeValue> values;
+                              values.push_back(SchemeValue(Symbol { "import" }));
+                              // Add import symbols
+                              for (const auto& tok : i.import) {
+                                  values.push_back(SchemeValue(Symbol { tok.lexeme }));
+                              }
+                              return SchemeValue(std::move(values));
+                          },
+
+                          [](const SyntaxRulesExpression& s) -> SchemeValue {
+                              std::list<SchemeValue> values;
+                              values.push_back(SchemeValue(Symbol { "syntax-rules" }));
+
+                              // Add literals list
+                              std::list<SchemeValue> literals;
+                              for (const auto& lit : s.literals) {
+                                  literals.push_back(SchemeValue(Symbol { lit.lexeme }));
+                              }
+                              values.push_back(SchemeValue(std::move(literals)));
+
+                              // Add pattern/template pairs
+                              for (const auto& pat : s.pattern) {
+                                  values.push_back(expressionToValue(*pat));
+                              }
+                              for (const auto& templ : s.template_expr) {
+                                  values.push_back(expressionToValue(*templ));
+                              }
+
+                              return SchemeValue(std::move(values));
+                          },
+
+                          [](const SetExpression& s) {
+                              std::list<SchemeValue> values;
+                              values.push_back(SchemeValue { Symbol { s.identifier.lexeme } });
+                              values.push_back(expressionToValue(*s.value));
+                              return SchemeValue(std::move(values));
+                          },
                           [](const DefineExpression& d) -> SchemeValue {
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "define" }));

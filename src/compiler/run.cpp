@@ -32,19 +32,8 @@ void evaluate(interpret::InterpreterState& state, const std::string& input)
 
     tokens = scanner::tokenize(input);
     expressions = parse::parse(std::move(tokens));
-    for (auto expr : *expressions) {
-        auto exprValue = expressionToValue(*expr);
-
-        auto expandResult = state.env->get("expand-expression");
-        if (!expandResult) {
-            throw InterpreterError("Could not find expand-expression");
-        }
-
-        auto expanded = (*expandResult->asProc())(state, { exprValue });
-
-        auto processedExpr = valueToExpression(*expanded);
-        auto result = interpret::interpret(state, processedExpr);
-    }
+    for (auto& expr : *expressions)
+        interpret::interpret(state, expr);
 }
 
 void runFile(const std::string& path)
@@ -67,8 +56,6 @@ void runPrompt()
     printJawsLogo();
     std::cout << "Welcome to the Jaws REPL!\n";
     std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
-
-    // Create a single interpreter state that persists throughout the REPL session
     auto state = interpret::createInterpreter();
     std::string input;
 
