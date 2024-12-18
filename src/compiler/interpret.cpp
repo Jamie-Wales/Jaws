@@ -272,7 +272,7 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
             return interpret(state, tail.expression);
         }
         auto tailCall = std::make_shared<TailCall>(call->procedure.asProc(), call->arguments);
-        return SchemeValue(tailCall);
+        return executeProcedure(state, SchemeValue(tailCall), tailCall->args);
     }
     return interpret(state, tail.expression);
 }

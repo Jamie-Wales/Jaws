@@ -1,30 +1,40 @@
 #pragma once
 #include "Value.h"
-#include <iostream>
-#include <stdexcept>
+#include <list>
+#include <memory>
 #include <unordered_map>
+
 class Environment {
 public:
     struct Frame {
         std::unordered_map<std::string, SchemeValue> bound;
     };
-    Environment(std::shared_ptr<Environment> enclosing = nullptr)
+
+    Environment()
         : frames({ std::make_shared<Frame>() })
-        , enclosing(enclosing)
+        , enclosing(nullptr)
+    {
+        pushFrame();
+    }
+
+    Environment(const Environment& other)
+        : frames(other.frames)
+        , enclosing(other.enclosing)
     {
     }
-    void replaceFrame()
+
+    Environment(std::shared_ptr<Frame> capturedFrame, std::shared_ptr<Environment> parent)
+        : frames({ capturedFrame })
+        , enclosing(parent)
     {
-        if (frames.size() > 1) {
-            frames.back().reset(new Frame());
-        } else {
-            throw std::runtime_error("Cannot replace the global frame");
-        }
     }
+
+    void printCurrentFrame() const;
+    size_t getFrameCount() const { return frames.size(); }
+    std::shared_ptr<Frame> getCurrentFrame() const { return frames.front(); }
     void define(const std::string& name, const SchemeValue& value);
     std::optional<SchemeValue> get(const std::string& name) const;
     void set(const std::string& name, const SchemeValue& value);
-
     void pushFrame();
     void popFrame();
 
