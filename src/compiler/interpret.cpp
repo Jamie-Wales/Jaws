@@ -1,4 +1,5 @@
 #include "interpret.h"
+#include "Expression.h"
 #include "ExpressionUtils.h"
 #include "Procedure.h"
 #include "Value.h"
@@ -95,17 +96,36 @@ std::optional<SchemeValue> interpret(
 {
     std::optional<SchemeValue> result = std::nullopt;
     for (const auto& expr : exprs) {
-        if (std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
-            interpret(state, expr);
-        }
-    }
-    for (const auto& expr : exprs) {
-        if (!std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
-            result = interpret(state, expr);
-        }
+        result = interpret(state, expr);
     }
     return result;
 }
+
+std::optional<SchemeValue> interpretBegin(InterpreterState& state, const BeginExpression& begin)
+{
+    std::optional<SchemeValue> result = std::nullopt;
+    for (const auto& expr : begin.body) {
+        result = interpret(state, expr);
+    }
+    return result;
+}
+std::optional<SchemeValue> interpretCond(InterpreterState& state, const CondExpression& cond)
+{
+    for (const auto [first, second] : cond.conditions) {
+        if (const auto item = interpret(state, first)) {
+            if (item->isTrue()) {
+                return interpret(state, second);
+            }
+        }
+    }
+
+    if (cond.elseCond) {
+        return interpret(state, *cond.elseCond);
+    }
+
+    return std::nullopt;
+}
+
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr)
@@ -113,6 +133,8 @@ std::optional<SchemeValue> interpret(
     return std::visit(overloaded {
                           [&](const AtomExpression& e) { return interpretAtom(state, e); },
                           [&](const ListExpression& e) { return interpretList(state, e); },
+                          [&](const BeginExpression& e) { return interpretBegin(state, e); },
+                          [&](const CondExpression& e) { return interpretCond(state, e); },
                           [&](const sExpression& e) { return interpretSExpression(state, e); },
                           [&](const DefineExpression& e) { return interpretDefine(state, e); },
                           [&](const DefineProcedure& e) { return interpretDefineProcedure(state, e); },

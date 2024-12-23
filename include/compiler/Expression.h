@@ -1,5 +1,6 @@
 #pragma once
 #include "Token.h"
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
@@ -35,16 +36,36 @@ public:
     LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body);
 };
 
+class BeginExpression {
+public:
+    std::vector<std::shared_ptr<Expression>> body;
+    BeginExpression(std::vector<std::shared_ptr<Expression>> body);
+};
+
+class CondExpression {
+public:
+    std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions;
+    std::optional<std::shared_ptr<Expression>> elseCond;
+
+    CondExpression(std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions, std::optional<std::shared_ptr<Expression>> expr);
+};
+
+// NEW: Represents a single syntax-rule clause (pattern + template)
+class SyntaxRule {
+public:
+    std::shared_ptr<Expression> pattern;
+    std::shared_ptr<Expression> template_expr;
+    SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expression> template_expr);
+};
+
 /**
  * @brief Represents syntax-rules expressions for macro pattern matching
  */
 class SyntaxRulesExpression {
 public:
     std::vector<Token> literals;
-    std::vector<std::shared_ptr<Expression>> pattern;
-    std::vector<std::shared_ptr<Expression>> template_expr;
-    SyntaxRulesExpression(std::vector<Token> literals, std::vector<std::shared_ptr<Expression>> pattern,
-        std::vector<std::shared_ptr<Expression>> template_expr);
+    std::vector<SyntaxRule> rules; // Changed to store SyntaxRule objects
+    SyntaxRulesExpression(std::vector<Token> literals, std::vector<SyntaxRule> rules);
 };
 
 /**
@@ -53,7 +74,7 @@ public:
 class DefineSyntaxExpression {
 public:
     Token name;
-    std::shared_ptr<Expression> rule;
+    std::shared_ptr<Expression> rule; // Now typically a SyntaxRulesExpression
     DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule);
 };
 
@@ -178,8 +199,10 @@ public:
         SetExpression,
         TailExpression,
         ImportExpression,
-        SyntaxRulesExpression,
-        DefineSyntaxExpression,
+        SyntaxRulesExpression, // Added
+        DefineSyntaxExpression, // Added
+        BeginExpression,
+        CondExpression,
         LetExpression>;
 
     ExpressionVariant as;

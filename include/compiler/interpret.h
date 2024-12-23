@@ -29,12 +29,18 @@ std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr);
 
+std::optional<SchemeValue> interpret(
+    InterpreterState& state,
+    const std::vector<std::shared_ptr<Expression>>& expr);
+
 struct ProcedureCall {
     SchemeValue procedure;
     std::vector<SchemeValue> arguments;
 };
 
 std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpression& atom);
+std::optional<SchemeValue> interpretBegin(InterpreterState& state, const BeginExpression& begin);
+std::optional<SchemeValue> interpretCond(InterpreterState& state, const CondExpression& cond);
 std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpression& list);
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr);
 std::optional<SchemeValue> interpretDefine(InterpreterState& state, const DefineExpression& def);

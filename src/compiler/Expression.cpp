@@ -20,6 +20,18 @@ sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems)
 {
 }
 
+BeginExpression::BeginExpression(std::vector<std::shared_ptr<Expression>> body)
+    : body(std::move(body))
+{
+}
+
+CondExpression::CondExpression(
+    std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions,
+    std::optional<std::shared_ptr<Expression>> elseCond)
+    : conditions(std::move(conditions))
+    , elseCond(std::move(elseCond))
+{
+}
 SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression> value)
     : identifier(std::move(identifier))
     , value(std::move(value))
@@ -120,6 +132,25 @@ void Expression::toString(std::stringstream& ss) const
                    [&](const SetExpression& s) {
                        ss << "(set! " << std::endl;
                        ss << s.identifier.lexeme << " " << s.value->toString() << ")" << std::endl;
+                   },
+                   [&](const CondExpression& c) {
+                       ss << "(cond " << std::endl;
+                       for (const auto& [first, second] : c.conditions) {
+                           ss << "(" << first->toString() << ")" << "(" << second->toString() << ")";
+                       }
+                       if (c.elseCond) {
+                           ss << "(else " << (*c.elseCond)->toString() << ")";
+                       }
+
+                       ss << ")" << std::endl;
+                   },
+
+                   [&](const BeginExpression& b) {
+                       ss << "(begin " << std::endl;
+                       for (const auto& ele : b.body) {
+                           ss << ele->toString() << std::endl;
+                       }
+                       ss << ")";
                    },
                    [&](const LetExpression& l) {
                        ss << "(let (";
@@ -277,6 +308,29 @@ std::shared_ptr<Expression> Expression::clone() const
                                       p.name, output, p.body },
                                   line });
                           },
+                          [&](const CondExpression& c) -> std::shared_ptr<Expression> {
+                              std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> body = {};
+                              for (const auto& [first, second] : c.conditions) {
+                                  body.push_back({ first->clone(), second->clone() });
+                              }
+                              return std::make_shared<Expression>(
+                                  CondExpression {
+                                      std::move(body),
+                                      c.elseCond },
+                                  line);
+                          },
+
+                          [&](const BeginExpression& b) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> body = {};
+                              for (const auto& first : b.body) {
+                                  body.push_back(first->clone());
+                              }
+                              return std::make_shared<Expression>(
+                                  BeginExpression {
+                                      std::move(body),
+                                  },
+                                  line);
+                          },
                           [&](const SyntaxRulesExpression& s) -> std::shared_ptr<Expression> {
                               std::vector<Token> clonedLiterals = s.literals; // Tokens can be copied directly
                               std::vector<std::shared_ptr<Expression>> clonedPattern;
@@ -386,105 +440,5 @@ std::shared_ptr<Expression> Expression::clone() const
 void Expression::print(int indent) const
 {
     std::string indentation(indent * 2, ' ');
-    std::visit(overloaded {
-
-                   [&](const LetExpression& l) {
-                       std::cout << indentation << "(" << std::endl;
-                       std::cout << "let" << std::endl;
-                       std::cout << indentation << "  (";
-                       for (const auto& [first, second] : l.arguments) {
-                           std::cout << first.lexeme << " ";
-                           second->print(indent);
-                       }
-                       for (const auto& ref : l.body) {
-                           ref->print(indent * 2);
-                       }
-                       std::cout << ")" << std::endl;
-                   },
-                   [&](const SyntaxRulesExpression& s) {
-                       std::cout << this->toString() << std::endl;
-                   },
-                   [&](const DefineSyntaxExpression& d) {
-                       std::cout << indentation << "(define-syntax " << d.name.lexeme << std::endl;
-                       d.rule->print(indent + 2); // Changed from rules to rule
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const SetExpression& d) {
-                       std::cout << indentation << "(set!"
-                                 << d.identifier.lexeme << std::endl;
-                       d.value->print(indent + 2);
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const ImportExpression& i) {
-                       std::cout << "(import ";
-                       for (auto& tok : i.import)
-                           std::cout << tok.lexeme;
-                       std::cout << std::endl;
-                   },
-                   [&](const TailExpression& e) {
-                       std::cout << indentation;
-                       e.expression->print();
-                       std::cout << std::endl;
-                   },
-                   [&](const AtomExpression& e) {
-                       std::cout << indentation << e.value.lexeme << std::endl;
-                   },
-                   [&](const ListExpression& e) {
-                       std::cout << indentation << "(" << std::endl;
-                       for (const auto& elem : e.elements) {
-                           elem->print(indent + 1);
-                       }
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const IfExpression& i) {
-                       std::cout << indentation << "(if" << std::endl;
-                       i.condition->print(indent + 1);
-                       std::cout << indentation << "then" << std::endl;
-                       i.then->print(indent + 1);
-                       if (i.el) {
-                           std::cout << indentation << "else" << std::endl;
-                           (*i.el)->print(indent + 1);
-                       }
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const VectorExpression& e) {
-                       std::cout << indentation << "#(" << std::endl;
-                       for (const auto& elem : e.elements) {
-                           elem->print(indent + 1);
-                       }
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const sExpression& s) {
-                       std::cout << indentation << "(" << std::endl;
-                       for (const auto& elem : s.elements) {
-                           elem->print(indent + 1);
-                       }
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const QuoteExpression& e) {
-                       std::cout << indentation << "(quote " << std::endl;
-                       e.expression->print(indent + 1);
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const DefineExpression& d) {
-                       std::cout << indentation << std::format("(define {}", d.name.lexeme) << std::endl;
-                       d.value->print(indent + 1);
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const DefineProcedure& d) {
-                       std::cout << indentation << std::format("(define {}", d.name.lexeme) << std::endl;
-                       for (auto& ele : d.body) {
-                           ele->print();
-                       }
-                       std::cout << indentation << ")" << std::endl;
-                   },
-                   [&](const LambdaExpression& l) {
-                       std::cout << indentation << "(lambda " << std::endl;
-                       for (auto& ele : l.body) {
-                           ele->print();
-                       }
-                       std::cout << indentation << ")" << std::endl;
-                   },
-               },
-        as);
+    std::cout << indentation << toString() << std::endl;
 }

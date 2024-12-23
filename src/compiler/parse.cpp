@@ -2,7 +2,6 @@
 
 namespace parse {
 
-// Helper functions implementation
 Token peek(const ParserState& state)
 {
     return state.tokens[state.current];
@@ -75,6 +74,41 @@ std::shared_ptr<Expression> parseSet(ParserState& state)
     consume(state, Tokentype::RIGHT_PAREN, "Expect ')' after expression");
     return std::make_shared<Expression>(Expression { SetExpression { name, expr }, previousToken(state).line });
 }
+
+std::shared_ptr<Expression> parseCond(ParserState& state)
+{
+    std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions;
+    std::optional<std::shared_ptr<Expression>> elseCond = std::nullopt;
+
+    while (!check(state, Tokentype::RIGHT_PAREN)) {
+        consume(state, Tokentype::LEFT_PAREN, "Expected '(' at start of cond clause");
+
+        if (match(state, Tokentype::ELSE)) {
+            auto body = parseExpression(state);
+            elseCond = body;
+        } else {
+            auto test = parseExpression(state);
+            auto body = parseExpression(state);
+            conditions.push_back({ test, body });
+        }
+
+        consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after cond clause");
+    }
+
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after cond expression");
+    return std::make_shared<Expression>(
+        Expression { CondExpression { std::move(conditions), std::move(elseCond) },
+            previousToken(state).line });
+}
+std::shared_ptr<Expression> parseBegin(ParserState& state)
+{
+    std::vector<std::shared_ptr<Expression>> body;
+    while (!check(state, Tokentype::RIGHT_PAREN)) {
+        body.push_back(parseExpression(state));
+    }
+    consume(state, Tokentype::RIGHT_PAREN, "Expect ')' after expression");
+    return std::make_shared<Expression>(Expression { BeginExpression { body }, previousToken(state).line });
+}
 std::shared_ptr<Expression> parseExpression(ParserState& state)
 {
     if (match(state, Tokentype::LEFT_PAREN)) {
@@ -82,10 +116,12 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
             return parseDefine(state);
         if (match(state, Tokentype::LET))
             return parseLet(state);
-        if (match(state, Tokentype::LETREC))
-            return parseLetRec(state);
         if (match(state, Tokentype::SET))
             return parseSet(state);
+        if (match(state, Tokentype::COND))
+            return parseCond(state);
+        if (match(state, Tokentype::BEGIN))
+            return parseBegin(state);
         if (match(state, Tokentype::IMPORT))
             return parseImport(state);
         if (match(state, Tokentype::LAMBDA))

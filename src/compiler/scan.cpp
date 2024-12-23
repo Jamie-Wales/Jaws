@@ -3,17 +3,20 @@
 namespace scanner {
 
 const std::unordered_map<std::string, Tokentype> keywords = {
-    { "define-syntax", Tokentype::IDENTIFIER },
+    { "define-syntax", Tokentype::DEFINE_SYTAX },
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
     { "quote", Tokentype::QUOTE },
     { "let", Tokentype::LET },
     { "import", Tokentype::IMPORT },
-    { "syntax-rules", Tokentype::IDENTIFIER},
+    { "syntax-rules", Tokentype::SYNTAX_RULE },
     { "=>", Tokentype::ARROW },
     { "...", Tokentype::ELLIPSIS },
     { "set!", Tokentype::SET },
+    { "cond", Tokentype::COND },
+    { "begin", Tokentype::BEGIN },
+    { "else", Tokentype::ELSE },
 };
 
 const std::vector<RegexInfo> regexPatterns = {

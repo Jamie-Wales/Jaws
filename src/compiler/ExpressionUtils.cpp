@@ -1,4 +1,5 @@
 #include "ExpressionUtils.h"
+#include "Expression.h"
 #include "Visit.h"
 
 std::shared_ptr<Expression> makeAtom(const std::string& lexeme, Tokentype type)
@@ -20,6 +21,25 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               std::vector<std::shared_ptr<Expression>> elements;
                               for (const auto& elem : e.elements) {
                                   elements.push_back(exprToList(elem));
+                              }
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
+
+                          [&](const BeginExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              for (const auto& elem : e.body) {
+                                  elements.push_back(exprToList(elem));
+                              }
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
+
+                          [&](const CondExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              for (const auto& [f, s] : e.conditions) {
+                                  elements.push_back(exprToList(f));
+                                  elements.push_back(exprToList(s));
                               }
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });

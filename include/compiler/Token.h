@@ -2,8 +2,11 @@
 #include <string>
 
 enum class Tokentype {
+    ELSE,
     ELLIPSIS,
     INTEGER,
+    BEGIN,
+    COND,
     SET,
     FLOAT,
     STRING,

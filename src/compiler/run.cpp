@@ -23,17 +23,12 @@ std::string readFile(const std::string& path)
 
 void evaluate(interpret::InterpreterState& state, const std::string& input)
 {
-    auto file = readFile("../example.scm");
-    auto tokens = scanner::tokenize(file);
+    auto tokens = scanner::tokenize(input);
     auto expressions = parse::parse(std::move(tokens));
-    for (const auto& expr : *expressions) {
-        interpret::interpret(state, expr);
+    auto val = interpret::interpret(state, *expressions);
+    if (val) { // Only show the return value if it exists
+        std::cout << val->toString() << std::endl;
     }
-
-    tokens = scanner::tokenize(input);
-    expressions = parse::parse(std::move(tokens));
-    for (auto& expr : *expressions)
-        interpret::interpret(state, expr);
 }
 
 void runFile(const std::string& path)
