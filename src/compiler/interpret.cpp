@@ -23,7 +23,6 @@ InterpreterState createInterpreter()
         state.env->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
     };
 
-    // Math operations
     define("+", jaws_math::plus);
     define("-", jaws_math::minus);
     define("*", jaws_math::mult);
@@ -32,7 +31,6 @@ InterpreterState createInterpreter()
     define(">=", jaws_math::greaterOrEqual);
     define("<", jaws_math::less);
     define(">", jaws_math::greater);
-
     auto eq = std::make_shared<BuiltInProcedure>(jaws_math::equal);
     state.env->define("=", SchemeValue(eq));
     state.env->define("eq?", SchemeValue(eq));
@@ -43,6 +41,9 @@ InterpreterState createInterpreter()
     define("port?", jaws_eq::isPort);
     define("eq?", jaws_eq::isEq);
     define("eqv?", jaws_eq::isEqv);
+
+    define("error", jaws_io::error);
+    define("symbol?", jaws_eq::isSymbol);
     define("open-input-file", jaws_io::openInputFile);
     define("open-output-file", jaws_io::openOutputFile);
     define("close-port", jaws_io::closePort);
@@ -72,14 +73,39 @@ InterpreterState createInterpreter()
     define("eval", jaws_hof::eval);
     define("apply", jaws_hof::apply);
 
-    auto file = readFile("../example.scm");
-    auto toks = scanner::tokenize(file);
-    auto exprs = parse::parse(toks);
-    for (const auto& ex : *exprs)
-        interpret::interpret(state, ex);
+    // // auto macroSystemFile = readFile("../lib/simplified-macro-system.scm");
+    // // auto macroSystemToks = scanner::tokenize(macroSystemFile);
+    // // auto macroSystemExprs = parse::parse(macroSystemToks);
+    //
+    // if (!macroSystemExprs) {
+    //     throw std::runtime_error("Error parsing macro system definitions");
+    // }
+    //
+    // for (const auto& expr : *macroSystemExprs) {
+    //     auto result = interpret(state, expr);
+    //
+    // }
+
     return state;
 }
 
+std::optional<SchemeValue> interpret(
+    InterpreterState& state,
+    const std::vector<std::shared_ptr<Expression>>& exprs)
+{
+    std::optional<SchemeValue> result = std::nullopt;
+    for (const auto& expr : exprs) {
+        if (std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
+            interpret(state, expr);
+        }
+    }
+    for (const auto& expr : exprs) {
+        if (!std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
+            result = interpret(state, expr);
+        }
+    }
+    return result;
+}
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr)
@@ -193,7 +219,7 @@ std::optional<SchemeValue> interpretDefine(InterpreterState& state, const Define
 
 std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, const DefineProcedure& proc)
 {
-    auto procedure = std::make_shared<UserProcedure>(proc.parameters, proc.body);
+    auto procedure = std::make_shared<UserProcedure>(proc.parameters, proc.body, state.env);
     state.env->define(proc.name.lexeme, SchemeValue(std::move(procedure)));
     return std::nullopt;
 }
@@ -202,7 +228,7 @@ std::optional<SchemeValue> interpretLambda(InterpreterState& state, const Lambda
 {
     auto proc = std::make_shared<UserProcedure>(
         lambda.parameters,
-        lambda.body);
+        lambda.body, state.env);
     return SchemeValue(std::move(proc));
 }
 
@@ -222,25 +248,28 @@ std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpressi
 
 std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpression& let)
 {
-    state.env->pushFrame();
+    auto letEnv = std::make_shared<Environment>(state.env);
+    letEnv->pushFrame();
+
     std::vector<Token> params;
     std::vector<SchemeValue> args;
 
     for (const auto& [param, argExpr] : let.arguments) {
         auto arg = interpret(state, argExpr);
         if (!arg) {
-            state.env->popFrame();
             return std::nullopt;
         }
-        state.env->define(param.lexeme, *arg);
+        letEnv->define(param.lexeme, *arg);
         params.push_back(param);
         args.push_back(*arg);
     }
 
-    auto proc = std::make_shared<UserProcedure>(params, let.body);
-    auto result = executeProcedure(state, SchemeValue(proc), args);
-    state.env->popFrame();
-    return result;
+    auto proc = std::make_shared<UserProcedure>(
+        params,
+        let.body,
+        letEnv);
+
+    return executeProcedure(state, SchemeValue(proc), args);
 }
 
 std::optional<SchemeValue> interpretQuote(InterpreterState& state, const QuoteExpression& quote)
@@ -283,25 +312,7 @@ std::optional<SchemeValue> interpretImport(InterpreterState& state, const Import
         auto source = readFile(std::format("../lib/{}.scm", tok.lexeme));
         auto tokens = scanner::tokenize(source);
         auto exprs = parse::parse(std::move(tokens));
-
-        if (!exprs)
-            continue;
-
-        for (auto& expr : *exprs) {
-            if (auto ele = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-                state.macros.collectMacros(expr);
-            } else if (auto sExpr = std::get_if<sExpression>(&expr->as)) {
-                auto expanded = state.macros.expandMacros(exprToList(expr));
-                auto expandedTokens = scanner::tokenize(expanded->toString());
-                if (auto expandedExpr = parse::parse(std::move(expandedTokens))) {
-                    for (const auto& e : *expandedExpr) {
-                        interpret(state, e);
-                    }
-                }
-            } else {
-                interpret(state, expr);
-            }
-        }
+        interpret(state, *exprs);
     }
     return std::nullopt;
 }

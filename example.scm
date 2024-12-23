@@ -1,8 +1,18 @@
-(define (exe y) (* y y))
+(define (make-counter)
+  (let ((count 0))
+    (lambda ()
+      (set! count (+ count 1))
+      count)))
 
+; Create a counter
+(define counter (make-counter))
 
-(define (ele a) (+ a a))
+; Use the counter
+(display (counter)) ; Output: 1
+(display (counter)) ; Output: 2
+(display (counter)) ; Output: 3
 
-(define x (exe (ele 10)))
-
-(display x)
+; Create another independent counter
+(define counter2 (make-counter))
+(display (counter2)) ; Output: 1
+(display (counter))  ; Output: 4 (counter continues from where it left off)

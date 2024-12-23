@@ -6,30 +6,37 @@
 
 std::optional<SchemeValue> UserProcedure::operator()(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) const
-{
-    if (args.size() != parameters.size()) {
-        throw InterpreterError(
-            "Expected " + std::to_string(parameters.size()) + " arguments but got " + std::to_string(args.size()));
+    const std::vector<SchemeValue>& args) const {
+    
+    auto newEnv = std::make_shared<Environment>(
+        closure ? closure : state.rootEnv
+    );
+    newEnv->pushFrame();  // Single frame for procedure scope
+
+    // Parameter binding
+    size_t i = 0;
+    for (; i < parameters.size() - (isVariadic ? 1 : 0); i++) {
+        newEnv->define(parameters[i].lexeme, args[i]);
+    }
+    if (isVariadic) {
+        std::list<SchemeValue> remainingArgs(args.begin() + i, args.end());
+        newEnv->define(parameters.back().lexeme, SchemeValue(remainingArgs));
     }
 
-    state.env->pushFrame();
+    auto oldEnv = state.env;
+    state.env = newEnv;
 
-    // Bind arguments to parameters
-    for (size_t i = 0; i < parameters.size(); i++) {
-        state.env->define(parameters[i].lexeme, args[i]);
-    }
-
-    // Execute body
     std::optional<SchemeValue> result;
     for (const auto& expr : body) {
         result = interpret::interpret(state, expr);
         if (result && result->isProc() && result->asProc()->isTailCall()) {
-            state.env->popFrame();
+            newEnv->popFrame();  // Pop our frame
+            state.env = oldEnv;
             return result;
         }
     }
 
-    state.env->popFrame();
+    newEnv->popFrame();  // Pop our frame
+    state.env = oldEnv;
     return result;
 }

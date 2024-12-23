@@ -92,7 +92,8 @@ class LambdaExpression {
 public:
     std::vector<Token> parameters;
     std::vector<std::shared_ptr<Expression>> body;
-    LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body);
+    bool isVariadic;
+    LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic = false);
 };
 
 /**
@@ -122,7 +123,8 @@ public:
     Token name;
     std::vector<Token> parameters;
     std::vector<std::shared_ptr<Expression>> body;
-    DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body);
+    bool isVariadic;
+    DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic = false);
 };
 
 /**

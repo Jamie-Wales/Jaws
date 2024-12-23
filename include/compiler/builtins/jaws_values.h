@@ -1,41 +1,37 @@
 #pragma once
-#include "interpret.h"
+#include "Error.h"
 #include "Value.h"
 #include <optional>
 #include <vector>
 
-namespace jaws_io {
+namespace interpret {
+struct InterpreterState;
+}
 
-std::optional<SchemeValue> openOutputFile(
+namespace jaws_values {
+
+std::optional<SchemeValue> schemeToString(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> openInputFile(
+std::optional<SchemeValue> valuesToList(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> error(
+std::optional<SchemeValue> valuesToVector(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> read(
+// Convert between lists and vectors
+std::optional<SchemeValue> listToVector(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> write(
+std::optional<SchemeValue> vectorToList(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> display(
+std::optional<SchemeValue> symbolToString(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
-
-std::optional<SchemeValue> newline(
-    interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args);
-
-std::optional<SchemeValue> closePort(
-    interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args);
-
-} // namespace jaws_io
+} // namespace jaws_values

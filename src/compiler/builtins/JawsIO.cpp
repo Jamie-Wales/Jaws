@@ -158,6 +158,30 @@ std::optional<SchemeValue> display(
     return std::nullopt;
 }
 
+std::optional<SchemeValue> error(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.empty()) {
+        throw InterpreterError("error requires at least 1 argument");
+    }
+
+    std::cout << state.output.str() << std::endl;
+
+    std::string message = "";
+    for (size_t i = 0; i < args.size(); ++i) {
+        auto val = args[i].ensureValue();
+        if (const auto* str = std::get_if<std::string>(&val.value)) {
+            message += *str;
+        } else {
+            message += val.toString();
+        }
+        if (i < args.size() - 1) {
+            message += " ";
+        }
+    }
+    throw InterpreterError(message);
+}
 std::optional<SchemeValue> newline(
     interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)

@@ -30,10 +30,11 @@ DefineSyntaxExpression::DefineSyntaxExpression(Token name, std::shared_ptr<Expre
     , rule(std::move(rule))
 {
 }
-DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body)
+DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
     : name(std::move(name))
     , parameters(std::move(parameters))
     , body(std::move(body))
+    , isVariadic(isVariadic)
 {
 }
 AtomExpression::AtomExpression(Token token)
@@ -89,9 +90,10 @@ ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> elems, b
     , isVariadic(variadic)
 {
 }
-LambdaExpression::LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body)
+LambdaExpression::LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
     : parameters(std::move(parameters))
     , body(std::move(body))
+    , isVariadic(isVariadic)
 {
 }
 VectorExpression::VectorExpression(std::vector<std::shared_ptr<Expression>> elems)

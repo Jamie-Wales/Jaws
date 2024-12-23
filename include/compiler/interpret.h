@@ -13,12 +13,13 @@ namespace interpret {
 // Central interpreter state
 struct InterpreterState {
     std::shared_ptr<Environment> env;
-    MacroProcessor macros;
+    std::shared_ptr<Environment> rootEnv;
     std::stringstream output;
 
     InterpreterState()
-        : env(std::make_shared<Environment>())
     {
+        rootEnv = std::make_shared<Environment>();
+        env = rootEnv;
     }
 };
 

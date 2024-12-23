@@ -86,10 +86,6 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
             return parseLetRec(state);
         if (match(state, Tokentype::SET))
             return parseSet(state);
-        if (match(state, Tokentype::DEFINE_SYTAX))
-            return parseDefineSyntax(state);
-        if (match(state, Tokentype::SYNTAX_RULE))
-            return parseSyntaxRules(state);
         if (match(state, Tokentype::IMPORT))
             return parseImport(state);
         if (match(state, Tokentype::LAMBDA))
@@ -302,6 +298,16 @@ std::shared_ptr<Expression> parseList(ParserState& state)
         previousToken(state).line);
 }
 
+template <typename... Types>
+Token consume(ParserState& state, const std::string& message, Types... types)
+{
+    bool matches = (... || check(state, types));
+    if (matches) {
+        return advance(state);
+    }
+    throw ParseError(message + " Token: " + previousToken(state).lexeme, peek(state), "");
+}
+
 std::shared_ptr<Expression> parseImport(ParserState& state)
 {
     std::vector<Token> output;
@@ -312,47 +318,6 @@ std::shared_ptr<Expression> parseImport(ParserState& state)
     consume(state, Tokentype::RIGHT_PAREN, "import ends with )");
     return std::make_shared<Expression>(
         Expression { ImportExpression { std::move(output) }, previousToken(state).line });
-}
-
-std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
-{
-    consume(state, Tokentype::LEFT_PAREN, "Expect ( after syntax-rules");
-    std::vector<Token> literals;
-    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
-        literals.push_back(consume(state, Tokentype::IDENTIFIER, "Expect literal identifier"));
-    }
-    consume(state, Tokentype::RIGHT_PAREN, "Expect ) after literals list");
-
-    std::vector<std::shared_ptr<Expression>> patterns;
-    std::vector<std::shared_ptr<Expression>> templates;
-    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
-        consume(state, Tokentype::LEFT_PAREN, "Expect ( before pattern");
-        auto list = parseList(state);
-        auto aslist = std::get<ListExpression>(list->as);
-        for (size_t i = 0; i < aslist.elements.size() - 1; i++) {
-            patterns.push_back(aslist.elements[i]);
-            templates.push_back(aslist.elements[i + 1]);
-        }
-        consume(state, Tokentype::RIGHT_PAREN, "Expect ) after template");
-    }
-
-    consume(state, Tokentype::RIGHT_PAREN, "Expect ) after syntax-rules");
-    return std::make_shared<Expression>(Expression {
-        SyntaxRulesExpression {
-            std::move(literals),
-            std::move(patterns),
-            std::move(templates) },
-        previousToken(state).line });
-}
-
-std::shared_ptr<Expression> parseDefineSyntax(ParserState& state)
-{
-    Token name = consume(state, Tokentype::IDENTIFIER, "Expect macro name");
-    auto rule = parseExpression(state);
-    consume(state, Tokentype::RIGHT_PAREN, "Expect ) after define-syntax");
-    return std::make_shared<Expression>(Expression {
-        DefineSyntaxExpression { name, rule },
-        name.line });
 }
 
 std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token> tokens)
@@ -373,5 +338,4 @@ std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token>
         return std::nullopt;
     }
 }
-
 } // namespace parse
