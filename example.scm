@@ -33,3 +33,13 @@
 
 (display "\nTesting begin:\n")
 (test-begin 4)
+
+(define-syntax when
+  (syntax-rules ()
+    [(_ condition body)        ; Pattern matches (when condition body ...)
+     (if condition                 ; Template expands to (if condition (begin body ...) #f)
+         body 
+         #f)]))
+
+
+(when (< 1 10) (display "hello"))

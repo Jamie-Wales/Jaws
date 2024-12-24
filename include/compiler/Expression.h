@@ -50,7 +50,6 @@ public:
     CondExpression(std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions, std::optional<std::shared_ptr<Expression>> expr);
 };
 
-// NEW: Represents a single syntax-rule clause (pattern + template)
 class SyntaxRule {
 public:
     std::shared_ptr<Expression> pattern;

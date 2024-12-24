@@ -130,12 +130,14 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               elements.push_back(std::make_shared<Expression>(
                                   Expression { ListExpression { literalElements, false }, expr->line }));
 
-                              for (const auto& pat : s.pattern) {
-                                  elements.push_back(exprToList(pat));
+                              for (const auto& rule : s.rules) {
+                                  std::vector<std::shared_ptr<Expression>> ruleElements;
+                                  ruleElements.push_back(exprToList(rule.pattern));
+                                  ruleElements.push_back(exprToList(rule.template_expr));
+                                  elements.push_back(std::make_shared<Expression>(
+                                      Expression { ListExpression { ruleElements, false }, expr->line }));
                               }
-                              for (const auto& templ : s.template_expr) {
-                                  elements.push_back(exprToList(templ));
-                              }
+
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },
@@ -160,6 +162,11 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const LetExpression& l) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("let"));
+
+                              // Named let
+                              if (l.name.has_value()) {
+                                  elements.push_back(makeAtom(l.name.value().lexeme));
+                              }
 
                               std::vector<std::shared_ptr<Expression>> bindingElements;
                               for (const auto& [name, value] : l.arguments) {

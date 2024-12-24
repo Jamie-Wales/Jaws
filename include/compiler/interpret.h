@@ -14,7 +14,6 @@ namespace interpret {
 struct InterpreterState {
     std::shared_ptr<Environment> env;
     std::shared_ptr<Environment> rootEnv;
-    std::stringstream output;
 
     InterpreterState()
     {
@@ -24,6 +23,11 @@ struct InterpreterState {
 };
 
 InterpreterState createInterpreter();
+
+std::optional<std::shared_ptr<Expression>> expandMacro(
+    InterpreterState& state,
+    const std::string& macroName,
+    const sExpression& sexpr);
 
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
@@ -44,6 +48,7 @@ std::optional<SchemeValue> interpretCond(InterpreterState& state, const CondExpr
 std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpression& list);
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr);
 std::optional<SchemeValue> interpretDefine(InterpreterState& state, const DefineExpression& def);
+std::optional<SchemeValue> interpretDefineSyntax(InterpreterState& state, const DefineSyntaxExpression& stx);
 std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, const DefineProcedure& proc);
 std::optional<SchemeValue> interpretLambda(InterpreterState& state, const LambdaExpression& lambda);
 std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpression& ifexpr);
@@ -62,5 +67,4 @@ std::optional<SchemeValue> executeProcedure(
     InterpreterState& state,
     const SchemeValue& proc,
     const std::vector<SchemeValue>& args);
-
 }

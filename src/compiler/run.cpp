@@ -26,7 +26,7 @@ void evaluate(interpret::InterpreterState& state, const std::string& input)
     auto tokens = scanner::tokenize(input);
     auto expressions = parse::parse(std::move(tokens));
     auto val = interpret::interpret(state, *expressions);
-    if (val) { // Only show the return value if it exists
+    if (val) {
         std::cout << val->toString() << std::endl;
     }
 }
@@ -36,7 +36,6 @@ void runFile(const std::string& path)
     try {
         auto state = interpret::createInterpreter();
         evaluate(state, readFile(path));
-        std::cout << state.output.str();
     } catch (const ParseError& e) {
         e.printFormattedError();
     } catch (const InterpreterError& e) {
@@ -51,6 +50,7 @@ void runPrompt()
     printJawsLogo();
     std::cout << "Welcome to the Jaws REPL!\n";
     std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
+
     auto state = interpret::createInterpreter();
     std::string input;
 
@@ -65,20 +65,12 @@ void runPrompt()
             break;
         }
 
-        if (input == "jaws") {
-            std::cout << jaws2 << std::endl;
-            continue;
-        }
-
         if (input.empty()) {
             continue;
         }
 
         try {
             evaluate(state, input);
-            std::cout << state.output.str();
-            state.output.str("");
-            state.output.clear();
         } catch (const ParseError& e) {
             e.printFormattedError();
         } catch (const InterpreterError& e) {

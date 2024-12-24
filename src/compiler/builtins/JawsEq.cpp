@@ -4,7 +4,7 @@
 namespace jaws_eq {
 
 std::optional<SchemeValue> less(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
@@ -15,7 +15,7 @@ std::optional<SchemeValue> less(
         SchemeValue curr = args[i].ensureValue();
         SchemeValue next = args[i + 1].ensureValue();
         auto comparison = curr <=> next;
-        
+
         if (comparison == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these values");
         }
@@ -27,7 +27,7 @@ std::optional<SchemeValue> less(
 }
 
 std::optional<SchemeValue> greater(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
@@ -38,7 +38,7 @@ std::optional<SchemeValue> greater(
         SchemeValue curr = args[i].ensureValue();
         SchemeValue next = args[i + 1].ensureValue();
         auto comparison = curr <=> next;
-        
+
         if (comparison == std::partial_ordering::unordered) {
             throw InterpreterError("Cannot compare these values");
         }
@@ -50,7 +50,7 @@ std::optional<SchemeValue> greater(
 }
 
 std::optional<SchemeValue> equal(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
@@ -67,7 +67,7 @@ std::optional<SchemeValue> equal(
 }
 
 std::optional<SchemeValue> isProcedure(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -77,17 +77,17 @@ std::optional<SchemeValue> isProcedure(
 }
 
 std::optional<SchemeValue> isPair(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("pair?: expected 1 argument");
     }
-    return SchemeValue(args[0].isList() && !args[0].asList().empty());
+    return SchemeValue(args[0].ensureValue().isList() && !args[0].ensureValue().asList().empty());
 }
 
 std::optional<SchemeValue> isList(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -97,7 +97,7 @@ std::optional<SchemeValue> isList(
 }
 
 std::optional<SchemeValue> isVector(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -107,17 +107,21 @@ std::optional<SchemeValue> isVector(
 }
 
 std::optional<SchemeValue> isSymbol(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("symbol?: expected 1 argument");
     }
-    return SchemeValue(args[0].isSymbol());
+
+    if (!args[0].ensureValue().isSymbol()) {
+        std::cout << "NOT SYMBOL" << std::endl;
+    }
+    return SchemeValue(args[0].ensureValue().isSymbol());
 }
 
 std::optional<SchemeValue> isNumber(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -127,7 +131,7 @@ std::optional<SchemeValue> isNumber(
 }
 
 std::optional<SchemeValue> isString(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -137,7 +141,7 @@ std::optional<SchemeValue> isString(
 }
 
 std::optional<SchemeValue> isPort(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -147,7 +151,7 @@ std::optional<SchemeValue> isPort(
 }
 
 std::optional<SchemeValue> isNull(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
@@ -157,7 +161,7 @@ std::optional<SchemeValue> isNull(
 }
 
 std::optional<SchemeValue> isEq(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
@@ -167,7 +171,7 @@ std::optional<SchemeValue> isEq(
 }
 
 std::optional<SchemeValue> isEqv(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
@@ -177,7 +181,7 @@ std::optional<SchemeValue> isEqv(
 }
 
 std::optional<SchemeValue> isBooleanProc(
-    interpret::InterpreterState&, 
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {

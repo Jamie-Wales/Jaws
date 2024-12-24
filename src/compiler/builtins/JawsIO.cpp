@@ -135,7 +135,7 @@ std::optional<SchemeValue> write(
 }
 
 std::optional<SchemeValue> display(
-    interpret::InterpreterState& state,
+    interpret::InterpreterState&, // Note: we don't need the state parameter anymore
     const std::vector<SchemeValue>& args)
 {
     if (args.size() < 1 || args.size() > 2) {
@@ -144,7 +144,11 @@ std::optional<SchemeValue> display(
 
     auto val = args[0].ensureValue();
     if (args.size() == 1) {
-        state.output << val.toString() << std::endl;
+        if (const auto* str = std::get_if<std::string>(&val.value)) {
+            std::cout << *str;
+        } else {
+            std::cout << val.toString(); // For other types, use toString
+        }
         return std::nullopt;
     }
 
@@ -165,9 +169,6 @@ std::optional<SchemeValue> error(
     if (args.empty()) {
         throw InterpreterError("error requires at least 1 argument");
     }
-
-    std::cout << state.output.str() << std::endl;
-
     std::string message = "";
     for (size_t i = 0; i < args.size(); ++i) {
         auto val = args[i].ensureValue();

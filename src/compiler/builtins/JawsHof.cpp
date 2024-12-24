@@ -1,5 +1,7 @@
 #include "builtins/JawsHof.h"
 #include "Error.h"
+#include "parse.h"
+#include "scan.h"
 
 namespace jaws_hof {
 
@@ -8,21 +10,33 @@ std::optional<SchemeValue> eval(
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
-        throw InterpreterError("eval expects one argument");
+        throw InterpreterError("eval: expects exactly one argument");
     }
-    
-    SchemeValue arg = args[0];
+
+    const SchemeValue& arg = args[0];
     if (arg.isExpr()) {
         return interpret::interpret(state, arg.asExpr());
     }
-    return arg;
+
+    try {
+        std::string valueStr = arg.toString();
+
+        std::vector<Token> tokens = scanner::tokenize(valueStr);
+        auto expressions = parse::parse(std::move(tokens));
+        if (!expressions || expressions->empty()) {
+            throw InterpreterError("eval: failed to parse value: " + valueStr);
+        }
+        return interpret::interpret(state, (*expressions)[0]);
+    } catch (const std::exception& e) {
+        throw InterpreterError("eval: error evaluating expression: " + std::string(e.what()));
+    }
 }
 
 std::optional<SchemeValue> printHelp(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
-    state.output << "Available commands:\n"
+    std::cout << "Available commands:\n"
               << "  exit       - Exit the Jaws REPL\n"
               << "  help       - Display this help message\n"
               << "\nBasic Jaws syntax:\n"
@@ -35,7 +49,7 @@ std::optional<SchemeValue> printHelp(
               << "  define     - Define variables (e.g., (define x 10))\n"
               << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
               << "\nEnter Scheme expressions to evaluate them\n";
-              
+
     return std::nullopt;
 }
 
@@ -52,12 +66,9 @@ std::optional<SchemeValue> apply(
     }
 
     std::vector<SchemeValue> procArgs;
-    // Collect non-list arguments
     for (size_t i = 1; i < args.size() - 1; i++) {
         procArgs.push_back(args[i]);
     }
-
-    // Handle last argument (must be a list)
     const auto& lastArg = args.back();
     if (!lastArg.isList()) {
         throw InterpreterError("apply: last argument must be a list");

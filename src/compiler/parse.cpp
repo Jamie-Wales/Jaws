@@ -109,11 +109,28 @@ std::shared_ptr<Expression> parseBegin(ParserState& state)
     consume(state, Tokentype::RIGHT_PAREN, "Expect ')' after expression");
     return std::make_shared<Expression>(Expression { BeginExpression { body }, previousToken(state).line });
 }
+std::shared_ptr<Expression> parseDefineSyntax(ParserState& state)
+{
+    Token name = consume(state, Tokentype::IDENTIFIER, "Expected macro name after 'define-syntax'");
+    consume(state, Tokentype::LEFT_PAREN, "Expected '(' after macro name"); // Consume the '(' before 'syntax-rules'
+
+    if (!match(state, Tokentype::SYNTAX_RULE)) {
+        throw ParseError("Expected 'syntax-rules' in 'define-syntax'", peek(state), "");
+    }
+
+    auto syntaxRules = parseSyntaxRules(state);
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after 'define-syntax'");
+
+    return std::make_shared<Expression>(
+        Expression { DefineSyntaxExpression { name, syntaxRules }, name.line });
+}
 std::shared_ptr<Expression> parseExpression(ParserState& state)
 {
     if (match(state, Tokentype::LEFT_PAREN)) {
         if (match(state, Tokentype::DEFINE))
             return parseDefine(state);
+        if (match(state, Tokentype::DEFINE_SYTAX))
+            return parseDefineSyntax(state);
         if (match(state, Tokentype::LET))
             return parseLet(state);
         if (match(state, Tokentype::SET))
@@ -161,7 +178,7 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     case Tokentype::SYNTAX_RULE:
         return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });
     default:
-        throw ParseError("Unexpected token in atom", token, "");
+        throw ParseError("Unexpected token in atom " + token.lexeme, token, "");
     }
 }
 
@@ -374,4 +391,27 @@ std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token>
         return std::nullopt;
     }
 }
-} // namespace parse
+std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
+{
+    consume(state, Tokentype::LEFT_PAREN, "Expected '(' before literals in 'syntax-rules'");
+    std::vector<Token> literals;
+    while (!match(state, Tokentype::RIGHT_PAREN)) {
+        literals.push_back(previousToken(state));
+    }
+
+    std::vector<SyntaxRule> rules;
+    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+        consume(state, Tokentype::LEFT_PAREN, "Expected '(' before pattern in 'syntax-rules'");
+        auto pattern = parseExpression(state); // Parse the pattern
+        auto template_expr = parseExpression(state); // Parse the template
+        consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after template in 'syntax-rules'");
+        rules.push_back(SyntaxRule(pattern, template_expr));
+    }
+
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after 'syntax-rules'");
+
+    return std::make_shared<Expression>(
+        Expression { SyntaxRulesExpression { literals, std::move(rules) }, previousToken(state).line });
+}
+
+}

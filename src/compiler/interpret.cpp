@@ -23,7 +23,6 @@ InterpreterState createInterpreter()
     auto define = [&state](const std::string& name, BuiltInProcedure::Func func) {
         state.env->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
     };
-
     define("+", jaws_math::plus);
     define("-", jaws_math::minus);
     define("*", jaws_math::mult);
@@ -35,6 +34,7 @@ InterpreterState createInterpreter()
     auto eq = std::make_shared<BuiltInProcedure>(jaws_math::equal);
     state.env->define("=", SchemeValue(eq));
     state.env->define("eq?", SchemeValue(eq));
+    state.env->define("equal?", SchemeValue(eq));
     define("boolean?", jaws_eq::isBooleanProc);
     define("procedure?", jaws_eq::isProcedure);
     define("pair?", jaws_eq::isPair);
@@ -53,6 +53,8 @@ InterpreterState createInterpreter()
     define("display", jaws_io::display);
     define("newline", jaws_io::newline);
     define("map", jaws_list::map);
+
+    define("list?", jaws_eq::isList);
     define("list", jaws_list::listProcedure);
     define("car", jaws_list::carProcudure);
     define("cdr", jaws_list::cdrProcedure);
@@ -74,18 +76,14 @@ InterpreterState createInterpreter()
     define("eval", jaws_hof::eval);
     define("apply", jaws_hof::apply);
 
-    // // auto macroSystemFile = readFile("../lib/simplified-macro-system.scm");
-    // // auto macroSystemToks = scanner::tokenize(macroSystemFile);
-    // // auto macroSystemExprs = parse::parse(macroSystemToks);
-    //
-    // if (!macroSystemExprs) {
-    //     throw std::runtime_error("Error parsing macro system definitions");
-    // }
-    //
-    // for (const auto& expr : *macroSystemExprs) {
-    //     auto result = interpret(state, expr);
-    //
-    // }
+    auto macroSystemFile = readFile("../lib/example.scm");
+    auto macroSystemToks = scanner::tokenize(macroSystemFile);
+    auto macroSystemExprs = parse::parse(macroSystemToks);
+
+    if (!macroSystemExprs) {
+        throw std::runtime_error("Error parsing macro system definitions");
+    }
+    auto result = interpret(state, *macroSystemExprs);
 
     return state;
 }
@@ -137,6 +135,7 @@ std::optional<SchemeValue> interpret(
                           [&](const CondExpression& e) { return interpretCond(state, e); },
                           [&](const sExpression& e) { return interpretSExpression(state, e); },
                           [&](const DefineExpression& e) { return interpretDefine(state, e); },
+                          [&](const DefineSyntaxExpression& e) { return interpretDefineSyntax(state, e); },
                           [&](const DefineProcedure& e) { return interpretDefineProcedure(state, e); },
                           [&](const LambdaExpression& e) { return interpretLambda(state, e); },
                           [&](const IfExpression& e) { return interpretIf(state, e); },
@@ -224,6 +223,45 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
 
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
 {
+
+    if (auto* atomExpr = std::get_if<AtomExpression>(&sexpr.elements[0]->as)) {
+        std::string name = atomExpr->value.lexeme;
+
+        if (state.env->isMacro(name)) {
+            auto rules = state.env->getMacroRules(name);
+            if (!rules) {
+                throw InterpreterError("Internal error: macro rules not found");
+            }
+
+            auto exprPtr = std::make_shared<Expression>(sExpression(sexpr.elements), sexpr.elements[0]->line);
+            SchemeValue form = expressionToValue(*exprPtr);
+
+            for (const auto& rule : *rules) {
+                SchemeValue pattern = expressionToValue(*rule.pattern);
+                SchemeValue templ = expressionToValue(*rule.template_expr);
+                std::vector<SchemeValue> matchArgs = { form, pattern };
+                auto matchProc = state.env->get("match");
+                if (!matchProc) {
+                    throw InterpreterError("match procedure not found");
+                }
+                auto bindings = executeProcedure(state, *matchProc, matchArgs);
+                if (bindings && bindings->isTrue()) {
+                    std::vector<SchemeValue> transformArgs = { *bindings, templ };
+                    auto transformProc = state.env->get("transform");
+                    if (!transformProc) {
+                        throw InterpreterError("transform procedure not found");
+                    }
+                    auto expanded = executeProcedure(state, *transformProc, transformArgs);
+                    if (expanded) {
+                        auto tokens = scanner::tokenize(expanded->toString());
+                        auto ast = parse::parse(tokens);
+                        return interpret(state, *ast);
+                    }
+                }
+            }
+            throw InterpreterError("No matching pattern for macro: " + name);
+        }
+    }
     auto call = evaluateProcedureCall(state, sexpr);
     if (!call)
         return std::nullopt;
@@ -275,7 +313,6 @@ std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpres
 
     std::vector<Token> params;
     std::vector<SchemeValue> args;
-
     for (const auto& [param, argExpr] : let.arguments) {
         auto arg = interpret(state, argExpr);
         if (!arg) {
@@ -285,11 +322,13 @@ std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpres
         params.push_back(param);
         args.push_back(*arg);
     }
-
     auto proc = std::make_shared<UserProcedure>(
         params,
         let.body,
         letEnv);
+    if (let.name) {
+        letEnv->define(let.name->lexeme, SchemeValue(proc));
+    }
 
     return executeProcedure(state, SchemeValue(proc), args);
 }
@@ -328,6 +367,16 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
     return interpret(state, tail.expression);
 }
 
+std::optional<SchemeValue> interpretDefineSyntax(
+    InterpreterState& state,
+    const DefineSyntaxExpression& syntax)
+{
+    if (auto* rules = std::get_if<SyntaxRulesExpression>(&syntax.rule->as)) {
+        state.env->defineMacro(syntax.name.lexeme, rules->rules);
+        return std::nullopt;
+    }
+    throw InterpreterError("Invalid syntax-rules expression in define-syntax");
+}
 std::optional<SchemeValue> interpretImport(InterpreterState& state, const ImportExpression& import)
 {
     for (const auto& tok : import.import) {
@@ -360,14 +409,12 @@ std::optional<ProcedureCall> evaluateProcedureCall(
     auto proc = interpret(state, sexpr.elements[0]);
     if (!proc)
         return std::nullopt;
-
     if (!proc->isProc()) {
         throw InterpreterError("First element is not a procedure: " + proc->toString());
     }
 
     std::vector<SchemeValue> args;
     args.reserve(sexpr.elements.size() - 1);
-
     for (size_t i = 1; i < sexpr.elements.size(); i++) {
         auto arg = interpret(state, sexpr.elements[i]);
         if (!arg)

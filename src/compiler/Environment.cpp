@@ -1,6 +1,6 @@
 #include "Environment.h"
 #include <iostream>
-
+std::unordered_map<std::string, std::vector<SyntaxRule>> Environment::macroBindings = {};
 void Environment::pushFrame()
 {
     frames.push_front(std::make_shared<Frame>());
@@ -62,4 +62,24 @@ std::optional<SchemeValue> Environment::get(const std::string& name) const
     }
 
     return std::nullopt;
+}
+void Environment::defineMacro(const std::string& name, const std::vector<SyntaxRule>& rules)
+{
+    // Since macroBindings is static, this updates the global macro environment
+    macroBindings[name] = rules;
+}
+
+std::optional<std::vector<SyntaxRule>> Environment::getMacroRules(const std::string& name) const
+{
+    // Look up in the global macro environment
+    auto it = macroBindings.find(name);
+    if (it != macroBindings.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+bool Environment::isMacro(const std::string& name) const
+{
+    return macroBindings.find(name) != macroBindings.end();
 }
