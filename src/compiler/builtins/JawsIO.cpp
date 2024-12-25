@@ -147,7 +147,7 @@ std::optional<SchemeValue> display(
         if (const auto* str = std::get_if<std::string>(&val.value)) {
             std::cout << *str;
         } else {
-            std::cout << val.toString(); // For other types, use toString
+            std::cout << val.toString();
         }
         return std::nullopt;
     }

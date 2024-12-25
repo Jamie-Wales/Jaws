@@ -58,7 +58,6 @@ InterpreterState createInterpreter()
     define("list", jaws_list::listProcedure);
     define("car", jaws_list::carProcudure);
     define("cdr", jaws_list::cdrProcedure);
-    define("cadr", jaws_list::cadrProcedure);
     define("cons", jaws_list::cons);
     define("length", jaws_list::length);
     define("append", jaws_list::append);
@@ -223,39 +222,30 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
 
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
 {
-
     if (auto* atomExpr = std::get_if<AtomExpression>(&sexpr.elements[0]->as)) {
         std::string name = atomExpr->value.lexeme;
-
         if (state.env->isMacro(name)) {
             auto rules = state.env->getMacroRules(name);
             if (!rules) {
                 throw InterpreterError("Internal error: macro rules not found");
             }
 
-            auto exprPtr = std::make_shared<Expression>(sExpression(sexpr.elements), sexpr.elements[0]->line);
-            SchemeValue form = expressionToValue(*exprPtr);
+            SchemeValue form = expressionToValue(*std::make_shared<Expression>(
+                sExpression(sexpr.elements), sexpr.elements[0]->line));
 
             for (const auto& rule : *rules) {
                 SchemeValue pattern = expressionToValue(*rule.pattern);
                 SchemeValue templ = expressionToValue(*rule.template_expr);
-                std::vector<SchemeValue> matchArgs = { form, pattern };
-                auto matchProc = state.env->get("match");
-                if (!matchProc) {
-                    throw InterpreterError("match procedure not found");
-                }
-                auto bindings = executeProcedure(state, *matchProc, matchArgs);
+
+                auto bindings = executeProcedure(state, *state.env->get("match"),
+                    std::vector<SchemeValue> { form, pattern });
+
                 if (bindings && bindings->isTrue()) {
-                    std::vector<SchemeValue> transformArgs = { *bindings, templ };
-                    auto transformProc = state.env->get("transform");
-                    if (!transformProc) {
-                        throw InterpreterError("transform procedure not found");
-                    }
-                    auto expanded = executeProcedure(state, *transformProc, transformArgs);
-                    if (expanded) {
-                        auto tokens = scanner::tokenize(expanded->toString());
-                        auto ast = parse::parse(tokens);
-                        return interpret(state, *ast);
+                    auto transformed = executeProcedure(state, *state.env->get("transform"),
+                        std::vector<SchemeValue> { *bindings, templ });
+
+                    if (transformed) {
+                    return jaws_hof::eval(state, {*transformed});
                     }
                 }
             }

@@ -114,9 +114,6 @@ std::optional<SchemeValue> isSymbol(
         throw InterpreterError("symbol?: expected 1 argument");
     }
 
-    if (!args[0].ensureValue().isSymbol()) {
-        std::cout << "NOT SYMBOL" << std::endl;
-    }
     return SchemeValue(args[0].ensureValue().isSymbol());
 }
 

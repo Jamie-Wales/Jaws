@@ -41,13 +41,14 @@ std::optional<SchemeValue> cdrProcedure(
     if (args.size() != 1) {
         throw InterpreterError("cdr: requires exactly 1 argument");
     }
-
     auto val = args[0].ensureValue();
-    if (!val.isList() || val.asList().empty()) {
-        throw InterpreterError("cdr: argument must be a non-empty list");
+    if (!val.isList()) {
+        throw InterpreterError("cdr: argument must be a list");
     }
-
     auto list = val.asList();
+    if (list.empty()) {
+        throw InterpreterError("cdr: argument cannot be empty list");
+    }
     list.pop_front();
     return SchemeValue(std::move(list));
 }
@@ -316,34 +317,27 @@ std::optional<SchemeValue> assq(
     if (args.size() != 2) {
         throw InterpreterError("assq: requires exactly 2 arguments");
     }
-
-    const auto& key = args[0];
+    const auto& key = args[0].ensureValue();
     auto list = args[1].ensureValue();
     if (!list.isList()) {
         throw InterpreterError("assq: second argument must be a list");
     }
-
     const auto& lst = list.asList();
     for (const auto& pair : lst) {
         if (!pair.isList()) {
-            continue;
+            throw InterpreterError("assq: elements must be pairs");
         }
-
         const auto& pairList = pair.asList();
         if (pairList.empty()) {
-            continue;
+            throw InterpreterError("assq: elements must be non-empty pairs");
         }
-
         if (key.isSymbol() && pairList.front().isSymbol() && key.asSymbol() == pairList.front().asSymbol()) {
             return SchemeValue(pair);
         }
-
-        if (key == pairList.front()) {
+        if (&key == &pairList.front()) {
             return SchemeValue(pair);
         }
     }
-
     return SchemeValue(false);
 }
-
 }

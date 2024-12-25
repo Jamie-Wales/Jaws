@@ -1,7 +1,7 @@
 
 (define (test-cond x)
   (cond
-    ((< x 0) 
+    ((< x 0)
      (begin
        (display "x is negative")
        'negative))
@@ -36,10 +36,11 @@
 
 (define-syntax when
   (syntax-rules ()
-    [(_ condition body)        ; Pattern matches (when condition body ...)
-     (if condition                 ; Template expands to (if condition (begin body ...) #f)
-         body 
+    [(_ condition-expr body-expr)
+     (if condition-expr
+         body-expr
          #f)]))
 
 
 (when (< 1 10) (display "hello"))
+(when #t (display "this should print"))
