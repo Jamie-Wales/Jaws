@@ -1,10 +1,3 @@
-(define-syntax when
-  (syntax-rules ()
-    ((when condition body ...)
-     (if condition
-         (begin body ...)
-         #f))))
-
 (define-syntax match
   (syntax-rules (list quote)
     ;; Empty list pattern
@@ -21,7 +14,7 @@
        ((quote sym) body ...)
        rest ...)
      (let ((value expr))
-       (if (eq? value (quote sym))
+       (if (eq? value sym)  ;; Changed this line - compare directly with sym
            (begin body ...)
            (match value rest ...))))
 
@@ -33,9 +26,7 @@
     ;; No matches
     ((match expr)
      #f)))
-(when (> 5 3)
-  (display "5 is greater than 3")
-  (newline))
+
 (match '()
   ((list) (display "Found empty list"))
   ((quote x) (display "Found x"))

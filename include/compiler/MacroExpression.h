@@ -342,7 +342,7 @@ private:
 
 class InterpreterState;
 
-std::optional<SchemeValue> expandMacro(
+std::optional<std::shared_ptr<Expression>> expandMacro(
     interpret::InterpreterState& state,
     const std::string& macroName,
     const sExpression& sexpr,
@@ -360,10 +360,201 @@ std::optional<SchemeValue> expandMacro(
         if (matchResult) {
             auto transformed = MacroTransformer::transform(rule.template_expr, *matchResult);
             if (transformed) {
-                return expressionToValue(*transformed);
+                // Convert to string and reparse
+                std::string exprStr = transformed->toString();
+                auto tokens = scanner::tokenize(exprStr);
+                auto reparsed = parse::parse(tokens);
+                if (!reparsed || reparsed->empty()) {
+                    return std::nullopt;
+                }
+                return (*reparsed)[0];
             }
         }
     }
 
     return std::nullopt;
+}
+bool isMacroCall(const std::shared_ptr<Expression>& expr, const Environment& env) {
+    if (auto* sexpr = std::get_if<sExpression>(&expr->as)) {
+        if (!sexpr->elements.empty()) {
+            if (auto* atom = std::get_if<AtomExpression>(&sexpr->elements[0]->as)) {
+                return env.isMacro(atom->value.lexeme);
+            }
+        }
+    }
+    return false;
+}
+
+std::optional<std::shared_ptr<Expression>> expandMacrosIn(
+    interpret::InterpreterState& state,
+    const std::shared_ptr<Expression>& expr)
+{
+    if (!expr) return std::nullopt;
+
+    if (isMacroCall(expr, *state.env)) {
+        auto* sexpr = std::get_if<sExpression>(&expr->as);
+        auto* atom = std::get_if<AtomExpression>(&sexpr->elements[0]->as);
+        auto name = atom->value.lexeme;
+
+        auto rules = state.env->getMacroRules(name);
+        if (!rules) return std::nullopt;
+
+        std::vector<Token> literals;
+        for (const auto& rule : *rules) {
+            if (auto* patternAtom = std::get_if<AtomExpression>(&rule.pattern->as)) {
+                literals.push_back(patternAtom->value);
+            }
+        }
+
+        if (auto expanded = expandMacro(state, name, *sexpr, literals)) {
+            return expandMacrosIn(state, *expanded);
+        }
+        return std::nullopt;
+    }
+
+    // If not a macro call, recursively check all nested expressions
+    return std::visit(overloaded {
+        [&](const AtomExpression& atom) -> std::shared_ptr<Expression> {
+            return expr;  // Atoms can't contain macros
+        },
+
+        [&](const ListExpression& list) -> std::shared_ptr<Expression> {
+            std::vector<std::shared_ptr<Expression>> newElements;
+            bool changed = false;
+            for (const auto& e : list.elements) {
+                if (auto expanded = expandMacrosIn(state, e)) {
+                    newElements.push_back(*expanded);
+                    changed = true;
+                } else {
+                    newElements.push_back(e);
+                }
+            }
+            if (changed) {
+                return std::make_shared<Expression>(
+                    Expression{ListExpression{newElements, list.isVariadic}, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const sExpression& sexpr) -> std::shared_ptr<Expression> {
+            std::vector<std::shared_ptr<Expression>> newElements;
+            bool changed = false;
+            for (const auto& e : sexpr.elements) {
+                if (auto expanded = expandMacrosIn(state, e)) {
+                    newElements.push_back(*expanded);
+                    changed = true;
+                } else {
+                    newElements.push_back(e);
+                }
+            }
+            if (changed) {
+                return std::make_shared<Expression>(
+                    Expression{sExpression{newElements}, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const BeginExpression& begin) -> std::shared_ptr<Expression> {
+            std::vector<std::shared_ptr<Expression>> newBody;
+            bool changed = false;
+            for (const auto& e : begin.body) {
+                if (auto expanded = expandMacrosIn(state, e)) {
+                    newBody.push_back(*expanded);
+                    changed = true;
+                } else {
+                    newBody.push_back(e);
+                }
+            }
+            if (changed) {
+                return std::make_shared<Expression>(
+                    Expression{BeginExpression{newBody}, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const LetExpression& let) -> std::shared_ptr<Expression> {
+            std::vector<std::pair<Token, std::shared_ptr<Expression>>> newArgs;
+            std::vector<std::shared_ptr<Expression>> newBody;
+            bool changed = false;
+
+            for (const auto& [name, value] : let.arguments) {
+                if (auto expanded = expandMacrosIn(state, value)) {
+                    newArgs.push_back({name, *expanded});
+                    changed = true;
+                } else {
+                    newArgs.push_back({name, value});
+                }
+            }
+
+            for (const auto& e : let.body) {
+                if (auto expanded = expandMacrosIn(state, e)) {
+                    newBody.push_back(*expanded);
+                    changed = true;
+                } else {
+                    newBody.push_back(e);
+                }
+            }
+
+            if (changed) {
+                return std::make_shared<Expression>(
+                    Expression{LetExpression{let.name, newArgs, newBody}, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const IfExpression& if_expr) -> std::shared_ptr<Expression> {
+            bool changed = false;
+            auto newCond = expandMacrosIn(state, if_expr.condition);
+            auto newThen = expandMacrosIn(state, if_expr.then);
+            std::optional<std::shared_ptr<Expression>> newElse;
+
+            if (if_expr.el) {
+                newElse = expandMacrosIn(state, *if_expr.el);
+            }
+
+            if (newCond || newThen || newElse) {
+                return std::make_shared<Expression>(
+                    Expression{IfExpression{
+                        newCond ? *newCond : if_expr.condition,
+                        newThen ? *newThen : if_expr.then,
+                        newElse ? std::optional<std::shared_ptr<Expression>>(*newElse) : if_expr.el
+                    }, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const TailExpression& tail) -> std::shared_ptr<Expression> {
+            if (auto expanded = expandMacrosIn(state, tail.expression)) {
+                return std::make_shared<Expression>(
+                    Expression{TailExpression{*expanded}, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const QuoteExpression&) -> std::shared_ptr<Expression> {
+            return expr;  // Don't expand inside quotes
+        },
+
+        [&](const LambdaExpression& lambda) -> std::shared_ptr<Expression> {
+            std::vector<std::shared_ptr<Expression>> newBody;
+            bool changed = false;
+            for (const auto& e : lambda.body) {
+                if (auto expanded = expandMacrosIn(state, e)) {
+                    newBody.push_back(*expanded);
+                    changed = true;
+                } else {
+                    newBody.push_back(e);
+                }
+            }
+            if (changed) {
+                return std::make_shared<Expression>(
+                    Expression{LambdaExpression{lambda.parameters, newBody, lambda.isVariadic}, expr->line});
+            }
+            return expr;
+        },
+
+        [&](const auto&) -> std::shared_ptr<Expression> {
+            return expr;  // Default case for other expression types
+        }
+    }, expr->as);
 }

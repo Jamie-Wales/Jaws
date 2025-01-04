@@ -210,8 +210,7 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
     return SchemeValue(std::move(elements));
 }
 
-std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
-{
+std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr) {
     if (auto* atomExpr = std::get_if<AtomExpression>(&sexpr.elements[0]->as)) {
         std::string name = atomExpr->value.lexeme;
         if (state.env->isMacro(name)) {
@@ -219,8 +218,6 @@ std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const s
             if (!rules) {
                 throw InterpreterError("Internal error: macro rules not found");
             }
-
-            // Extract literals from the rules
             std::vector<Token> literals;
             for (const auto& rule : *rules) {
                 if (auto* patternAtom = std::get_if<AtomExpression>(&rule.pattern->as)) {
@@ -228,13 +225,15 @@ std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const s
                 }
             }
             if (auto expanded = expandMacro(state, name, sexpr, literals)) {
-                return interpret(state, valueToExpression(*expanded));
+                // Recursively expand any macros in the expanded result
+                if (auto fullyExpanded = expandMacrosIn(state, *expanded)) {
+                    return interpret(state, *fullyExpanded);
+                }
+                return interpret(state, *expanded);
             }
-
             throw InterpreterError("No matching pattern for macro: " + name);
         }
     }
-
     auto call = evaluateProcedureCall(state, sexpr);
     if (!call)
         return std::nullopt;

@@ -203,7 +203,7 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const QuoteExpression& e) {
-                ss << "'";
+                ss << "quote ";
                 e.expression->toString(ss);
             },
             [&](const SetExpression& e) {
@@ -212,7 +212,7 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const TailExpression& e) {
-                ss << "(tail ";
+                ss << "(";
                 e.expression->toString(ss);
                 ss << ")";
             },

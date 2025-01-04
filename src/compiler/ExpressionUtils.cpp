@@ -98,13 +98,15 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },
-                          [&](const QuoteExpression& q) -> std::shared_ptr<Expression> {
-                              std::vector<std::shared_ptr<Expression>> elements;
-                              elements.push_back(makeAtom("quote"));
-                              elements.push_back(exprToList(q.expression));
-                              return std::make_shared<Expression>(
-                                  Expression { ListExpression { elements, false }, expr->line });
-                          },
+[&](const QuoteExpression& q) -> std::shared_ptr<Expression> {
+    std::vector<std::shared_ptr<Expression>> elements;
+    elements.push_back(makeAtom("quote", Tokentype::IDENTIFIER));
+
+    elements.push_back(exprToList(q.expression));
+
+    return std::make_shared<Expression>(
+        Expression{ ListExpression{ elements, false }, expr->line });
+},
                           [&](const TailExpression& t) -> std::shared_ptr<Expression> {
                               return t.expression ? exprToList(t.expression) : nullptr;
                           },
