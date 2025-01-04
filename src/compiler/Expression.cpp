@@ -203,8 +203,9 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const QuoteExpression& e) {
-                ss << "quote ";
+                ss << "(quote ";
                 e.expression->toString(ss);
+                ss << ")" << std::endl;
             },
             [&](const SetExpression& e) {
                 ss << "(set! " << e.identifier.lexeme << " ";
