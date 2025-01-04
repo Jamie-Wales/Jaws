@@ -143,7 +143,7 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const ListExpression& e) {
-                ss << "(list ";
+                ss << "(";
                 for (size_t i = 0; i < e.elements.size(); ++i) {
                     e.elements[i]->toString(ss);
                     if (i < e.elements.size() - 1)

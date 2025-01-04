@@ -28,36 +28,36 @@
 
 (define (try-match value patterns)
   (if (null? patterns)
-    #f
-    (let ([m (match value (caar patterns))])
-      (if m
-        (cons m (cadar patterns))
-        (try-match value (cdr patterns))))))
+      #f
+      (let ([m (match value (caar patterns))])
+        (if m
+            (cons m (cadar patterns))
+            (try-match value (cdr patterns))))))
 
 (define (flatten x)
   (cond
     [(null? x) '()]
     [(pair? x)
-      (append (flatten (car x))
-        (flatten (cdr x)))]
+     (append (flatten (car x))
+             (flatten (cdr x)))]
     [else (list x)]))
 
 (define (transform bindings template)
-    (cond
-      [(symbol? template)
-       (let ([binding (assq template bindings)])
-         (if binding
-             (let ([value (cdr binding)])
-               (if (and (pair? value)
-                       (null? (cdr value))
-                       (not (pair? (car value))))
-                   (car value)
-                   value))
-             template))]
-      [(pair? template)
-       (cons (transform bindings (car template))
-             (transform bindings (cdr template)))]
-      [else template]))
+  (cond
+    [(symbol? template)
+     (let ([binding (assq template bindings)])
+       (if binding
+           (let ([value (cdr binding)])
+             (if (and (pair? value)
+                      (null? (cdr value))
+                      (not (pair? (car value))))
+                 (car value)
+                 value))
+           template))]
+    [(pair? template)
+     (cons (transform bindings (car template))
+           (transform bindings (cdr template)))]
+    [else template]))
 
 ;; Test the fixed version
 (define (test-macro-system)
@@ -84,8 +84,8 @@
 (define (expand-macro form rules)
   (let ([result (try-match form rules)])
     (if result
-      (transform (car result) (cdr result))
-      (error "No matching pattern"))))
+        (transform (car result) (cdr result))
+        (error "No matching pattern"))))
 (define test-value '(2 + 3))
 
 (define test-pattern '(?x + ?y))

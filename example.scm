@@ -1,46 +1,47 @@
-
-(define (test-cond x)
-  (cond
-    ((< x 0)
-     (begin
-       (display "x is negative")
-       'negative))
-    ((> x 0)
-     (begin
-       (display "x is positive")
-       (newline)
-       'positive))
-    (else
-     (begin
-       (display "x is zero")
-       'zero))))
-
-(define (test-begin x)
-  (begin
-    (display "Starting computation...")
-    (display "Input x = ")
-    (display x)
-    (let ((result (* x x)))
-      (display "Square of x = ")
-      (display result)
-      result)))
-
-;; Test cases
-(display "Testing cond:\n")
-(test-cond -5)
-(test-cond 3)
-(test-cond 0)
-
-(display "\nTesting begin:\n")
-(test-begin 4)
-
 (define-syntax when
   (syntax-rules ()
-    [(_ condition-expr body-expr)
-     (if condition-expr
-         body-expr
-         #f)]))
+    ((when condition body ...)
+     (if condition
+         (begin body ...)
+         #f))))
 
+(define-syntax match
+  (syntax-rules (list quote)
+    ;; Empty list pattern
+    ((match expr
+       ((list) body ...)
+       rest ...)
+     (let ((value expr))
+       (if (null? value)
+           (begin body ...)
+           (match value rest ...))))
 
-(when (< 1 10) (display "hello"))
-(when #t (display "this should print"))
+    ;; Quoted symbol pattern
+    ((match expr
+       ((quote sym) body ...)
+       rest ...)
+     (let ((value expr))
+       (if (eq? value (quote sym))
+           (begin body ...)
+           (match value rest ...))))
+
+    ;; Default case
+    ((match expr
+       (default body ...))
+     (begin body ...))
+
+    ;; No matches
+    ((match expr)
+     #f)))
+(when (> 5 3)
+  (display "5 is greater than 3")
+  (newline))
+(match '()
+  ((list) (display "Found empty list"))
+  ((quote x) (display "Found x"))
+  (default (display "No match")))
+
+(match 'x
+  ((list) (display "Found empty list"))
+  ((quote x) (display "Found x"))
+  (default (display "No match")))

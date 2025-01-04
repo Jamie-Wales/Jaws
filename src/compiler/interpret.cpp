@@ -1,6 +1,6 @@
 #include "interpret.h"
 #include "Expression.h"
-#include "ExpressionUtils.h"
+#include "MacroExpression.h"
 #include "Procedure.h"
 #include "Value.h"
 #include "builtins/JawsEq.h"
@@ -74,16 +74,6 @@ InterpreterState createInterpreter()
     define("vector-length", jaws_vec::vectorLength);
     define("eval", jaws_hof::eval);
     define("apply", jaws_hof::apply);
-
-    auto macroSystemFile = readFile("../lib/example.scm");
-    auto macroSystemToks = scanner::tokenize(macroSystemFile);
-    auto macroSystemExprs = parse::parse(macroSystemToks);
-
-    if (!macroSystemExprs) {
-        throw std::runtime_error("Error parsing macro system definitions");
-    }
-    auto result = interpret(state, *macroSystemExprs);
-
     return state;
 }
 
@@ -230,28 +220,21 @@ std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const s
                 throw InterpreterError("Internal error: macro rules not found");
             }
 
-            SchemeValue form = expressionToValue(*std::make_shared<Expression>(
-                sExpression(sexpr.elements), sexpr.elements[0]->line));
-
+            // Extract literals from the rules
+            std::vector<Token> literals;
             for (const auto& rule : *rules) {
-                SchemeValue pattern = expressionToValue(*rule.pattern);
-                SchemeValue templ = expressionToValue(*rule.template_expr);
-
-                auto bindings = executeProcedure(state, *state.env->get("match"),
-                    std::vector<SchemeValue> { form, pattern });
-
-                if (bindings && bindings->isTrue()) {
-                    auto transformed = executeProcedure(state, *state.env->get("transform"),
-                        std::vector<SchemeValue> { *bindings, templ });
-
-                    if (transformed) {
-                    return jaws_hof::eval(state, {*transformed});
-                    }
+                if (auto* patternAtom = std::get_if<AtomExpression>(&rule.pattern->as)) {
+                    literals.push_back(patternAtom->value);
                 }
             }
+            if (auto expanded = expandMacro(state, name, sexpr, literals)) {
+                return interpret(state, valueToExpression(*expanded));
+            }
+
             throw InterpreterError("No matching pattern for macro: " + name);
         }
     }
+
     auto call = evaluateProcedureCall(state, sexpr);
     if (!call)
         return std::nullopt;

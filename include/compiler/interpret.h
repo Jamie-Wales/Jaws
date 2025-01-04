@@ -2,7 +2,6 @@
 #include "Environment.h"
 #include "Error.h"
 #include "Expression.h"
-#include "MacroProcessor.h"
 #include "Value.h"
 #include <memory>
 #include <optional>

@@ -23,7 +23,6 @@ public:
     std::optional<std::vector<SyntaxRule>> getMacroRules(const std::string& name) const;
     bool isMacro(const std::string& name) const;
 
-    // Existing methods
     void pushFrame();
     void popFrame();
     void define(const std::string& name, const SchemeValue& value);

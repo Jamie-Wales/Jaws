@@ -396,7 +396,13 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' before literals in 'syntax-rules'");
     std::vector<Token> literals;
     while (!match(state, Tokentype::RIGHT_PAREN)) {
-        literals.push_back(previousToken(state));
+   if (match(state, Tokentype::IDENTIFIER) ||
+            match(state, Tokentype::QUOTE) ||
+            match(state, Tokentype::ARROW)) {
+            literals.push_back(previousToken(state));
+        } else {
+            error(state, "Expected identifier, quote, or => in literals list");
+        }
     }
 
     std::vector<SyntaxRule> rules;
