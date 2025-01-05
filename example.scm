@@ -28,11 +28,11 @@
      #f)))
 
 (match '()
-  ((list) (display "Found empty list"))
-  ((quote x) (display "Found x"))
+  ((list) (display "**** FOUND empty list ****"))
+  ((quote x) (display "**** FOUND x *****"))
   (default (display "No match")))
 
 (match 'x
-  ((list) (display "Found empty list"))
-  ((quote x) (display "Found x"))
+  ((list) (display "**** FOUND empty list ****"))
+  ((quote x) (display "**** FOUND x *****"))
   (default (display "No match")))

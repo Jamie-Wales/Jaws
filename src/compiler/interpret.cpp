@@ -9,6 +9,7 @@
 #include "builtins/JawsList.h"
 #include "builtins/JawsMath.h"
 #include "builtins/JawsVector.h"
+#include "builtins/jaws_ffi.h"
 #include "parse.h"
 #include "run.h"
 #include "scan.h"
@@ -61,6 +62,8 @@ InterpreterState createInterpreter()
     define("cons", jaws_list::cons);
     define("length", jaws_list::length);
     define("append", jaws_list::append);
+    define("load-library", jaws_ffi::loadLibrary);
+    define("register-function", jaws_ffi::registerFunction);
     define("reverse", jaws_list::reverse);
     define("list-ref", jaws_list::listRef);
     define("list-tail", jaws_list::listTail);
@@ -210,7 +213,8 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
     return SchemeValue(std::move(elements));
 }
 
-std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr) {
+std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
+{
     if (auto* atomExpr = std::get_if<AtomExpression>(&sexpr.elements[0]->as)) {
         std::string name = atomExpr->value.lexeme;
         if (state.env->isMacro(name)) {

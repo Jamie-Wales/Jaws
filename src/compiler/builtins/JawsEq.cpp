@@ -154,7 +154,7 @@ std::optional<SchemeValue> isNull(
     if (args.size() != 1) {
         throw InterpreterError("null?: expected 1 argument");
     }
-    return SchemeValue(args[0].isList() && args[0].asList().empty());
+    return SchemeValue(args[0].ensureValue().isList() && args[0].ensureValue().asList().empty());
 }
 
 std::optional<SchemeValue> isEq(
