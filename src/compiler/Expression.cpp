@@ -95,9 +95,94 @@ TailExpression::TailExpression(std::shared_ptr<Expression> expression)
     : expression(expression)
 {
 }
-ImportExpression::ImportExpression(std::vector<Token> import)
-    : import { import } { };
+#include <cassert>
 
+// ImportSpec constructors
+ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib)
+    : type(ImportSet::Type::DIRECT)
+    , library(std::move(lib))
+{
+}
+
+ImportExpression::ImportSpec::ImportSpec(ImportSet::Type t,
+    std::vector<std::shared_ptr<Expression>> lib,
+    std::vector<Token> ids)
+    : type(t)
+    , library(std::move(lib))
+    , identifiers(std::move(ids))
+{
+    assert(t == ImportSet::Type::ONLY || t == ImportSet::Type::EXCEPT);
+}
+
+ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
+    Token pfx)
+    : type(ImportSet::Type::PREFIX)
+    , library(std::move(lib))
+    , prefix(std::move(pfx))
+{
+}
+
+ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
+    std::vector<std::pair<Token, Token>> renames_)
+    : type(ImportSet::Type::RENAME)
+    , library(std::move(lib))
+    , renames(std::move(renames_))
+{
+}
+
+// ImportExpression constructor
+ImportExpression::ImportExpression(std::vector<ImportSpec> imports_)
+    : imports(std::move(imports_))
+{
+}
+
+// Helper function implementations
+ImportExpression::ImportSpec makeDirectImport(std::vector<std::shared_ptr<Expression>> library)
+{
+    return ImportExpression::ImportSpec(std::move(library));
+}
+
+ImportExpression::ImportSpec makeOnlyImport(
+    std::vector<std::shared_ptr<Expression>> library,
+    std::vector<Token> identifiers)
+{
+    return ImportExpression::ImportSpec(
+        ImportExpression::ImportSet::Type::ONLY,
+        std::move(library),
+        std::move(identifiers));
+}
+
+ImportExpression::ImportSpec makeExceptImport(
+    std::vector<std::shared_ptr<Expression>> library,
+    std::vector<Token> identifiers)
+{
+    return ImportExpression::ImportSpec(
+        ImportExpression::ImportSet::Type::EXCEPT,
+        std::move(library),
+        std::move(identifiers));
+}
+
+ImportExpression::ImportSpec makePrefixImport(
+    std::vector<std::shared_ptr<Expression>> library,
+    Token prefix)
+{
+    return ImportExpression::ImportSpec(std::move(library), std::move(prefix));
+}
+
+ImportExpression::ImportSpec makeRenameImport(
+    std::vector<std::shared_ptr<Expression>> library,
+    std::vector<std::pair<Token, Token>> renames)
+{
+    return ImportExpression::ImportSpec(std::move(library), std::move(renames));
+}
+ImportExpression::ImportSpec::ImportSpec(const ImportSpec& other)
+    : type(other.type)
+    , library(other.library) // shared_ptr copy
+    , identifiers(other.identifiers)
+    , prefix(other.prefix)
+    , renames(other.renames)
+{
+}
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic)
     : elements(std::move(elems))
     , isVariadic(variadic)
@@ -219,8 +304,62 @@ void Expression::toString(std::stringstream& ss) const
             },
             [&](const ImportExpression& e) {
                 ss << "(import";
-                for (const auto& module : e.import) {
-                    ss << " " << module.lexeme;
+                for (const auto& spec : e.imports) {
+                    ss << " ";
+                    switch (spec.type) {
+                    case ImportExpression::ImportSet::Type::DIRECT: {
+                        ss << "(";
+                        for (const auto& part : spec.library) {
+                            ss << " " << part->toString();
+                        }
+                        ss << ")";
+                        break;
+                    }
+                    case ImportExpression::ImportSet::Type::ONLY: {
+                        ss << "(only (";
+                        for (const auto& part : spec.library) {
+                            ss << " " << part->toString();
+                        }
+                        ss << ")";
+                        for (const auto& id : spec.identifiers) {
+                            ss << " " << id.lexeme;
+                        }
+                        ss << ")";
+                        break;
+                    }
+                    case ImportExpression::ImportSet::Type::EXCEPT: {
+                        ss << "(except (";
+                        for (const auto& part : spec.library) {
+                            ss << " " << part->toString();
+                        }
+                        ss << ")";
+                        for (const auto& id : spec.identifiers) {
+                            ss << " " << id.lexeme;
+                        }
+                        ss << ")";
+                        break;
+                    }
+                    case ImportExpression::ImportSet::Type::PREFIX: {
+                        ss << "(prefix (";
+                        for (const auto& part : spec.library) {
+                            ss << " " << part->toString();
+                        }
+                        ss << ") " << spec.prefix.lexeme << ")";
+                        break;
+                    }
+                    case ImportExpression::ImportSet::Type::RENAME: {
+                        ss << "(rename (";
+                        for (const auto& part : spec.library) {
+                            ss << " " << part->toString();
+                        }
+                        ss << ")";
+                        for (const auto& [old_name, new_name] : spec.renames) {
+                            ss << " (" << old_name.lexeme << " " << new_name.lexeme << ")";
+                        }
+                        ss << ")";
+                        break;
+                    }
+                    }
                 }
                 ss << ")";
             },
@@ -369,7 +508,12 @@ std::shared_ptr<Expression> Expression::clone() const
                                   line);
                           },
                           [&](const ImportExpression& i) -> std::shared_ptr<Expression> {
-                              return std::make_shared<Expression>(ImportExpression { i.import }, line);
+                              std::vector<ImportExpression::ImportSpec> importsCopy;
+                              for (const auto& spec : i.imports) {
+                                  importsCopy.push_back(ImportExpression::ImportSpec(spec)); // Use copy constructor
+                              }
+                              return std::make_shared<Expression>(
+                                  Expression { ImportExpression { std::move(importsCopy) }, line });
                           },
                           [&](const TailExpression& e) -> std::shared_ptr<Expression> {
                               return std::make_shared<Expression>(TailExpression { e.expression->clone() }, line);

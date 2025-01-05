@@ -153,10 +153,7 @@ private:
         if (!pattern || !expr) {
             return false;
         }
-
-        // First check if pattern is an atom that's a pattern variable
         if (auto* patAtom = std::get_if<MacroAtom>(&pattern->value)) {
-            // Check if it's a literal
             bool isLiteral = std::find_if(literals.begin(), literals.end(),
                                  [&](const Token& lit) { return lit.lexeme == patAtom->token.lexeme; })
                 != literals.end();
@@ -167,8 +164,6 @@ private:
                 return true;
             }
         }
-
-        // If it's not a pattern variable, do normal matching
         return std::visit(overloaded {
                               [&](const MacroAtom& patAtom, const MacroAtom& exprAtom) -> bool {
                                   if (patAtom.token.lexeme == "_") {

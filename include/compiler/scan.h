@@ -1,9 +1,7 @@
 #pragma once
-#include "Error.h"
 #include "Token.h"
 #include <regex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace scanner {

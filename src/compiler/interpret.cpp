@@ -353,17 +353,105 @@ std::optional<SchemeValue> interpretDefineSyntax(
     }
     throw InterpreterError("Invalid syntax-rules expression in define-syntax");
 }
+
+bool fileExists(const std::string& path)
+{
+    std::ifstream f(path.c_str());
+    return f.good();
+}
+
 std::optional<SchemeValue> interpretImport(InterpreterState& state, const ImportExpression& import)
 {
-    for (const auto& tok : import.import) {
-        auto source = readFile(std::format("../lib/{}.scm", tok.lexeme));
+    for (const auto& spec : import.imports) {
+        auto libEnv = std::make_shared<Environment>(state.env);
+        libEnv->pushFrame();
+        std::string filePath;
+        if (spec.library.size() == 1) {
+            if (auto* atom = std::get_if<AtomExpression>(&spec.library[0]->as)) {
+                std::string localPath = atom->value.lexeme + ".scm";
+                if (fileExists(localPath)) {
+                    filePath = localPath;
+                } else {
+                    filePath = std::format("../lib/{}", localPath);
+                }
+            }
+        } else {
+            std::string libPath;
+            for (const auto& part : spec.library) {
+                if (auto* atom = std::get_if<AtomExpression>(&part->as)) {
+                    libPath += atom->value.lexeme + "/";
+                }
+            }
+            filePath = std::format("../lib/{}.scm", libPath.substr(0, libPath.length() - 1));
+        }
+
+        if (!fileExists(filePath)) {
+            throw InterpreterError("Cannot find file to import: " + filePath);
+        }
+        auto source = readFile(filePath);
         auto tokens = scanner::tokenize(source);
         auto exprs = parse::parse(std::move(tokens));
-        interpret(state, *exprs);
+        InterpreterState libState;
+        libState.env = libEnv;
+        interpret(libState, *exprs);
+        switch (spec.type) {
+        case ImportExpression::ImportSet::Type::DIRECT: {
+            for (const auto& [name, value] : libEnv->frames.front()->bound) {
+                state.env->define(name, value);
+            }
+            break;
+        }
+        case ImportExpression::ImportSet::Type::ONLY: {
+            for (const auto& id : spec.identifiers) {
+                if (auto value = libEnv->get(id.lexeme)) {
+                    state.env->define(id.lexeme, *value);
+                } else {
+                    throw InterpreterError("Symbol not found in library: " + id.lexeme);
+                }
+            }
+            break;
+        }
+        case ImportExpression::ImportSet::Type::EXCEPT: {
+            for (const auto& [name, value] : libEnv->frames.front()->bound) {
+                bool shouldSkip = false;
+                for (const auto& id : spec.identifiers) {
+                    if (name == id.lexeme) {
+                        shouldSkip = true;
+                        break;
+                    }
+                }
+                if (!shouldSkip) {
+                    state.env->define(name, value);
+                }
+            }
+            break;
+        }
+        case ImportExpression::ImportSet::Type::PREFIX: {
+            for (const auto& [name, value] : libEnv->frames.front()->bound) {
+                state.env->define(spec.prefix.lexeme + name, value);
+            }
+            break;
+        }
+        case ImportExpression::ImportSet::Type::RENAME: {
+            for (const auto& [name, value] : libEnv->frames.front()->bound) {
+                bool isRenamed = false;
+                for (const auto& [oldName, newName] : spec.renames) {
+                    if (name == oldName.lexeme) {
+                        state.env->define(newName.lexeme, value);
+                        isRenamed = true;
+                        break;
+                    }
+                }
+                if (!isRenamed) {
+                    state.env->define(name, value);
+                }
+            }
+            break;
+        }
+        }
     }
     return std::nullopt;
 }
-
 std::optional<SchemeValue> interpretSet(InterpreterState& state, const SetExpression& set)
 {
     auto val = interpret(state, set.value);
@@ -407,14 +495,15 @@ std::optional<SchemeValue> executeProcedure(
     const std::vector<SchemeValue>& args)
 {
     if (!proc.isProc()) {
-        throw InterpreterError("Cannot execute non-procedure value: " + proc.toString());
+        throw InterpreterError(
+            "Cannot execute non-procedure: " + proc.toString());
     }
 
     auto procedure = proc.asProc();
     auto currentArgs = args;
 
     while (true) {
-        if (procedure->isTailCall()) {
+        while (procedure->isTailCall()) {
             auto tailCall = std::dynamic_pointer_cast<TailCall>(procedure);
             procedure = tailCall->proc;
             currentArgs = tailCall->args;
@@ -424,12 +513,11 @@ std::optional<SchemeValue> executeProcedure(
         if (!result)
             return std::nullopt;
 
-        if (result->isProc() && result->asProc()->isTailCall()) {
-            procedure = result->asProc();
-            continue;
+        if (!result->isProc() || !result->asProc()->isTailCall()) {
+            return result;
         }
 
-        return result;
+        procedure = result->asProc();
     }
 }
 }

@@ -6,14 +6,11 @@
 
 std::optional<SchemeValue> UserProcedure::operator()(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) const {
-    
+    const std::vector<SchemeValue>& args) const
+{
     auto newEnv = std::make_shared<Environment>(
-        closure ? closure : state.rootEnv
-    );
-    newEnv->pushFrame();  // Single frame for procedure scope
-
-    // Parameter binding
+        closure ? closure : state.rootEnv);
+    newEnv->pushFrame();
     size_t i = 0;
     for (; i < parameters.size() - (isVariadic ? 1 : 0); i++) {
         newEnv->define(parameters[i].lexeme, args[i]);
@@ -30,13 +27,13 @@ std::optional<SchemeValue> UserProcedure::operator()(
     for (const auto& expr : body) {
         result = interpret::interpret(state, expr);
         if (result && result->isProc() && result->asProc()->isTailCall()) {
-            newEnv->popFrame();  // Pop our frame
+            newEnv->popFrame(); // Pop our frame
             state.env = oldEnv;
             return result;
         }
     }
 
-    newEnv->popFrame();  // Pop our frame
+    newEnv->popFrame(); // Pop our frame
     state.env = oldEnv;
     return result;
 }

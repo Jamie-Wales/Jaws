@@ -1,5 +1,5 @@
 #include "scan.h"
-
+#include "Error.h"
 namespace scanner {
 
 const std::unordered_map<std::string, Tokentype> keywords = {
@@ -8,6 +8,10 @@ const std::unordered_map<std::string, Tokentype> keywords = {
     { "lambda", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
     { "quote", Tokentype::QUOTE },
+    { "only", Tokentype::ONLY },
+    { "except", Tokentype::EXCEPT },
+    { "prefix", Tokentype::PREFIX },
+    { "rename", Tokentype::RENAME },
     { "let", Tokentype::LET },
     { "import", Tokentype::IMPORT },
     { "syntax-rules", Tokentype::SYNTAX_RULE },

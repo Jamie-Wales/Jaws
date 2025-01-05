@@ -33,6 +33,8 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state);
 std::shared_ptr<Expression> parseList(ParserState& state);
 
 std::shared_ptr<Expression> parseBegin(ParserState& state);
+
+std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state);
 std::shared_ptr<Expression> parseCond(ParserState& state);
 std::shared_ptr<Expression> parseTailExpression(ParserState& state);
 

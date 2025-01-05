@@ -114,10 +114,64 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const ImportExpression& i) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("import"));
-                              for (const auto& module : i.import) {
-                                  elements.push_back(std::make_shared<Expression>(
-                                      Expression { AtomExpression { module }, expr->line }));
+
+                              for (const auto& spec : i.imports) {
+                                  std::vector<std::shared_ptr<Expression>> specElements;
+
+                                  switch (spec.type) {
+                                  case ImportExpression::ImportSet::Type::DIRECT: {
+                                      specElements = spec.library;
+                                      break;
+                                  }
+                                  case ImportExpression::ImportSet::Type::ONLY: {
+                                      specElements.push_back(makeAtom("only"));
+                                      specElements.push_back(std::make_shared<Expression>(
+                                          Expression { ListExpression { spec.library, false }, expr->line }));
+                                      for (const auto& id : spec.identifiers) {
+                                          specElements.push_back(makeAtom(id.lexeme));
+                                      }
+                                      break;
+                                  }
+                                  case ImportExpression::ImportSet::Type::EXCEPT: {
+                                      specElements.push_back(makeAtom("except"));
+                                      specElements.push_back(std::make_shared<Expression>(
+                                          Expression { ListExpression { spec.library, false }, expr->line }));
+                                      for (const auto& id : spec.identifiers) {
+                                          specElements.push_back(makeAtom(id.lexeme));
+                                      }
+                                      break;
+                                  }
+                                  case ImportExpression::ImportSet::Type::PREFIX: {
+                                      specElements.push_back(makeAtom("prefix"));
+                                      specElements.push_back(std::make_shared<Expression>(
+                                          Expression { ListExpression { spec.library, false }, expr->line }));
+                                      specElements.push_back(makeAtom(spec.prefix.lexeme));
+                                      break;
+                                  }
+                                  case ImportExpression::ImportSet::Type::RENAME: {
+                                      specElements.push_back(makeAtom("rename"));
+                                      specElements.push_back(std::make_shared<Expression>(
+                                          Expression { ListExpression { spec.library, false }, expr->line }));
+                                      for (const auto& [old_name, new_name] : spec.renames) {
+                                          std::vector<std::shared_ptr<Expression>> renameElements;
+                                          renameElements.push_back(makeAtom(old_name.lexeme));
+                                          renameElements.push_back(makeAtom(new_name.lexeme));
+                                          specElements.push_back(std::make_shared<Expression>(
+                                              Expression { ListExpression { renameElements, false }, expr->line }));
+                                      }
+                                      break;
+                                  }
+                                  }
+
+                                  if (spec.type != ImportExpression::ImportSet::Type::DIRECT) {
+                                      elements.push_back(std::make_shared<Expression>(
+                                          Expression { ListExpression { specElements, false }, expr->line }));
+                                  } else {
+                                      elements.push_back(std::make_shared<Expression>(
+                                          Expression { ListExpression { specElements, false }, expr->line }));
+                                  }
                               }
+
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },

@@ -89,11 +89,49 @@ public:
 /**
  * @brief Represents import expressions for loading external modules
  */
+
 class ImportExpression {
 public:
-    std::vector<Token> import;
-    ImportExpression(std::vector<Token> import);
+    struct ImportSet {
+        enum class Type {
+            DIRECT,
+            ONLY,
+            EXCEPT,
+            PREFIX,
+            RENAME
+        };
+    };
+
+    struct ImportSpec {
+        ImportSet::Type type;
+        std::vector<std::shared_ptr<Expression>> library;
+        std::vector<Token> identifiers;
+        Token prefix;
+        std::vector<std::pair<Token, Token>> renames; // Used for RENAME
+
+        explicit ImportSpec(std::vector<std::shared_ptr<Expression>> lib);
+        ImportSpec(ImportSet::Type t, std::vector<std::shared_ptr<Expression>> lib,
+            std::vector<Token> ids);
+        ImportSpec(std::vector<std::shared_ptr<Expression>> lib, Token pfx);
+        ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
+            std::vector<std::pair<Token, Token>> renames);
+        ImportSpec(const ImportSpec& other);
+    };
+
+    std::vector<ImportSpec> imports;
+
+    explicit ImportExpression(std::vector<ImportSpec> imports_);
 };
+
+ImportExpression::ImportSpec makeDirectImport(std::vector<std::shared_ptr<Expression>> library);
+ImportExpression::ImportSpec makeOnlyImport(std::vector<std::shared_ptr<Expression>> library,
+    std::vector<Token> identifiers);
+ImportExpression::ImportSpec makeExceptImport(std::vector<std::shared_ptr<Expression>> library,
+    std::vector<Token> identifiers);
+ImportExpression::ImportSpec makePrefixImport(std::vector<std::shared_ptr<Expression>> library,
+    Token prefix);
+ImportExpression::ImportSpec makeRenameImport(std::vector<std::shared_ptr<Expression>> library,
+    std::vector<std::pair<Token, Token>> renames);
 
 /**
  * @brief Represents list expressions (proper lists)
@@ -198,8 +236,8 @@ public:
         SetExpression,
         TailExpression,
         ImportExpression,
-        SyntaxRulesExpression, // Added
-        DefineSyntaxExpression, // Added
+        SyntaxRulesExpression,
+        DefineSyntaxExpression,
         BeginExpression,
         CondExpression,
         LetExpression>;

@@ -61,7 +61,6 @@ SchemeValue expressionToValue(const Expression& expr)
                                   size_t iPos = complexStr.find('i');
 
                                   if (iPos == std::string::npos) {
-                                      // Not a complex number, treat as a regular number
                                       return SchemeValue(Number(std::stod(complexStr)));
                                   }
 
@@ -69,14 +68,12 @@ SchemeValue expressionToValue(const Expression& expr)
                                   double imag;
 
                                   if (plusPos == std::string::npos && minusPos == std::string::npos) {
-                                      // No real part, just imaginary (e.g., "3i")
                                       real = 0.0;
                                       imag = std::stod(complexStr.substr(0, iPos));
                                   } else {
                                       size_t signPos = (plusPos != std::string::npos) ? plusPos : minusPos;
 
                                       if (signPos == 0) {
-                                          // Only imaginary part with a sign (e.g., "+2i" or "-2i")
                                           real = 0.0;
                                           imag = std::stod(complexStr.substr(0, iPos));
                                       } else {
@@ -151,7 +148,6 @@ SchemeValue expressionToValue(const Expression& expr)
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "let" }));
 
-                              // Handle optional named let
                               if (l.name.has_value()) {
                                   values.push_back(SchemeValue(Symbol { l.name.value().lexeme }));
                               }
@@ -173,9 +169,81 @@ SchemeValue expressionToValue(const Expression& expr)
                           [&](const ImportExpression& i) -> SchemeValue {
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "import" }));
-                              for (const auto& tok : i.import) {
-                                  values.push_back(SchemeValue(Symbol { tok.lexeme }));
+
+                              for (const auto& spec : i.imports) {
+                                  switch (spec.type) {
+                                  case ImportExpression::ImportSet::Type::DIRECT: {
+                                      std::list<SchemeValue> libRef;
+                                      for (const auto& part : spec.library) {
+                                          libRef.push_back(expressionToValue(*part));
+                                      }
+                                      values.push_back(SchemeValue(std::move(libRef)));
+                                      break;
+                                  }
+
+                                  case ImportExpression::ImportSet::Type::ONLY: {
+                                      std::list<SchemeValue> onlySpec;
+                                      onlySpec.push_back(SchemeValue(Symbol { "only" }));
+                                      std::list<SchemeValue> libRef;
+                                      for (const auto& part : spec.library) {
+                                          libRef.push_back(expressionToValue(*part));
+                                      }
+                                      onlySpec.push_back(SchemeValue(std::move(libRef)));
+                                      for (const auto& id : spec.identifiers) {
+                                          onlySpec.push_back(SchemeValue(Symbol { id.lexeme }));
+                                      }
+                                      values.push_back(SchemeValue(std::move(onlySpec)));
+                                      break;
+                                  }
+
+                                  case ImportExpression::ImportSet::Type::EXCEPT: {
+                                      std::list<SchemeValue> exceptSpec;
+                                      exceptSpec.push_back(SchemeValue(Symbol { "except" }));
+                                      std::list<SchemeValue> libRef;
+                                      for (const auto& part : spec.library) {
+                                          libRef.push_back(expressionToValue(*part));
+                                      }
+                                      exceptSpec.push_back(SchemeValue(std::move(libRef)));
+                                      for (const auto& id : spec.identifiers) {
+                                          exceptSpec.push_back(SchemeValue(Symbol { id.lexeme }));
+                                      }
+                                      values.push_back(SchemeValue(std::move(exceptSpec)));
+                                      break;
+                                  }
+
+                                  case ImportExpression::ImportSet::Type::PREFIX: {
+                                      std::list<SchemeValue> prefixSpec;
+                                      prefixSpec.push_back(SchemeValue(Symbol { "prefix" }));
+                                      std::list<SchemeValue> libRef;
+                                      for (const auto& part : spec.library) {
+                                          libRef.push_back(expressionToValue(*part));
+                                      }
+                                      prefixSpec.push_back(SchemeValue(std::move(libRef)));
+                                      prefixSpec.push_back(SchemeValue(Symbol { spec.prefix.lexeme }));
+                                      values.push_back(SchemeValue(std::move(prefixSpec)));
+                                      break;
+                                  }
+
+                                  case ImportExpression::ImportSet::Type::RENAME: {
+                                      std::list<SchemeValue> renameSpec;
+                                      renameSpec.push_back(SchemeValue(Symbol { "rename" }));
+                                      std::list<SchemeValue> libRef;
+                                      for (const auto& part : spec.library) {
+                                          libRef.push_back(expressionToValue(*part));
+                                      }
+                                      renameSpec.push_back(SchemeValue(std::move(libRef)));
+                                      for (const auto& [old_name, new_name] : spec.renames) {
+                                          std::list<SchemeValue> renamePair;
+                                          renamePair.push_back(SchemeValue(Symbol { old_name.lexeme }));
+                                          renamePair.push_back(SchemeValue(Symbol { new_name.lexeme }));
+                                          renameSpec.push_back(SchemeValue(std::move(renamePair)));
+                                      }
+                                      values.push_back(SchemeValue(std::move(renameSpec)));
+                                      break;
+                                  }
+                                  }
                               }
+
                               return SchemeValue(std::move(values));
                           },
 
