@@ -341,24 +341,6 @@ SchemeValue expressionToValue(const Expression& expr)
                               return SchemeValue(std::move(values));
                           },
 
-                          [&](const CondExpression& c) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "cond" }));
-                              for (const auto& [test, body] : c.conditions) {
-                                  std::list<SchemeValue> clause;
-                                  clause.push_back(expressionToValue(*test));
-                                  clause.push_back(expressionToValue(*body));
-                                  values.push_back(SchemeValue(std::move(clause)));
-                              }
-                              if (c.elseCond) {
-                                  std::list<SchemeValue> elseClause;
-                                  elseClause.push_back(SchemeValue(Symbol { "else" }));
-                                  elseClause.push_back(expressionToValue(**c.elseCond));
-                                  values.push_back(SchemeValue(std::move(elseClause)));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
                           [&](const ListExpression& l) -> SchemeValue {
                               std::list<SchemeValue> values;
                               for (const auto& elem : l.elements) {

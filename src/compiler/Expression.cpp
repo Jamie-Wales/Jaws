@@ -25,13 +25,6 @@ BeginExpression::BeginExpression(std::vector<std::shared_ptr<Expression>> body)
 {
 }
 
-CondExpression::CondExpression(
-    std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions,
-    std::optional<std::shared_ptr<Expression>> elseCond)
-    : conditions(std::move(conditions))
-    , elseCond(std::move(elseCond))
-{
-}
 SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression> value)
     : identifier(std::move(identifier))
     , value(std::move(value))
@@ -394,22 +387,6 @@ void Expression::toString(std::stringstream& ss) const
                 }
                 ss << ")";
             },
-            [&](const CondExpression& e) {
-                ss << "(cond ";
-                for (const auto& [condition, expr] : e.conditions) {
-                    ss << "(";
-                    condition->toString(ss);
-                    ss << " ";
-                    expr->toString(ss);
-                    ss << ") ";
-                }
-                if (e.elseCond) {
-                    ss << "(else ";
-                    (*e.elseCond)->toString(ss);
-                    ss << ") ";
-                }
-                ss << ")";
-            },
             [&](const LetExpression& e) {
                 ss << "(let ";
                 if (e.name) {
@@ -450,23 +427,6 @@ std::shared_ptr<Expression> Expression::clone() const
                                       p.name, output, clonedBody },
                                   line });
                           },
-                          [&](const CondExpression& c) -> std::shared_ptr<Expression> {
-                              std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> body = {};
-                              for (const auto& [first, second] : c.conditions) {
-                                  body.push_back({ first->clone(), second->clone() });
-                              }
-                              std::optional<std::shared_ptr<Expression>> elseClone = std::nullopt;
-                              if (c.elseCond) {
-                                  elseClone = (*c.elseCond)->clone();
-                              }
-
-                              return std::make_shared<Expression>(
-                                  CondExpression {
-                                      std::move(body),
-                                      elseClone },
-                                  line);
-                          },
-
                           [&](const BeginExpression& b) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> body = {};
                               for (const auto& first : b.body) {

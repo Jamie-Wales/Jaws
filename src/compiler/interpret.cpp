@@ -99,22 +99,6 @@ std::optional<SchemeValue> interpretBegin(InterpreterState& state, const BeginEx
     }
     return result;
 }
-std::optional<SchemeValue> interpretCond(InterpreterState& state, const CondExpression& cond)
-{
-    for (const auto [first, second] : cond.conditions) {
-        if (const auto item = interpret(state, first)) {
-            if (item->isTrue()) {
-                return interpret(state, second);
-            }
-        }
-    }
-
-    if (cond.elseCond) {
-        return interpret(state, *cond.elseCond);
-    }
-
-    return std::nullopt;
-}
 
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
@@ -124,7 +108,6 @@ std::optional<SchemeValue> interpret(
                           [&](const AtomExpression& e) { return interpretAtom(state, e); },
                           [&](const ListExpression& e) { return interpretList(state, e); },
                           [&](const BeginExpression& e) { return interpretBegin(state, e); },
-                          [&](const CondExpression& e) { return interpretCond(state, e); },
                           [&](const sExpression& e) { return interpretSExpression(state, e); },
                           [&](const DefineExpression& e) { return interpretDefine(state, e); },
                           [&](const DefineSyntaxExpression& e) { return interpretDefineSyntax(state, e); },
@@ -218,18 +201,11 @@ std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const s
     if (auto* atomExpr = std::get_if<AtomExpression>(&sexpr.elements[0]->as)) {
         std::string name = atomExpr->value.lexeme;
         if (state.env->isMacro(name)) {
-            auto rules = state.env->getMacroRules(name);
+            auto rules = state.env->getMacroDefinition(name);
             if (!rules) {
                 throw InterpreterError("Internal error: macro rules not found");
             }
-            std::vector<Token> literals;
-            for (const auto& rule : *rules) {
-                if (auto* patternAtom = std::get_if<AtomExpression>(&rule.pattern->as)) {
-                    literals.push_back(patternAtom->value);
-                }
-            }
-            if (auto expanded = expandMacro(state, name, sexpr, literals)) {
-                // Recursively expand any macros in the expanded result
+            if (auto expanded = expandMacro(state, name, sexpr, rules->literals)) {
                 if (auto fullyExpanded = expandMacrosIn(state, *expanded)) {
                     return interpret(state, *fullyExpanded);
                 }
@@ -348,7 +324,7 @@ std::optional<SchemeValue> interpretDefineSyntax(
     const DefineSyntaxExpression& syntax)
 {
     if (auto* rules = std::get_if<SyntaxRulesExpression>(&syntax.rule->as)) {
-        state.env->defineMacro(syntax.name.lexeme, rules->rules);
+        state.env->defineMacro(syntax.name.lexeme, rules->literals, rules->rules);
         return std::nullopt;
     }
     throw InterpreterError("Invalid syntax-rules expression in define-syntax");

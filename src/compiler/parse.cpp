@@ -75,31 +75,6 @@ std::shared_ptr<Expression> parseSet(ParserState& state)
     return std::make_shared<Expression>(Expression { SetExpression { name, expr }, previousToken(state).line });
 }
 
-std::shared_ptr<Expression> parseCond(ParserState& state)
-{
-    std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions;
-    std::optional<std::shared_ptr<Expression>> elseCond = std::nullopt;
-
-    while (!check(state, Tokentype::RIGHT_PAREN)) {
-        consume(state, Tokentype::LEFT_PAREN, "Expected '(' at start of cond clause");
-
-        if (match(state, Tokentype::ELSE)) {
-            auto body = parseExpression(state);
-            elseCond = body;
-        } else {
-            auto test = parseExpression(state);
-            auto body = parseExpression(state);
-            conditions.push_back({ test, body });
-        }
-
-        consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after cond clause");
-    }
-
-    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after cond expression");
-    return std::make_shared<Expression>(
-        Expression { CondExpression { std::move(conditions), std::move(elseCond) },
-            previousToken(state).line });
-}
 std::shared_ptr<Expression> parseBegin(ParserState& state)
 {
     std::vector<std::shared_ptr<Expression>> body;
@@ -135,8 +110,6 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
             return parseLet(state);
         if (match(state, Tokentype::SET))
             return parseSet(state);
-        if (match(state, Tokentype::COND))
-            return parseCond(state);
         if (match(state, Tokentype::BEGIN))
             return parseBegin(state);
         if (match(state, Tokentype::IMPORT))
@@ -165,6 +138,7 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     switch (token.type) {
     case Tokentype::IDENTIFIER:
     case Tokentype::INTEGER:
+    case Tokentype::ELSE:
     case Tokentype::FLOAT:
     case Tokentype::COMPLEX:
     case Tokentype::RATIONAL:
@@ -466,18 +440,13 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' before literals in 'syntax-rules'");
     std::vector<Token> literals;
     while (!match(state, Tokentype::RIGHT_PAREN)) {
-        if (match(state, Tokentype::IDENTIFIER) || match(state, Tokentype::QUOTE) || match(state, Tokentype::ARROW)) {
-            literals.push_back(previousToken(state));
-        } else {
-            error(state, "Expected identifier, quote, or => in literals list");
-        }
+        literals.push_back(advance(state));
     }
-
     std::vector<SyntaxRule> rules;
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         consume(state, Tokentype::LEFT_PAREN, "Expected '(' before pattern in 'syntax-rules'");
-        auto pattern = parseExpression(state); // Parse the pattern
-        auto template_expr = parseExpression(state); // Parse the template
+        auto pattern = parseExpression(state);
+        auto template_expr = parseExpression(state);
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after template in 'syntax-rules'");
         rules.push_back(SyntaxRule(pattern, template_expr));
     }
@@ -487,5 +456,4 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
     return std::make_shared<Expression>(
         Expression { SyntaxRulesExpression { literals, std::move(rules) }, previousToken(state).line });
 }
-
 }

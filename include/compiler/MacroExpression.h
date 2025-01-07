@@ -157,61 +157,84 @@ private:
             bool isLiteral = std::find_if(literals.begin(), literals.end(),
                                  [&](const Token& lit) { return lit.lexeme == patAtom->token.lexeme; })
                 != literals.end();
+            if (isLiteral) {
+                if (auto* exprAtom = std::get_if<MacroAtom>(&expr->value)) {
+                    return patAtom->token.lexeme == exprAtom->token.lexeme;
+                }
+                return false;
+            }
 
-            if (!isLiteral && patAtom->token.lexeme != "_") {
-                // It's a pattern variable - it can match anything
+            if (patAtom->token.lexeme != "_") {
                 env[patAtom->token.lexeme].matches.push_back(expr);
                 return true;
             }
         }
+
         return std::visit(overloaded {
                               [&](const MacroAtom& patAtom, const MacroAtom& exprAtom) -> bool {
                                   if (patAtom.token.lexeme == "_") {
                                       return true;
                                   }
 
-                                  return patAtom.token.lexeme == exprAtom.token.lexeme;
+                                  bool isLiteral = std::find_if(literals.begin(), literals.end(),
+                                                       [&](const Token& lit) { return lit.lexeme == patAtom.token.lexeme; })
+                                      != literals.end();
+
+                                  if (isLiteral) {
+                                      return patAtom.token.lexeme == exprAtom.token.lexeme;
+                                  }
+
+                                  // Non-literal matches anything
+                                  env[patAtom.token.lexeme].matches.push_back(expr);
+                                  return true;
                               },
 
                               [&](const MacroList& patList, const MacroList& exprList) -> bool {
-                                  if (!pattern->isVariadic) {
-                                      if (patList.elements.size() != exprList.elements.size()) {
+                                  if (pattern->isVariadic) {
+                                      if (patList.elements.empty()) {
                                           return false;
                                       }
 
-                                      for (size_t i = 0; i < patList.elements.size(); i++) {
+                                      size_t fixedCount = patList.elements.size() - 1;
+                                      if (exprList.elements.size() < fixedCount) {
+                                          return false;
+                                      }
+                                      for (size_t i = 0; i < fixedCount; i++) {
                                           if (!matchExpr(patList.elements[i], exprList.elements[i], env, literals)) {
                                               return false;
                                           }
                                       }
+                                      if (auto last = patList.elements.back()) {
+                                          std::visit(overloaded {
+                                                         [&](const MacroAtom& patAtom) {
+                                                             auto& matches = env[patAtom.token.lexeme].matches;
+                                                             for (size_t i = fixedCount; i < exprList.elements.size(); i++) {
+                                                                 matches.push_back(exprList.elements[i]);
+                                                             }
+                                                         },
+                                                         [](const auto&) {} },
+                                              last->value);
+                                      }
+
                                       return true;
                                   }
-
-                                  if (patList.elements.empty()) {
+                                  if (patList.elements.size() > 0 && exprList.elements.size() > 0) {
+                                      if (auto* firstPatAtom = std::get_if<MacroAtom>(&patList.elements[0]->value)) {
+                                          if (std::find_if(literals.begin(), literals.end(),
+                                                  [&](const Token& lit) { return lit.lexeme == firstPatAtom->token.lexeme; })
+                                              != literals.end()) {
+                                              return matchExpr(patList.elements[0], exprList.elements[0], env, literals);
+                                          }
+                                      }
+                                  }
+                                  if (patList.elements.size() != exprList.elements.size()) {
                                       return false;
                                   }
 
-                                  size_t fixedCount = patList.elements.size() - 1;
-                                  if (exprList.elements.size() < fixedCount) {
-                                      return false;
-                                  }
-
-                                  for (size_t i = 0; i < fixedCount; i++) {
+                                  for (size_t i = 0; i < patList.elements.size(); i++) {
                                       if (!matchExpr(patList.elements[i], exprList.elements[i], env, literals)) {
                                           return false;
                                       }
-                                  }
-
-                                  if (auto last = patList.elements.back()) {
-                                      std::visit(overloaded {
-                                                     [&](const MacroAtom& patAtom) {
-                                                         auto& matches = env[patAtom.token.lexeme].matches;
-                                                         for (size_t i = fixedCount; i < exprList.elements.size(); i++) {
-                                                             matches.push_back(exprList.elements[i]);
-                                                         }
-                                                     },
-                                                     [](const auto&) {} },
-                                          last->value);
                                   }
 
                                   return true;
@@ -229,13 +252,8 @@ public:
         const std::shared_ptr<Expression>& templ,
         const MatchEnv& env)
     {
-        std::cout << "DEBUG: Starting macro transformation\n"
-                  << "Template: " << templ->toString() << "\n";
-
         auto macroTemplate = prepareForMacro(templ);
         auto result = transformMacro(macroTemplate, env)->toExpr();
-
-        std::cout << "DEBUG: Transformation result: " << result->toString() << "\n";
         return result;
     }
 
@@ -252,6 +270,9 @@ private:
                               [&](const MacroAtom& atom) -> std::shared_ptr<MacroExpr> {
                                   auto it = env.find(atom.token.lexeme);
                                   if (it != env.end()) {
+                                      if (it->second.matches.empty()) {
+                                          return nullptr;
+                                      }
                                       if (it->second.matches.size() == 1) {
                                           return it->second.matches[0];
                                       } else {
@@ -266,13 +287,21 @@ private:
 
                               [&](const MacroList& list) -> std::shared_ptr<MacroExpr> {
                                   MacroList newList;
+                                  bool hasElements = false;
+
                                   for (const auto& elem : list.elements) {
                                       if (auto transformed = transformMacro(elem, env)) {
                                           newList.elements.push_back(transformed);
+                                          hasElements = true;
                                       }
                                   }
-                                  return std::make_shared<MacroExpr>(
-                                      MacroExpr { std::move(newList), expr->isVariadic, expr->line });
+
+                                  // Only return the list if it has elements or if it's not a variadic pattern
+                                  if (hasElements || !expr->isVariadic) {
+                                      return std::make_shared<MacroExpr>(
+                                          MacroExpr { std::move(newList), expr->isVariadic, expr->line });
+                                  }
+                                  return nullptr;
                               } },
             expr->value);
     }
@@ -287,20 +316,16 @@ std::optional<std::shared_ptr<Expression>> expandMacro(
     const std::vector<Token>& literals)
 {
     auto expr = std::make_shared<Expression>(sExpression(sexpr.elements), sexpr.elements[0]->line);
-
-    auto rules = state.env->getMacroRules(macroName);
+    auto rules = state.env->getMacroDefinition(macroName);
     if (!rules) {
         return std::nullopt;
     }
-
-    for (const auto& rule : *rules) {
+    for (const auto& rule : (*rules).rules) {
         auto matchResult = PatternMatcher::match(rule.pattern, expr, literals);
         if (matchResult) {
             auto transformed = MacroTransformer::transform(rule.template_expr, *matchResult);
             if (transformed) {
-                // Convert to string and reparse
                 std::string exprStr = transformed->toString();
-                std::cout << "DONE PARSING :" << transformed->toString() << std::endl;
                 auto tokens = scanner::tokenize(exprStr);
                 auto reparsed = parse::parse(tokens);
                 if (!reparsed || reparsed->empty()) {
@@ -336,19 +361,10 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
         auto* sexpr = std::get_if<sExpression>(&expr->as);
         auto* atom = std::get_if<AtomExpression>(&sexpr->elements[0]->as);
         auto name = atom->value.lexeme;
-
-        auto rules = state.env->getMacroRules(name);
+        auto rules = state.env->getMacroDefinition(name);
         if (!rules)
             return std::nullopt;
-
-        std::vector<Token> literals;
-        for (const auto& rule : *rules) {
-            if (auto* patternAtom = std::get_if<AtomExpression>(&rule.pattern->as)) {
-                literals.push_back(patternAtom->value);
-            }
-        }
-
-        if (auto expanded = expandMacro(state, name, *sexpr, literals)) {
+        if (auto expanded = expandMacro(state, name, *sexpr, rules->literals)) {
             return expandMacrosIn(state, *expanded);
         }
         return std::nullopt;
@@ -358,7 +374,6 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                           [&](const AtomExpression& atom) -> std::shared_ptr<Expression> {
                               return expr; // Atoms can't contain macros
                           },
-
                           [&](const ListExpression& list) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> newElements;
                               bool changed = false;
@@ -376,7 +391,6 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                               }
                               return expr;
                           },
-
                           [&](const sExpression& sexpr) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> newElements;
                               bool changed = false;
@@ -394,7 +408,6 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                               }
                               return expr;
                           },
-
                           [&](const BeginExpression& begin) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> newBody;
                               bool changed = false;
@@ -412,7 +425,6 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                               }
                               return expr;
                           },
-
                           [&](const LetExpression& let) -> std::shared_ptr<Expression> {
                               std::vector<std::pair<Token, std::shared_ptr<Expression>>> newArgs;
                               std::vector<std::shared_ptr<Expression>> newBody;
@@ -435,14 +447,12 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                                       newBody.push_back(e);
                                   }
                               }
-
                               if (changed) {
                                   return std::make_shared<Expression>(
                                       Expression { LetExpression { let.name, newArgs, newBody }, expr->line });
                               }
                               return expr;
                           },
-
                           [&](const IfExpression& if_expr) -> std::shared_ptr<Expression> {
                               bool changed = false;
                               auto newCond = expandMacrosIn(state, if_expr.condition);
@@ -473,7 +483,7 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                           },
 
                           [&](const QuoteExpression&) -> std::shared_ptr<Expression> {
-                              return expr; // Don't expand inside quotes
+                              return expr;
                           },
 
                           [&](const LambdaExpression& lambda) -> std::shared_ptr<Expression> {
@@ -495,7 +505,7 @@ std::optional<std::shared_ptr<Expression>> expandMacrosIn(
                           },
 
                           [&](const auto&) -> std::shared_ptr<Expression> {
-                              return expr; // Default case for other expression types
+                              return expr;
                           } },
         expr->as);
 }

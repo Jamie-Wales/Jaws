@@ -1,6 +1,6 @@
 #include "Environment.h"
-#include <iostream>
-std::unordered_map<std::string, std::vector<SyntaxRule>> Environment::macroBindings = {};
+
+std::unordered_map<std::string, Environment::MacroDefinition> Environment::macroBindings = {};
 void Environment::pushFrame()
 {
     frames.push_front(std::make_shared<Frame>());
@@ -63,15 +63,16 @@ std::optional<SchemeValue> Environment::get(const std::string& name) const
 
     return std::nullopt;
 }
-void Environment::defineMacro(const std::string& name, const std::vector<SyntaxRule>& rules)
+
+void Environment::defineMacro(const std::string& name,
+    const std::vector<Token>& literals,
+    const std::vector<SyntaxRule>& rules)
 {
-    // Since macroBindings is static, this updates the global macro environment
-    macroBindings[name] = rules;
+    macroBindings[name] = MacroDefinition { literals, rules };
 }
 
-std::optional<std::vector<SyntaxRule>> Environment::getMacroRules(const std::string& name) const
+std::optional<Environment::MacroDefinition> Environment::getMacroDefinition(const std::string& name) const
 {
-    // Look up in the global macro environment
     auto it = macroBindings.find(name);
     if (it != macroBindings.end()) {
         return it->second;
@@ -79,6 +80,7 @@ std::optional<std::vector<SyntaxRule>> Environment::getMacroRules(const std::str
     return std::nullopt;
 }
 
+// Update isMacro to use the new structure
 bool Environment::isMacro(const std::string& name) const
 {
     return macroBindings.find(name) != macroBindings.end();

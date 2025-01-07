@@ -42,14 +42,6 @@ public:
     BeginExpression(std::vector<std::shared_ptr<Expression>> body);
 };
 
-class CondExpression {
-public:
-    std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions;
-    std::optional<std::shared_ptr<Expression>> elseCond;
-
-    CondExpression(std::vector<std::pair<std::shared_ptr<Expression>, std::shared_ptr<Expression>>> conditions, std::optional<std::shared_ptr<Expression>> expr);
-};
-
 class SyntaxRule {
 public:
     std::shared_ptr<Expression> pattern;
@@ -239,7 +231,6 @@ public:
         SyntaxRulesExpression,
         DefineSyntaxExpression,
         BeginExpression,
-        CondExpression,
         LetExpression>;
 
     ExpressionVariant as;
