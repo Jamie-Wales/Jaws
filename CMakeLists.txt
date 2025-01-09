@@ -29,7 +29,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 # Collect source files
-file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp")
+file(GLOB_RECURSE COMPILER_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE RUNTIME_SOURCES "${PROJECT_SOURCE_DIR}/runtime/src/*.c")
 file(GLOB_RECURSE TEST_SOURCES "${PROJECT_SOURCE_DIR}/tests/*.cpp")
 
@@ -41,6 +41,11 @@ add_library(compiler_lib STATIC ${COMPILER_SOURCES})
 target_include_directories(compiler_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
+    ${PROJECT_SOURCE_DIR}/include/interpreter/builtins
+    ${PROJECT_SOURCE_DIR}/include/interpreter
+    ${PROJECT_SOURCE_DIR}/include/utils
+    ${PROJECT_SOURCE_DIR}/include/frontend
+
 )
 set_target_properties(compiler_lib PROPERTIES
     CXX_STANDARD 20
@@ -58,7 +63,7 @@ set_target_properties(runtime PROPERTIES
 )
 
 # Create the jaws executable
-add_executable(jaws src/compiler/main.cpp)
+add_executable(jaws src/main.cpp)
 target_link_libraries(jaws
     PRIVATE compiler_lib
     runtime
@@ -67,7 +72,10 @@ target_link_libraries(jaws
 target_include_directories(jaws PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
-    ${ftxui_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/interpreter/builtins
+    ${PROJECT_SOURCE_DIR}/include/interpreter
+    ${PROJECT_SOURCE_DIR}/include/utils
+    ${PROJECT_SOURCE_DIR}/include/frontend
 )
 set_target_properties(jaws PROPERTIES
     CXX_STANDARD 20

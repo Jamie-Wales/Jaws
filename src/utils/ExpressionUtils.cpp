@@ -210,12 +210,9 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const LetExpression& l) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("let"));
-
-                              // Named let
                               if (l.name.has_value()) {
                                   elements.push_back(makeAtom(l.name.value().lexeme));
                               }
-
                               std::vector<std::shared_ptr<Expression>> bindingElements;
                               for (const auto& [name, value] : l.arguments) {
                                   std::vector<std::shared_ptr<Expression>> binding;
@@ -227,7 +224,6 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               }
                               elements.push_back(std::make_shared<Expression>(
                                   Expression { ListExpression { bindingElements, false }, expr->line }));
-
                               for (const auto& body_expr : l.body) {
                                   elements.push_back(exprToList(body_expr));
                               }
@@ -237,7 +233,6 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const LambdaExpression& l) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("lambda"));
-
                               std::vector<std::shared_ptr<Expression>> params;
                               for (const auto& param : l.parameters) {
                                   params.push_back(std::make_shared<Expression>(
