@@ -21,6 +21,7 @@ InterpreterState createInterpreter()
 {
     InterpreterState state;
 
+
     auto define = [&state](const std::string& name, BuiltInProcedure::Func func) {
         state.env->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
     };

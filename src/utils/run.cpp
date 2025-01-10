@@ -1,4 +1,5 @@
 #include "run.h"
+#include "ATransformer.h"
 #include "Error.h"
 #include "ExpressionUtils.h"
 #include "Procedure.h"
@@ -25,6 +26,10 @@ void evaluate(interpret::InterpreterState& state, const std::string& input)
 {
     auto tokens = scanner::tokenize(input);
     auto expressions = parse::parse(std::move(tokens));
+    auto ANF = ir::ANFtransform(*expressions);
+    for (const auto& elements : ANF) {
+        std::cout << elements->toString() << std::endl;
+    }
     auto val = interpret::interpret(state, *expressions);
     if (val) {
         std::cout << val->toString() << std::endl;
