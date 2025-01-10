@@ -28,7 +28,7 @@ void ANF::toString(std::stringstream& ss) const
                        if (let.name.has_value()) {
                            ss << " " << let.name->lexeme;
                        }
-                       ss << " (" << let.binding->toString() << ") "; // Just one set
+                       ss << " (" << let.binding->toString() << ") ";
                        let.body->toString(ss);
                        ss << ")";
                    },

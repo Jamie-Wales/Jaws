@@ -1,9 +1,11 @@
 #include "ATransformer.h"
+#include <optional>
 #include <ranges>
 #include <stdexcept>
+
 namespace ir {
 
-std::vector<std::shared_ptr<ANF>> ANFtransform(std::vector<std::shared_ptr<Expression>> expressions)
+std::vector<std::shared_ptr<ANF>> ANFtransform(const std::vector<std::shared_ptr<Expression>> &expressions)
 {
     size_t currentNumber = 0;
     std::vector<std::shared_ptr<ANF>> output = {};
@@ -31,7 +33,7 @@ std::shared_ptr<ANF> ALet(const LetExpression& l, size_t currentNumber)
         if (!transformed_value) {
             throw std::runtime_error("Failed to transform let binding");
         }
-        transformed_bindings.push_back({ name, *transformed_value });
+        transformed_bindings.emplace_back( name, *transformed_value );
     }
 
     std::shared_ptr<ANF> body = nullptr;
@@ -66,14 +68,10 @@ std::shared_ptr<ANF> ASExpr(const sExpression& s, size_t& currentNumber)
     if (s.elements.empty()) {
         throw std::runtime_error("Empty s-expression");
     }
-
-    // Transform function position first
     const auto func_expr = transform(s.elements[0], currentNumber);
     if (!func_expr) {
         throw std::runtime_error("Failed to transform function position");
     }
-
-    // Need to ensure function position becomes atomic
     Token func_name;
     if (const auto atom = std::get_if<Atom>(&(*func_expr)->term)) {
         func_name = atom->atom;
@@ -82,14 +80,13 @@ std::shared_ptr<ANF> ASExpr(const sExpression& s, size_t& currentNumber)
     }
     std::vector<Token> final_args;
     std::vector<std::pair<Token, std::shared_ptr<ANF>>> bindings;
-
     for (size_t i = 1; i < s.elements.size(); i++) {
         auto arg_expr = transform(s.elements[i], currentNumber);
         if (!arg_expr) {
             throw std::runtime_error("Failed to transform argument");
         }
 
-        if (auto atom = std::get_if<Atom>(&(*arg_expr)->term)) {
+        if (const auto atom = std::get_if<Atom>(&(*arg_expr)->term)) {
             final_args.push_back(atom->atom);
         } else {
             Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
@@ -98,9 +95,7 @@ std::shared_ptr<ANF> ASExpr(const sExpression& s, size_t& currentNumber)
         }
     }
 
-    auto app = std::make_shared<ANF>(App { func_name, final_args, false });
-
-    // Wrap with bindings from right to left
+    const auto app = std::make_shared<ANF>(App { func_name, final_args, false });
     auto result = app;
     for (auto& [first, second] : std::ranges::reverse_view(bindings)) {
         result = std::make_shared<ANF>(Let {
@@ -112,6 +107,40 @@ std::shared_ptr<ANF> ASExpr(const sExpression& s, size_t& currentNumber)
         result = std::make_shared<ANF>(Let {
             std::optional<Token>(func_name),
             *func_expr,
+            result });
+    }
+
+    return result;
+}
+
+std::shared_ptr<ANF> AIf(const IfExpression& ie, size_t& currentNumber)
+{
+    const auto anf_cond = transform(ie.condition, currentNumber);
+    if (!anf_cond) {
+        throw std::runtime_error("Failed to transform if condition");
+    }
+    const auto anf_then = transform(ie.then, currentNumber);
+    if (!anf_then) {
+        throw std::runtime_error("Failed to transform then branch");
+    }
+    std::optional<std::shared_ptr<ANF>> anf_else = nullptr;
+    if (ie.el) {
+        anf_else = transform(*ie.el, currentNumber);
+        if (!anf_else) {
+            throw std::runtime_error("Failed to transform else branch");
+        }
+    }
+    Token cond_name;
+    if (const auto atom = std::get_if<Atom>(&(*anf_cond)->term)) {
+        cond_name = atom->atom;
+    } else {
+        cond_name = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
+    }
+    auto result = std::make_shared<ANF>(If { cond_name, *anf_then, anf_else });
+    if (!std::get_if<Atom>(&(*anf_cond)->term)) {
+        result = std::make_shared<ANF>(Let {
+            std::optional<Token>(cond_name),
+            *anf_cond,
             result });
     }
 
@@ -130,7 +159,7 @@ std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>&
                           [&](const DefineSyntaxExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
                           [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
                           [&](const LambdaExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
-                          [&](const IfExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
+                          [&](const IfExpression& e) -> std::optional<std::shared_ptr<ANF>> { return AIf(e, currentNumber); },
                           [&](const QuoteExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
                           [&](const VectorExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
                           [&](const TailExpression& e) -> std::optional<std::shared_ptr<ANF>> { return transform(e.expression, currentNumber); },

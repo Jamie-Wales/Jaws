@@ -55,7 +55,7 @@ public:
 class SyntaxRulesExpression {
 public:
     std::vector<Token> literals;
-    std::vector<SyntaxRule> rules; // Changed to store SyntaxRule objects
+    std::vector<SyntaxRule> rules;
     SyntaxRulesExpression(std::vector<Token> literals, std::vector<SyntaxRule> rules);
 };
 
@@ -65,7 +65,7 @@ public:
 class DefineSyntaxExpression {
 public:
     Token name;
-    std::shared_ptr<Expression> rule; // Now typically a SyntaxRulesExpression
+    std::shared_ptr<Expression> rule;
     DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule);
 };
 
