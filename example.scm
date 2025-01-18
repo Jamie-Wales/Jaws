@@ -1,5 +1,6 @@
-(import base)
-
-
-(cond (< 1 10) (display "hello"))
-
+(cond
+ (<
+  1
+  10)
+ (display
+  "hello"))
