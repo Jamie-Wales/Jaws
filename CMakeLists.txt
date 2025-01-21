@@ -10,23 +10,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 
-# Find LLVM package
-find_package(LLVM REQUIRED CONFIG)
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-# Add LLVM definitions and include dirs
-add_definitions(${LLVM_DEFINITIONS})
-include_directories(${LLVM_INCLUDE_DIRS})
-
-# Enable testing
 include(CTest)
 enable_testing()
 
-# Fetch dependencies
 include(FetchContent)
-
-# GoogleTest setup
 FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
@@ -57,6 +44,7 @@ add_library(app_lib STATIC
     ${PROJECT_SOURCE_DIR}/src/frontend/parse.cpp
     ${PROJECT_SOURCE_DIR}/src/frontend/Expression.cpp
     ${PROJECT_SOURCE_DIR}/src/frontend/Environment.cpp
+    ${PROJECT_SOURCE_DIR}/src/utils/run.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/ExpressionUtils.cpp
     ${PROJECT_SOURCE_DIR}/src/utils/DebugUtils.cpp
     ${PROJECT_SOURCE_DIR}/src/interpreter/builtins/JawsEq.cpp
@@ -86,10 +74,8 @@ set_target_properties(app_lib PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
-
 # Create the executable
 add_executable(jaws ${MAIN_SOURCE})
-
 target_include_directories(jaws PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
@@ -104,11 +90,6 @@ set_target_properties(jaws PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(jaws PRIVATE
-    app_lib
-    ${LLVM_LIBS}
-)
-
 # Create the runtime library
 add_library(runtime STATIC ${RUNTIME_SOURCES})
 target_include_directories(runtime PUBLIC
@@ -120,7 +101,7 @@ set_target_properties(runtime PROPERTIES
     C_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(jaws PRIVATE runtime)
+target_link_libraries(jaws PRIVATE app_lib runtime)
 
 # Find assembler and linker
 find_program(AS_PATH as)
@@ -138,7 +119,6 @@ target_compile_definitions(jaws PRIVATE
 
 # Create the test executable
 add_executable(tests ${TEST_SOURCES})
-
 target_include_directories(tests PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/compiler
@@ -158,7 +138,6 @@ target_link_libraries(tests PRIVATE
     app_lib
     runtime
     gtest_main
-    ${LLVM_LIBS}
 )
 
 add_test(NAME AllTests COMMAND tests)

@@ -1,9 +1,15 @@
 #include "ANF.h"
+#include "Visit.h"
 namespace ir {
 
 void ANF::toString(std::stringstream& ss) const
 {
     std::visit(overloaded {
+                   [&](const Quote& quote) -> void {
+                       ss << "(quote ";
+                       ss << quote.expr->toString();
+                       ss << ")";
+                   },
                    [&](const Atom& a) -> void {
                        ss << a.atom.lexeme;
                    },
@@ -17,7 +23,7 @@ void ANF::toString(std::stringstream& ss) const
                        ss << ")";
                    },
                    [&](const App& app) -> void {
-                       ss << "(" << app.name.lexeme;
+                       ss << "(app " << app.name.lexeme;
                        for (const auto& param : app.params) {
                            ss << " " << param.lexeme;
                        }

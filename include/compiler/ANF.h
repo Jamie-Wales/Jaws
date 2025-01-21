@@ -1,8 +1,7 @@
 #pragma once
+#include "Expression.h"
 #include "Token.h"
-#include "Visit.h"
 #include <sstream>
-#include <stdexcept>
 #include <variant>
 #include <vector>
 
@@ -49,10 +48,14 @@ public:
     std::vector<Token> params;
     std::shared_ptr<ANF> body;
 };
+class Quote {
+public:
+    std::shared_ptr<Expression> expr;
+};
 
 class ANF {
 public:
-    using ANFTerm = std::variant<Let, Atom, Function, If, Lambda, App>;
+    using ANFTerm = std::variant<Let, Atom, Function, If, Lambda, App, Quote>;
     ANFTerm term;
     ANF(ANFTerm t)
         : term(std::move(t))
