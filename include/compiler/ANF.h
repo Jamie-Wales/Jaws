@@ -48,6 +48,7 @@ public:
     std::vector<Token> params;
     std::shared_ptr<ANF> body;
 };
+
 class Quote {
 public:
     std::shared_ptr<Expression> expr;
@@ -61,7 +62,6 @@ public:
         : term(std::move(t))
     {
     }
-
     void toString(std::stringstream& ss) const;
     std::string toString() const;
 };
