@@ -1,10 +1,10 @@
 #include "run.h"
-#include "ATransformer.h"
+#include "ANFTransformer.h"
 #include "Error.h"
-#include "ExpressionUtils.h"
 #include "Procedure.h"
 #include "icons.h"
 #include "interpret.h"
+#include "optimise.h"
 #include "parse.h"
 #include "scan.h"
 #include <fstream>
@@ -27,6 +27,7 @@ void evaluate(interpret::InterpreterState& state, const std::string& input)
     auto tokens = scanner::tokenize(input);
     auto expressions = parse::parse(std::move(tokens));
     auto anf = ir::ANFtransform(*expressions);
+    anf = optimise::optimise(anf);
 
     for (const auto& expr : anf) {
         std::cout << expr->toString() << std::endl;

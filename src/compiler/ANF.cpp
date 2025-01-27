@@ -7,7 +7,7 @@ void ANF::toString(std::stringstream& ss) const
     std::visit(overloaded {
                    [&](const Quote& quote) -> void {
                        ss << "(quote ";
-                       ss << quote.expr->toString();
+                       quote.expr->toString(ss);
                        ss << ")";
                    },
                    [&](const Atom& a) -> void {

@@ -1,4 +1,4 @@
-#include "ATransformer.h"
+#include "ANFTransformer.h"
 #include "Visit.h"
 #include <memory>
 #include <optional>
@@ -288,7 +288,6 @@ std::shared_ptr<ANF> AVector(const VectorExpression& ve, size_t& currentNumber)
         final_args,
         false });
 
-    // Wrap with necessary let bindings
     auto result = app;
     for (auto& [first, second] : std::ranges::reverse_view(bindings)) {
         result = std::make_shared<ANF>(Let {
@@ -302,7 +301,12 @@ std::shared_ptr<ANF> AVector(const VectorExpression& ve, size_t& currentNumber)
 
 std::shared_ptr<ANF> AQuote(const QuoteExpression& qe, size_t& currentNumber)
 {
-    return std::make_shared<ANF>(Quote { qe.expression });
+    Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
+
+    return std::make_shared<ANF>(Let {
+        std::optional<Token>(temp),
+        std::make_shared<ANF>(Quote { qe.expression }),
+        std::make_shared<ANF>(Atom { temp }) });
 }
 
 std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)
