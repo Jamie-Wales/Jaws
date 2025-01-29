@@ -152,7 +152,8 @@ public:
 class sExpression {
 public:
     std::vector<std::shared_ptr<Expression>> elements;
-    sExpression(std::vector<std::shared_ptr<Expression>> elems);
+    bool isVariadic;
+    sExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic = false);
 };
 
 /**

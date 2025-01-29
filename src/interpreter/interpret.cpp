@@ -1,6 +1,5 @@
 #include "interpret.h"
 #include "Expression.h"
-#include "MacroExpression.h"
 #include "Procedure.h"
 #include "Value.h"
 #include "builtins/JawsEq.h"
@@ -20,7 +19,6 @@ namespace interpret {
 InterpreterState createInterpreter()
 {
     InterpreterState state;
-
 
     auto define = [&state](const std::string& name, BuiltInProcedure::Func func) {
         state.env->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
@@ -199,22 +197,6 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
 
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
 {
-    if (auto* atomExpr = std::get_if<AtomExpression>(&sexpr.elements[0]->as)) {
-        std::string name = atomExpr->value.lexeme;
-        if (state.env->isMacro(name)) {
-            auto rules = state.env->getMacroDefinition(name);
-            if (!rules) {
-                throw InterpreterError("Internal error: macro rules not found");
-            }
-            if (auto expanded = expandMacro(state, name, sexpr, rules->literals)) {
-                if (auto fullyExpanded = expandMacrosIn(state, *expanded)) {
-                    return interpret(state, *fullyExpanded);
-                }
-                return interpret(state, *expanded);
-            }
-            throw InterpreterError("No matching pattern for macro: " + name);
-        }
-    }
     auto call = evaluateProcedureCall(state, sexpr);
     if (!call)
         return std::nullopt;

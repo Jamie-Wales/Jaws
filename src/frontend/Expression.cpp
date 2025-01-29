@@ -15,8 +15,9 @@ Expression::Expression(Expression::ExpressionVariant as, int line)
     , line { line }
 {
 }
-sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems)
+sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic)
     : elements(std::move(elems))
+    , isVariadic(variadic)
 {
 }
 

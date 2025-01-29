@@ -2,40 +2,51 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 void printUsage(const char* programName)
 {
     std::cerr << "Usage:\n"
               << "  " << programName << "                  Start interactive REPL\n"
               << "  " << programName << " --script <file>  Run Scheme script file\n"
-              << "  " << programName << " -t               Start TUI mode\n";
+              << "  " << programName << " --print, -p      Print AST and ANF\n"
+              << "  " << programName << " --no-opt, -no    Disable optimizations\n"
+              << "  " << programName << " -h, --help       Show this help message\n";
 }
 
 int main(int argc, const char* argv[])
 {
-    if (argc == 1) {
-        runPrompt();
-        return EXIT_SUCCESS;
+    testMacros();
+    std::vector<std::string> args;
+    for (int i = 1; i < argc; i++) {
+        args.emplace_back(argv[i]);
     }
 
-    std::string arg1 = argv[1];
+    try {
+        Options opts;
+        if (args.empty()) {
+            opts.file = false;
+            runPrompt(opts);
+            return EXIT_SUCCESS;
+        }
 
-    if (arg1 == "--help" || arg1 == "-h") {
-        printUsage(argv[0]);
-        return EXIT_SUCCESS;
-    }
-
-    if (arg1 == "--script") {
-        if (argc != 3) {
-            std::cerr << "Error: --script requires a file path\n";
+        if (args[0] == "--help" || args[0] == "-h") {
+            printUsage(argv[0]);
+            return EXIT_SUCCESS;
+        }
+        try {
+            opts = parse_args(args);
+        } catch (const std::runtime_error& e) {
+            std::cerr << "Error: " << e.what() << "\n";
             printUsage(argv[0]);
             return EXIT_FAILURE;
         }
-        runFile(argv[2]);
-        return EXIT_SUCCESS;
-    }
 
-    std::cerr << "Error: Unknown argument '" << arg1 << "'\n";
-    printUsage(argv[0]);
-    return EXIT_FAILURE;
+        opts.file ? runFile(opts) : runPrompt(opts);
+        return EXIT_SUCCESS;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
 }
