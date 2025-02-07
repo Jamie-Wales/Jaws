@@ -30,11 +30,11 @@ void ANF::toString(std::stringstream& ss) const
                        ss << ")";
                    },
                    [&](const Let& let) -> void {
-                       ss << "(let";
+                       ss << "(let (";
                        if (let.name.has_value()) {
-                           ss << " " << let.name->lexeme;
+                           ss << let.name->lexeme << " ";
                        }
-                       ss << " " << let.binding->toString() << " ";
+                       ss << let.binding->toString() << ") ";
                        let.body->toString(ss);
                        ss << ")";
                    },

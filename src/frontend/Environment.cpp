@@ -1,6 +1,5 @@
 #include "Environment.h"
 
-std::unordered_map<std::string, Environment::MacroDefinition> Environment::macroBindings = {};
 void Environment::pushFrame()
 {
     frames.push_front(std::make_shared<Frame>());
@@ -62,26 +61,4 @@ std::optional<SchemeValue> Environment::get(const std::string& name) const
     }
 
     return std::nullopt;
-}
-
-void Environment::defineMacro(const std::string& name,
-    const std::vector<Token>& literals,
-    const std::vector<SyntaxRule>& rules)
-{
-    macroBindings[name] = MacroDefinition { literals, rules };
-}
-
-std::optional<Environment::MacroDefinition> Environment::getMacroDefinition(const std::string& name) const
-{
-    auto it = macroBindings.find(name);
-    if (it != macroBindings.end()) {
-        return it->second;
-    }
-    return std::nullopt;
-}
-
-// Update isMacro to use the new structure
-bool Environment::isMacro(const std::string& name) const
-{
-    return macroBindings.find(name) != macroBindings.end();
 }

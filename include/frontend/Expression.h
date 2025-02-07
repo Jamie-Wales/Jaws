@@ -1,5 +1,6 @@
 #pragma once
 #include "Token.h"
+#include <Visit.h>
 #include <memory>
 #include <string>
 #include <variant>
@@ -7,13 +8,45 @@
 
 class Expression;
 
+enum class ExprType {
+    MacroAtom,
+    Atom,
+    SExpr,
+    List,
+    Define,
+    DefineProcedure,
+    Vector,
+    Lambda,
+    If,
+    Quote,
+    Set,
+    Tail,
+    Import,
+    SyntaxRules,
+    DefineSyntax,
+    Begin,
+    Let
+};
+
 /**
  * @brief Represents atomic expressions like numbers, identifiers, and literals
  */
 class AtomExpression {
 public:
     Token value;
+
     AtomExpression(Token token);
+
+    void toString(std::stringstream& ss) const;
+};
+
+class MacroAtomExpression {
+public:
+    Token value;
+    bool isVariadic;
+
+    MacroAtomExpression(Token token, bool isVariadic);
+
     void toString(std::stringstream& ss) const;
 };
 
@@ -21,9 +54,12 @@ class SetExpression {
 public:
     Token identifier;
     std::shared_ptr<Expression> value;
+
     SetExpression(const Token& token, std::shared_ptr<Expression>);
+
     void toString(std::stringstream& ss) const;
 };
+
 /**
  * @brief Represents let expressions for local variable bindings
  */
@@ -33,12 +69,14 @@ public:
     using Args = std::vector<std::pair<Token, std::shared_ptr<Expression>>>;
     Args arguments;
     std::vector<std::shared_ptr<Expression>> body;
+
     LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body);
 };
 
 class BeginExpression {
 public:
     std::vector<std::shared_ptr<Expression>> body;
+
     BeginExpression(std::vector<std::shared_ptr<Expression>> body);
 };
 
@@ -46,6 +84,7 @@ class SyntaxRule {
 public:
     std::shared_ptr<Expression> pattern;
     std::shared_ptr<Expression> template_expr;
+
     SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expression> template_expr);
 };
 
@@ -56,6 +95,7 @@ class SyntaxRulesExpression {
 public:
     std::vector<Token> literals;
     std::vector<SyntaxRule> rules;
+
     SyntaxRulesExpression(std::vector<Token> literals, std::vector<SyntaxRule> rules);
 };
 
@@ -66,6 +106,7 @@ class DefineSyntaxExpression {
 public:
     Token name;
     std::shared_ptr<Expression> rule;
+
     DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule);
 };
 
@@ -75,6 +116,7 @@ public:
 class TailExpression {
 public:
     std::shared_ptr<Expression> expression;
+
     TailExpression(std::shared_ptr<Expression> expression);
 };
 
@@ -102,11 +144,15 @@ public:
         std::vector<std::pair<Token, Token>> renames; // Used for RENAME
 
         explicit ImportSpec(std::vector<std::shared_ptr<Expression>> lib);
+
         ImportSpec(ImportSet::Type t, std::vector<std::shared_ptr<Expression>> lib,
             std::vector<Token> ids);
+
         ImportSpec(std::vector<std::shared_ptr<Expression>> lib, Token pfx);
+
         ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
             std::vector<std::pair<Token, Token>> renames);
+
         ImportSpec(const ImportSpec& other);
     };
 
@@ -116,12 +162,16 @@ public:
 };
 
 ImportExpression::ImportSpec makeDirectImport(std::vector<std::shared_ptr<Expression>> library);
+
 ImportExpression::ImportSpec makeOnlyImport(std::vector<std::shared_ptr<Expression>> library,
     std::vector<Token> identifiers);
+
 ImportExpression::ImportSpec makeExceptImport(std::vector<std::shared_ptr<Expression>> library,
     std::vector<Token> identifiers);
+
 ImportExpression::ImportSpec makePrefixImport(std::vector<std::shared_ptr<Expression>> library,
     Token prefix);
+
 ImportExpression::ImportSpec makeRenameImport(std::vector<std::shared_ptr<Expression>> library,
     std::vector<std::pair<Token, Token>> renames);
 
@@ -132,6 +182,7 @@ class ListExpression {
 public:
     std::vector<std::shared_ptr<Expression>> elements;
     bool isVariadic;
+
     ListExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic = false);
 };
 
@@ -143,7 +194,9 @@ public:
     std::vector<Token> parameters;
     std::vector<std::shared_ptr<Expression>> body;
     bool isVariadic;
-    LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic = false);
+
+    LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body,
+        bool isVariadic = false);
 };
 
 /**
@@ -153,6 +206,7 @@ class sExpression {
 public:
     std::vector<std::shared_ptr<Expression>> elements;
     bool isVariadic;
+
     sExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic = false);
 };
 
@@ -163,6 +217,7 @@ class DefineExpression {
 public:
     Token name;
     std::shared_ptr<Expression> value;
+
     DefineExpression(Token n, std::shared_ptr<Expression> v);
 };
 
@@ -175,7 +230,9 @@ public:
     std::vector<Token> parameters;
     std::vector<std::shared_ptr<Expression>> body;
     bool isVariadic;
-    DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic = false);
+
+    DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body,
+        bool isVariadic = false);
 };
 
 /**
@@ -184,6 +241,7 @@ public:
 class QuoteExpression {
 public:
     std::shared_ptr<Expression> expression;
+
     QuoteExpression(std::shared_ptr<Expression> expression);
 };
 
@@ -193,6 +251,7 @@ public:
 class VectorExpression {
 public:
     std::vector<std::shared_ptr<Expression>> elements;
+
     VectorExpression(std::vector<std::shared_ptr<Expression>> elems);
 };
 
@@ -204,6 +263,7 @@ public:
     std::shared_ptr<Expression> condition;
     std::shared_ptr<Expression> then;
     std::optional<std::shared_ptr<Expression>> el;
+
     IfExpression(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> then,
         std::optional<std::shared_ptr<Expression>> el);
 };
@@ -217,6 +277,7 @@ public:
 class Expression {
 public:
     using ExpressionVariant = std::variant<
+        MacroAtomExpression,
         AtomExpression,
         sExpression,
         ListExpression,
@@ -267,4 +328,72 @@ public:
      * @return String representation of the expression
      */
     std::string toString() const;
+
+    // Add this to the Expression class
+
+    ExprType type() const
+    {
+        return std::visit(overloaded {
+                              [](const MacroAtomExpression&) { return ExprType::MacroAtom; },
+                              [](const AtomExpression&) { return ExprType::Atom; },
+                              [](const sExpression&) { return ExprType::SExpr; },
+                              [](const ListExpression&) { return ExprType::List; },
+                              [](const DefineExpression&) { return ExprType::Define; },
+                              [](const DefineProcedure&) { return ExprType::DefineProcedure; },
+                              [](const VectorExpression&) { return ExprType::Vector; },
+                              [](const LambdaExpression&) { return ExprType::Lambda; },
+                              [](const IfExpression&) { return ExprType::If; },
+                              [](const QuoteExpression&) { return ExprType::Quote; },
+                              [](const SetExpression&) { return ExprType::Set; },
+                              [](const TailExpression&) { return ExprType::Tail; },
+                              [](const ImportExpression&) { return ExprType::Import; },
+                              [](const SyntaxRulesExpression&) { return ExprType::SyntaxRules; },
+                              [](const DefineSyntaxExpression&) { return ExprType::DefineSyntax; },
+                              [](const BeginExpression&) { return ExprType::Begin; },
+                              [](const LetExpression&) { return ExprType::Let; } },
+            as);
+    }
+
+    // Helper function for converting type to string
 };
+
+static std::string typeToString(ExprType type)
+{
+    switch (type) {
+    case ExprType::MacroAtom:
+        return "MacroAtom";
+    case ExprType::Atom:
+        return "Atom";
+    case ExprType::SExpr:
+        return "SExpr";
+    case ExprType::List:
+        return "List";
+    case ExprType::Define:
+        return "Define";
+    case ExprType::DefineProcedure:
+        return "DefineProcedure";
+    case ExprType::Vector:
+        return "Vector";
+    case ExprType::Lambda:
+        return "Lambda";
+    case ExprType::If:
+        return "If";
+    case ExprType::Quote:
+        return "Quote";
+    case ExprType::Set:
+        return "Set";
+    case ExprType::Tail:
+        return "Tail";
+    case ExprType::Import:
+        return "Import";
+    case ExprType::SyntaxRules:
+        return "SyntaxRules";
+    case ExprType::DefineSyntax:
+        return "DefineSyntax";
+    case ExprType::Begin:
+        return "Begin";
+    case ExprType::Let:
+        return "Let";
+    }
+    return "Unknown";
+}

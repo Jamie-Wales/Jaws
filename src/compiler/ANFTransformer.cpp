@@ -1,5 +1,6 @@
 #include "ANFTransformer.h"
 #include "Visit.h"
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -129,6 +130,7 @@ std::shared_ptr<ANF> AIf(const IfExpression& ie, size_t& currentNumber)
     if (ie.el) {
         anf_else = transform(*ie.el, currentNumber);
         if (!anf_else) {
+            std::cout << typeToString((*ie.el)->type()) << std::endl;
             throw std::runtime_error("Failed to transform else branch");
         }
     }

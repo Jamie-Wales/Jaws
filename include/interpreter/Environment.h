@@ -14,20 +14,8 @@ class Environment {
 public:
     std::shared_ptr<Environment> enclosing;
     std::deque<std::shared_ptr<Frame>> frames;
-    struct MacroDefinition {
-        std::vector<Token> literals;
-        std::vector<SyntaxRule> rules;
-    };
-
-    static std::unordered_map<std::string, MacroDefinition> macroBindings;
     Environment();
     Environment(std::shared_ptr<Environment> parent);
-
-    void defineMacro(const std::string& name, const std::vector<Token>& literals,
-        const std::vector<SyntaxRule>& rules);
-    std::optional<MacroDefinition> getMacroDefinition(const std::string& name) const;
-    bool isMacro(const std::string& name) const;
-
     void pushFrame();
     void popFrame();
     void define(const std::string& name, const SchemeValue& value);

@@ -162,6 +162,10 @@ std::shared_ptr<Expression> parseSExpression(ParserState& state)
     while (!match(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         elements.push_back(parseExpression(state));
     }
+    if (!elements.empty()) {
+        elements.back() = std::make_shared<Expression>(
+            Expression { TailExpression { elements.back() }, previousToken(state).line });
+    }
     return std::make_shared<Expression>(
         Expression { sExpression { std::move(elements) }, previousToken(state).line });
 }
@@ -208,6 +212,12 @@ std::shared_ptr<Expression> parseLambda(ParserState& state)
     while (!check(state, Tokentype::RIGHT_PAREN)) {
         body.push_back(parseExpression(state));
     }
+
+    if (!body.empty()) {
+        body.back() = std::make_shared<Expression>(
+            Expression { TailExpression { body.back() }, previousToken(state).line });
+    }
+
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after lambda body");
     return std::make_shared<Expression>(Expression {
         LambdaExpression { std::move(parameters), std::move(body) },
@@ -217,10 +227,10 @@ std::shared_ptr<Expression> parseLambda(ParserState& state)
 std::shared_ptr<Expression> parseIf(ParserState& state)
 {
     auto condition = parseExpression(state);
-    auto then = parseExpression(state);
+    auto then = parseTailExpression(state);
     std::optional<std::shared_ptr<Expression>> elseExpr = std::nullopt;
     if (!check(state, Tokentype::RIGHT_PAREN)) {
-        elseExpr = parseExpression(state);
+        elseExpr = parseTailExpression(state);
     }
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after if expression");
 
@@ -244,6 +254,18 @@ std::shared_ptr<Expression> parseLet(ParserState& state)
     }
 
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' after let");
+
+    // Add special case for empty binding list
+    if (match(state, Tokentype::RIGHT_PAREN)) {
+        // Empty binding list - proceed directly to body
+        std::vector<std::shared_ptr<Expression>> body;
+        while (!match(state, Tokentype::RIGHT_PAREN)) {
+            body.emplace_back(parseExpression(state));
+        }
+        return std::make_shared<Expression>(
+            LetExpression { token, output, body },
+            previousToken(state).line);
+    }
     int count = 1;
     while (count != 0) {
         if (match(state, Tokentype::LEFT_PAREN)) {

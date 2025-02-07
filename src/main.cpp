@@ -16,7 +16,6 @@ void printUsage(const char* programName)
 
 int main(int argc, const char* argv[])
 {
-    testMacros();
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
         args.emplace_back(argv[i]);

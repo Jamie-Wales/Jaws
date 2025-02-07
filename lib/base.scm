@@ -1,15 +1,8 @@
 
-(define-syntax let*
-  (syntax-rules ()
-    ((_ () body ...)
-     (begin body ...))
-    ((_ ((name value)) body ...)
-     (let ((name value))
-       body ...))
-    ((_ ((name1 value1) (name2 value2) rest ...) body ...)
-     (let ((name1 value1))
-       (let* ((name2 value2) rest ...)
-         body ...)))))
+
+
+
+
 
 (define-syntax cond
   (syntax-rules (else =>)
@@ -36,6 +29,20 @@
      (if test
          (begin result1 result2 ...)
          (cond clause1 clause2 ...)))))
+
+
+
+(define-syntax let*
+  (syntax-rules ()
+    ((_ () body ...)
+     (begin body ...))
+    ((_ ((name value)) body ...)
+     (let ((name value))
+       body ...))
+    ((_ ((name1 value1) (name2 value2) rest ...) body ...)
+     (let ((name1 value1))
+       (let* ((name2 value2) rest ...)
+         body ...)))))
 
 
 (define-syntax and

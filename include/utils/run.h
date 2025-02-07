@@ -11,6 +11,7 @@ struct Options {
     bool printAST = false;
     bool optimise = true;
     bool printANF = false;
+    bool printMacro = false;
 };
 
 Options parse_args(std::vector<std::string> args);

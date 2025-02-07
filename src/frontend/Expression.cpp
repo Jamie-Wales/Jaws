@@ -1,4 +1,3 @@
-
 #include "Expression.h"
 #include "Token.h"
 #include "Visit.h"
@@ -15,6 +14,7 @@ Expression::Expression(Expression::ExpressionVariant as, int line)
     , line { line }
 {
 }
+
 sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic)
     : elements(std::move(elems))
     , isVariadic(variadic)
@@ -31,26 +31,38 @@ SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression
     , value(std::move(value))
 {
 }
+
 DefineSyntaxExpression::DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule)
     : name(std::move(name))
     , rule(std::move(rule))
 {
 }
-DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
+
+DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters,
+    std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
     : name(std::move(name))
     , parameters(std::move(parameters))
     , body(std::move(body))
     , isVariadic(isVariadic)
 {
 }
+
+MacroAtomExpression::MacroAtomExpression(Token token, bool isVariadic)
+    : value(std::move(token))
+    , isVariadic(isVariadic)
+{
+}
+
 AtomExpression::AtomExpression(Token token)
     : value(std::move(token))
 {
 }
+
 LetExpression::LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body)
     : name { std::move(name) }
     , arguments { std::move(arguments) }
-    , body { std::move(body) } { };
+    , body { std::move(body) } {
+    };
 
 SyntaxRule::SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expression> template_expr)
     : pattern(std::move(pattern))
@@ -68,17 +80,6 @@ QuoteExpression::QuoteExpression(std::shared_ptr<Expression> expression)
 {
 }
 
-class DefineSyntaxExpression::DefineSyntaxExpression {
-public:
-    Token name;
-    std::shared_ptr<Expression> rule;
-
-    DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule)
-        : name(std::move(name))
-        , rule(std::move(rule))
-    {
-    }
-};
 DefineExpression::DefineExpression(Token n, std::shared_ptr<Expression> v)
     : name(std::move(n))
     , value(std::move(v))
@@ -89,6 +90,7 @@ TailExpression::TailExpression(std::shared_ptr<Expression> expression)
     : expression(expression)
 {
 }
+
 #include <cassert>
 
 // ImportSpec constructors
@@ -169,6 +171,7 @@ ImportExpression::ImportSpec makeRenameImport(
 {
     return ImportExpression::ImportSpec(std::move(library), std::move(renames));
 }
+
 ImportExpression::ImportSpec::ImportSpec(const ImportSpec& other)
     : type(other.type)
     , library(other.library) // shared_ptr copy
@@ -177,22 +180,28 @@ ImportExpression::ImportSpec::ImportSpec(const ImportSpec& other)
     , renames(other.renames)
 {
 }
+
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic)
     : elements(std::move(elems))
     , isVariadic(variadic)
 {
 }
-LambdaExpression::LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
+
+LambdaExpression::LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body,
+    bool isVariadic)
     : parameters(std::move(parameters))
     , body(std::move(body))
     , isVariadic(isVariadic)
 {
 }
+
 VectorExpression::VectorExpression(std::vector<std::shared_ptr<Expression>> elems)
     : elements(std::move(elems))
 {
 }
-IfExpression::IfExpression(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> then, std::optional<std::shared_ptr<Expression>> el)
+
+IfExpression::IfExpression(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> then,
+    std::optional<std::shared_ptr<Expression>> el)
     : condition(std::move(condition))
     , then(std::move(then))
     , el(std::move(el))
@@ -205,12 +214,18 @@ std::string Expression::toString() const
     toString(ss);
     return ss.str();
 }
+
 void Expression::toString(std::stringstream& ss) const
 {
     std::visit(
         overloaded {
             [&](const AtomExpression& e) {
                 ss << e.value.lexeme;
+            },
+            [&](const MacroAtomExpression& e) {
+                ss << e.value.lexeme;
+                if (e.isVariadic)
+                    ss << "...";
             },
             [&](const sExpression& e) {
                 ss << "(";
@@ -409,6 +424,7 @@ void Expression::toString(std::stringstream& ss) const
             } },
         as);
 }
+
 std::shared_ptr<Expression> Expression::clone() const
 {
     return std::visit(overloaded {
@@ -480,13 +496,19 @@ std::shared_ptr<Expression> Expression::clone() const
                           [&](const AtomExpression& e) -> std::shared_ptr<Expression> {
                               return std::make_shared<Expression>(AtomExpression { e.value }, line);
                           },
+
+                          [&](const MacroAtomExpression& e) -> std::shared_ptr<Expression> {
+                              return std::make_shared<Expression>(MacroAtomExpression { e.value, e.isVariadic }, line);
+                          },
                           [&](const ListExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> clonedElements;
                               clonedElements.reserve(e.elements.size());
                               for (const auto& elem : e.elements) {
                                   clonedElements.push_back(elem->clone());
                               }
-                              return std::make_shared<Expression>(ListExpression { std::move(clonedElements), e.isVariadic }, line);
+                              return std::make_shared<Expression>(ListExpression {
+                                                                      std::move(clonedElements), e.isVariadic },
+                                  line);
                           },
                           [&](const QuoteExpression& e) -> std::shared_ptr<Expression> {
                               return std::make_shared<Expression>(QuoteExpression { e.expression->clone() }, line);

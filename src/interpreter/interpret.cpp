@@ -104,27 +104,56 @@ std::optional<SchemeValue> interpret(
     const std::shared_ptr<Expression>& expr)
 {
     return std::visit(overloaded {
-                          [&](const AtomExpression& e) { return interpretAtom(state, e); },
-                          [&](const ListExpression& e) { return interpretList(state, e); },
-                          [&](const BeginExpression& e) { return interpretBegin(state, e); },
-                          [&](const sExpression& e) { return interpretSExpression(state, e); },
-                          [&](const DefineExpression& e) { return interpretDefine(state, e); },
-                          [&](const DefineSyntaxExpression& e) { return interpretDefineSyntax(state, e); },
-                          [&](const DefineProcedure& e) { return interpretDefineProcedure(state, e); },
-                          [&](const LambdaExpression& e) { return interpretLambda(state, e); },
-                          [&](const IfExpression& e) { return interpretIf(state, e); },
-                          [&](const QuoteExpression& e) { return interpretQuote(state, e); },
-                          [&](const VectorExpression& e) { return interpretVector(state, e); },
-                          [&](const TailExpression& e) { return interpretTailCall(state, e); },
-                          [&](const LetExpression& e) { return interpretLet(state, e); },
-                          [&](const ImportExpression& e) { return interpretImport(state, e); },
-                          [&](const SetExpression& e) { return interpretSet(state, e); },
+                          [&](const AtomExpression& e) -> std::optional<SchemeValue> {
+                              return interpretAtom(state, e);
+                          },
+                          [&](const ListExpression& e) -> std::optional<SchemeValue> {
+                              return interpretList(state, e);
+                          },
+                          [&](const BeginExpression& e) -> std::optional<SchemeValue> {
+                              return interpretBegin(state, e);
+                          },
+                          [&](const sExpression& e) -> std::optional<SchemeValue> {
+                              return interpretSExpression(state, e);
+                          },
+                          [&](const DefineExpression& e) -> std::optional<SchemeValue> {
+                              return interpretDefine(state, e);
+                          },
+                          [&](const DefineSyntaxExpression& e) -> std::optional<SchemeValue> {
+                              return std::nullopt;
+                          },
+                          [&](const DefineProcedure& e) -> std::optional<SchemeValue> {
+                              return interpretDefineProcedure(state, e);
+                          },
+                          [&](const LambdaExpression& e) -> std::optional<SchemeValue> {
+                              return interpretLambda(state, e);
+                          },
+                          [&](const IfExpression& e) -> std::optional<SchemeValue> {
+                              return interpretIf(state, e);
+                          },
+                          [&](const QuoteExpression& e) -> std::optional<SchemeValue> {
+                              return interpretQuote(state, e);
+                          },
+                          [&](const VectorExpression& e) -> std::optional<SchemeValue> {
+                              return interpretVector(state, e);
+                          },
+                          [&](const TailExpression& e) -> std::optional<SchemeValue> {
+                              return interpretTailCall(state, e);
+                          },
+                          [&](const LetExpression& e) -> std::optional<SchemeValue> {
+                              return interpretLet(state, e);
+                          },
+                          [&](const ImportExpression& e) -> std::optional<SchemeValue> {
+                              return interpretImport(state, e);
+                          },
+                          [&](const SetExpression& e) -> std::optional<SchemeValue> {
+                              return interpretSet(state, e);
+                          },
                           [&](const auto&) -> std::optional<SchemeValue> {
                               throw InterpreterError("Unknown expression type");
                           } },
         expr->as);
 }
-
 std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpression& atom)
 {
     const Token& token = atom.value;
@@ -300,17 +329,6 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
         return executeProcedure(state, SchemeValue(tailCall), tailCall->args);
     }
     return interpret(state, tail.expression);
-}
-
-std::optional<SchemeValue> interpretDefineSyntax(
-    InterpreterState& state,
-    const DefineSyntaxExpression& syntax)
-{
-    if (auto* rules = std::get_if<SyntaxRulesExpression>(&syntax.rule->as)) {
-        state.env->defineMacro(syntax.name.lexeme, rules->literals, rules->rules);
-        return std::nullopt;
-    }
-    throw InterpreterError("Invalid syntax-rules expression in define-syntax");
 }
 
 bool fileExists(const std::string& path)

@@ -15,7 +15,10 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
 
     return std::visit(overloaded {
                           [&](const AtomExpression& e) -> std::shared_ptr<Expression> {
-                              return std::make_shared<Expression>(Expression { e, expr->line });
+                              return expr;
+                          },
+                          [&](const MacroAtomExpression& e) -> std::shared_ptr<Expression> {
+                              return expr;
                           },
                           [&](const sExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;

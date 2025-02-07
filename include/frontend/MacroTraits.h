@@ -1,146 +1,70 @@
 #pragma once
 #include "Expression.h"
-#include <memory>
-#include <type_traits>
+#include "ExpressionUtils.h"
+#include "MacroEnvironment.h"
+#include <Visit.h>
+#include <iostream>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
-namespace expr {
+namespace macroexp {
+class MacroExpression;
 
-// Forward declarations for pattern matching types
-struct PatternMatch {
-    std::vector<std::shared_ptr<Expression>> matches;
+struct MacroAtom {
+    Token token;
+    explicit MacroAtom(Token t);
 };
+
+struct MacroList {
+    std::vector<std::shared_ptr<MacroExpression>> elements;
+};
+
+class MacroExpression {
+public:
+    std::variant<MacroAtom, MacroList> value;
+    bool isVariadic;
+    int line;
+
+    MacroExpression(const MacroAtom& atom, bool variadic, int lineNum);
+    MacroExpression(const MacroList& list, bool variadic, int lineNum);
+    MacroExpression(const MacroExpression& other) = default;
+
+    std::string toString();
+    void print();
+};
+
+struct PatternMatch {
+    std::vector<std::shared_ptr<MacroExpression>> matches;
+};
+
 using MatchEnv = std::unordered_map<std::string, PatternMatch>;
 
-namespace traits {
-    ///////////////////////////////
-    // Expression Type Traits
-    ///////////////////////////////
-    
-    template <typename T>
-    struct is_expression_type : std::false_type { };
-    
-    template <> struct is_expression_type<AtomExpression> : std::true_type { };
-    template <> struct is_expression_type<ListExpression> : std::true_type { };
-    template <> struct is_expression_type<sExpression> : std::true_type { };
-    template <> struct is_expression_type<QuoteExpression> : std::true_type { };
-    template <> struct is_expression_type<LambdaExpression> : std::true_type { };
-    template <> struct is_expression_type<IfExpression> : std::true_type { };
-    template <> struct is_expression_type<BeginExpression> : std::true_type { };
-    template <> struct is_expression_type<LetExpression> : std::true_type { };
-    
-    template <typename T>
-    inline constexpr bool is_expression_type_v = is_expression_type<T>::value;
+bool isEllipsis(std::shared_ptr<MacroExpression> me);
+bool isPatternVariable(const Token& token, const std::vector<Token>& literals);
 
-    ///////////////////////////////
-    // Nested Expression Traits
-    ///////////////////////////////
-    
-    template <typename T>
-    struct has_nested_expressions : std::false_type { };
-    
-    template <> struct has_nested_expressions<ListExpression> : std::true_type { };
-    template <> struct has_nested_expressions<sExpression> : std::true_type { };
-    template <> struct has_nested_expressions<BeginExpression> : std::true_type { };
-    template <> struct has_nested_expressions<LetExpression> : std::true_type { };
-    
-    template <typename T>
-    inline constexpr bool has_nested_expressions_v = has_nested_expressions<T>::value;
+std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& expr);
+std::pair<MatchEnv, bool> tryMatch(std::shared_ptr<MacroExpression> pattern,
+    std::shared_ptr<MacroExpression> expr,
+    const std::vector<Token>& literals,
+    const std::string& macroName);
 
-    ///////////////////////////////
-    // Atomic Expression Traits
-    ///////////////////////////////
-    
-    template <typename T>
-    struct is_atomic_expression : std::false_type { };
-    
-    template <> struct is_atomic_expression<AtomExpression> : std::true_type { };
-    template <> struct is_atomic_expression<QuoteExpression> : std::true_type { };
-    
-    template <typename T>
-    inline constexpr bool is_atomic_expression_v = is_atomic_expression<T>::value;
+void printMatchEnv(const MatchEnv& env, int indent = 0);
+void printMatchResult(const std::pair<MatchEnv, bool>& result);
 
-    ///////////////////////////////
-    // Pattern Matching Traits
-    ///////////////////////////////
-    
-    template <typename T>
-    struct is_pattern_variable : std::false_type { };
-    
-    template <> 
-    struct is_pattern_variable<AtomExpression> : std::true_type { };
+std::shared_ptr<MacroExpression> transformTemplate(const std::shared_ptr<MacroExpression>& template_expr,
+    const MatchEnv& env);
 
-    template <typename T>
-    struct is_literal_matchable : std::false_type { };
-    
-    template <> 
-    struct is_literal_matchable<AtomExpression> : std::true_type { };
+std::shared_ptr<MacroExpression> transformMacroRecursive(const std::shared_ptr<MacroExpression>& expr,
+    pattern::MacroEnvironment& env);
 
-    template <typename T>
-    struct is_list_like : std::false_type { };
-    
-    template <> struct is_list_like<ListExpression> : std::true_type { };
-    template <> struct is_list_like<sExpression> : std::true_type { };
-    template <> struct is_list_like<BeginExpression> : std::true_type { };
-    
-    template <typename T>
-    inline constexpr bool is_list_like_v = is_list_like<T>::value;
+std::shared_ptr<MacroExpression> transformMacro(const std::shared_ptr<Expression>& template_expr,
+    const MatchEnv& env,
+    const std::string& macroName,
+    pattern::MacroEnvironment& macroEnv);
 
-    // Helper for checking if a type has variadic capability
-    template <typename T, typename = void>
-    struct has_variadic : std::false_type { };
-    
-    template <typename T>
-    struct has_variadic<T, std::void_t<decltype(std::declval<T>().isVariadic)>> 
-        : std::true_type { };
-    
-    template <typename T>
-    inline constexpr bool has_variadic_v = has_variadic<T>::value;
+std::shared_ptr<Expression> expandMacro(std::shared_ptr<Expression> expr,
+    pattern::MacroEnvironment& env);
 
-    ///////////////////////////////
-    // Element Access Traits
-    ///////////////////////////////
-    
-    // Primary template for expression elements
-    template <typename T, typename = void>
-    struct get_elements {
-        static std::vector<std::shared_ptr<Expression>> get(const T&) { 
-            return std::vector<std::shared_ptr<Expression>> {}; 
-        }
-    };
-
-    // Specialization for nested expressions
-    template <typename T>
-    struct get_elements<T, std::enable_if_t<has_nested_expressions_v<T>>> {
-        static std::vector<std::shared_ptr<Expression>> get(const T& expr)
-        {
-            if constexpr (std::is_same_v<T, ListExpression> || 
-                         std::is_same_v<T, sExpression>) {
-                return expr.elements;
-            } 
-            else if constexpr (std::is_same_v<T, BeginExpression>) {
-                return expr.body;
-            } 
-            else if constexpr (std::is_same_v<T, LetExpression>) {
-                std::vector<std::shared_ptr<Expression>> all_elements;
-                for (const auto& binding : expr.arguments) {
-                    all_elements.push_back(binding.second);
-                }
-                all_elements.insert(all_elements.end(), 
-                                  expr.body.begin(), 
-                                  expr.body.end());
-                return all_elements;
-            }
-            return std::vector<std::shared_ptr<Expression>> {};
-        }
-    };
-
-    // Helper function to get elements
-    template <typename T>
-    std::vector<std::shared_ptr<Expression>> get_expression_elements(const T& expr) {
-        return get_elements<T>::get(expr);
-    }
-
-} // namespace traits
-} // namespace expr
+std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_ptr<Expression>> exprs);
+}
