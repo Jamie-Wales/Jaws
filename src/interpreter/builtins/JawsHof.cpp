@@ -90,15 +90,32 @@ std::optional<SchemeValue> callCC(
     if (args.size() != 1) {
         throw InterpreterError("call/cc: expects exactly one argument");
     }
-
     const auto& proc = args[0];
     if (!proc.isProc()) {
         throw InterpreterError("call/cc: argument must be a procedure");
     }
-    auto cont = std::make_shared<Continuation>(
-        [&state](SchemeValue value) -> std::optional<SchemeValue> {
-            return value;
+    auto cont = std::make_shared<BuiltInProcedure>(
+        [](interpret::InterpreterState& state,
+            const std::vector<SchemeValue>& values) -> std::optional<SchemeValue> {
+            // Return values as a list if multiple values
+            if (values.size() > 1) {
+                std::list<SchemeValue> result;
+                for (const auto& val : values) {
+                    result.push_back(val);
+                }
+                return SchemeValue(std::move(result));
+            }
+            // Return single value directly
+            else if (values.size() == 1) {
+                return values[0];
+            }
+            // Return void/nil for no values
+            else {
+                return SchemeValue(std::list<SchemeValue>());
+            }
         });
+
+    // Pass continuation to procedure
     std::vector<SchemeValue> contArgs = { SchemeValue(cont) };
     return interpret::executeProcedure(state, proc, contArgs);
 }

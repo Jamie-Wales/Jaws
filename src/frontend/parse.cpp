@@ -143,6 +143,7 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     case Tokentype::COMPLEX:
     case Tokentype::RATIONAL:
     case Tokentype::STRING:
+    case Tokentype::DOT:
     case Tokentype::ELLIPSIS:
     case Tokentype::TRUE:
     case Tokentype::FALSE:
@@ -339,8 +340,6 @@ std::shared_ptr<Expression> parseList(ParserState& state)
         if (match(state, Tokentype::LEFT_PAREN)) {
             elements.push_back(parseList(state));
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after nested list");
-        } else if (match(state, Tokentype::ELLIPSIS)) {
-            isVariadic = true;
         } else {
             Token token = advance(state);
             elements.push_back(std::make_shared<Expression>(

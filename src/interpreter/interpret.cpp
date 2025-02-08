@@ -27,10 +27,10 @@ InterpreterState createInterpreter()
     define(">=", jaws_math::greaterOrEqual);
     define("<", jaws_math::less);
     define(">", jaws_math::greater);
-    auto eq = std::make_shared<BuiltInProcedure>(jaws_math::equal);
-    state.env->define("=", SchemeValue(eq));
-    state.env->define("eq?", SchemeValue(eq));
-    state.env->define("equal?", SchemeValue(eq));
+    define("eq", jaws_math::equal);
+    define("=", jaws_math::equal);
+    define("eq?", jaws_math::equal);
+    define("equal?", jaws_math::equal);
     define("boolean?", jaws_eq::isBooleanProc);
     define("procedure?", jaws_eq::isProcedure);
     define("pair?", jaws_eq::isPair);
@@ -38,7 +38,6 @@ InterpreterState createInterpreter()
     define("port?", jaws_eq::isPort);
     define("eq?", jaws_eq::isEq);
     define("eqv?", jaws_eq::isEqv);
-
     define("error", jaws_io::error);
     define("symbol?", jaws_eq::isSymbol);
     define("open-input-file", jaws_io::openInputFile);
@@ -49,7 +48,6 @@ InterpreterState createInterpreter()
     define("display", jaws_io::display);
     define("newline", jaws_io::newline);
     define("map", jaws_list::map);
-
     define("list?", jaws_eq::isList);
     define("list", jaws_list::listProcedure);
     define("car", jaws_list::carProcudure);
@@ -73,6 +71,7 @@ InterpreterState createInterpreter()
     define("eval", jaws_hof::eval);
     define("apply", jaws_hof::apply);
     define("call/cc", jaws_hof::callCC);
+    define("call-with-current-continuation", jaws_hof::callCC);
     return state;
 }
 

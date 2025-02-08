@@ -91,7 +91,7 @@ public:
 
 class Continuation : public Procedure {
 public:
-    using ContinuationFunc = std::function<std::optional<SchemeValue>(SchemeValue)>;
+    using ContinuationFunc = std::function<std::optional<SchemeValue>(std::vector<SchemeValue>)>;
 
     explicit Continuation(ContinuationFunc func)
         : continuation(std::move(func))
@@ -102,10 +102,7 @@ public:
         interpret::InterpreterState& state,
         const std::vector<SchemeValue>& args) const override
     {
-        if (args.size() != 1) {
-            throw InterpreterError("continuation: expects exactly one argument");
-        }
-        return continuation(args[0]);
+        return continuation(args);
     }
 
     bool isBuiltin() const override { return true; }

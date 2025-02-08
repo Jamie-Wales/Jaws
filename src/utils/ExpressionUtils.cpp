@@ -35,6 +35,10 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               for (const auto& elem : e.body) {
                                   elements.push_back(exprToList(elem));
                               }
+                              if (elements.size() == 1) {
+                                  return elements[0];
+                              }
+
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },
