@@ -9,10 +9,6 @@
 #include "builtins/JawsMath.h"
 #include "builtins/JawsVector.h"
 #include "builtins/jaws_ffi.h"
-#include "parse.h"
-#include "run.h"
-#include "scan.h"
-#include <format>
 
 namespace interpret {
 

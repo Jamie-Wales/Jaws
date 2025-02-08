@@ -132,7 +132,6 @@ ImportExpression::ImportExpression(std::vector<ImportSpec> imports_)
 {
 }
 
-// Helper function implementations
 ImportExpression::ImportSpec makeDirectImport(std::vector<std::shared_ptr<Expression>> library)
 {
     return ImportExpression::ImportSpec(std::move(library));
