@@ -1,6 +1,5 @@
-(import base)
 
-(let* ((x 1) (y (+ x 1)) (z (+ x 2)))
-  (* x y))
+(define (f x . rest) rest)
 
+(f 1 2 3)
 

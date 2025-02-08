@@ -175,9 +175,17 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
     if (match(state, Tokentype::LEFT_PAREN)) {
         Token name = consume(state, Tokentype::IDENTIFIER, "Expected function name");
         std::vector<Token> parameters;
+        bool isVariadic = false;
+
         while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+            if (match(state, Tokentype::DOT)) {
+                parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
+                isVariadic = true;
+                break;
+            }
             parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
         }
+
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameter list");
 
         std::vector<std::shared_ptr<Expression>> body;
@@ -187,7 +195,7 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after function body");
 
         return std::make_shared<Expression>(Expression {
-            DefineProcedure { name, std::move(parameters), std::move(body) },
+            DefineProcedure { name, std::move(parameters), std::move(body), isVariadic },
             name.line });
     } else {
         Token name = consume(state, Tokentype::IDENTIFIER, "Expected variable name");
@@ -203,9 +211,17 @@ std::shared_ptr<Expression> parseLambda(ParserState& state)
 {
     consume(state, Tokentype::LEFT_PAREN, "Lambda expects parameter list");
     std::vector<Token> parameters;
+    bool isVariadic = false;
+
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+        if (match(state, Tokentype::DOT)) {
+            parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
+            isVariadic = true;
+            break;
+        }
         parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
     }
+
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameters");
 
     std::vector<std::shared_ptr<Expression>> body;
@@ -220,10 +236,9 @@ std::shared_ptr<Expression> parseLambda(ParserState& state)
 
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after lambda body");
     return std::make_shared<Expression>(Expression {
-        LambdaExpression { std::move(parameters), std::move(body) },
+        LambdaExpression { std::move(parameters), std::move(body), isVariadic },
         previousToken(state).line });
 }
-
 std::shared_ptr<Expression> parseIf(ParserState& state)
 {
     auto condition = parseExpression(state);

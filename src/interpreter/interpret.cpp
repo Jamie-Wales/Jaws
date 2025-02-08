@@ -240,7 +240,7 @@ std::optional<SchemeValue> interpretDefine(InterpreterState& state, const Define
 
 std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, const DefineProcedure& proc)
 {
-    auto procedure = std::make_shared<UserProcedure>(proc.parameters, proc.body, state.env);
+    auto procedure = std::make_shared<UserProcedure>(proc.parameters, proc.body, state.env, proc.isVariadic);
     state.env->define(proc.name.lexeme, SchemeValue(std::move(procedure)));
     return std::nullopt;
 }
@@ -249,7 +249,7 @@ std::optional<SchemeValue> interpretLambda(InterpreterState& state, const Lambda
 {
     auto proc = std::make_shared<UserProcedure>(
         lambda.parameters,
-        lambda.body, state.env);
+        lambda.body, state.env, lambda.isVariadic);
     return SchemeValue(std::move(proc));
 }
 
