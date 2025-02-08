@@ -139,6 +139,19 @@ std::shared_ptr<Expression> transformExpression(
 
     return expr;
 }
+
+std::vector<std::shared_ptr<Expression>> processImport(const ImportExpression& import)
+{
+    std::vector<std::shared_ptr<Expression>> importedExprs;
+
+    for (const auto& spec : import.imports) {
+        auto path = resolveLibraryPath(spec);
+        importLibrary(path, spec, importedExprs);
+    }
+
+    return importedExprs;
+}
+
 std::vector<std::shared_ptr<Expression>> processImports(const std::vector<std::shared_ptr<Expression>>& expressions)
 {
     std::vector<std::shared_ptr<Expression>> defines;

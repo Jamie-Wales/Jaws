@@ -1,6 +1,7 @@
 #include "run.h"
 #include "ANFTransformer.h"
 #include "Error.h"
+#include "Import.h"
 #include "MacroTraits.h"
 #include "icons.h"
 #include "interpret.h"
@@ -63,8 +64,14 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             std::cout << expression->toString() << "\n";
         }
     }
-
-    const auto expanded = macroexp::expandMacros(*expressions);
+    auto withImports = import::processImports(*expressions);
+    if (opts.printAST) {
+        std::cout << "\nAfter Import Processing:\n";
+        for (const auto& expression : withImports) {
+            std::cout << expression->toString() << "\n";
+        }
+    }
+    const auto expanded = macroexp::expandMacros(withImports);
 
     if (opts.printMacro) {
         std::cout << "Expanded Macro: \n";
@@ -72,6 +79,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             std::cout << expression->toString() << "\n";
         }
     }
+
     if (opts.optimise) {
         auto anf = ir::ANFtransform(expanded);
         anf = optimise::optimise(anf);
@@ -83,6 +91,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             std::cout << "\n";
         }
     }
+
     auto val = interpret::interpret(state, expanded);
     if (val) {
         std::cout << val->toString() << std::endl;
