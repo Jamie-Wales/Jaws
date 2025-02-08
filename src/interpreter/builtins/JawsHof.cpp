@@ -1,5 +1,6 @@
 #include "builtins/JawsHof.h"
 #include "Error.h"
+#include "Procedure.h"
 #include "parse.h"
 #include "scan.h"
 
@@ -82,4 +83,23 @@ std::optional<SchemeValue> apply(
     return interpret::executeProcedure(state, args[0], procArgs);
 }
 
+std::optional<SchemeValue> callCC(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("call/cc: expects exactly one argument");
+    }
+
+    const auto& proc = args[0];
+    if (!proc.isProc()) {
+        throw InterpreterError("call/cc: argument must be a procedure");
+    }
+    auto cont = std::make_shared<Continuation>(
+        [&state](SchemeValue value) -> std::optional<SchemeValue> {
+            return value;
+        });
+    std::vector<SchemeValue> contArgs = { SchemeValue(cont) };
+    return interpret::executeProcedure(state, proc, contArgs);
+}
 } // namespace jaws_hof

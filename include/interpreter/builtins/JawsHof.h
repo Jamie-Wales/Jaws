@@ -1,6 +1,6 @@
 #pragma once
-#include "interpret.h"
 #include "Value.h"
+#include "interpret.h"
 #include <optional>
 #include <vector>
 
@@ -18,5 +18,7 @@ std::optional<SchemeValue> apply(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-} 
-
+std::optional<SchemeValue> callCC(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+}

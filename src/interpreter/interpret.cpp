@@ -76,6 +76,7 @@ InterpreterState createInterpreter()
     define("vector-length", jaws_vec::vectorLength);
     define("eval", jaws_hof::eval);
     define("apply", jaws_hof::apply);
+    define("call/cc", jaws_hof::callCC);
     return state;
 }
 

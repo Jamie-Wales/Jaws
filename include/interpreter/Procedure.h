@@ -88,3 +88,28 @@ public:
 
     bool isTailCall() const override { return true; }
 };
+
+class Continuation : public Procedure {
+public:
+    using ContinuationFunc = std::function<std::optional<SchemeValue>(SchemeValue)>;
+
+    explicit Continuation(ContinuationFunc func)
+        : continuation(std::move(func))
+    {
+    }
+
+    std::optional<SchemeValue> operator()(
+        interpret::InterpreterState& state,
+        const std::vector<SchemeValue>& args) const override
+    {
+        if (args.size() != 1) {
+            throw InterpreterError("continuation: expects exactly one argument");
+        }
+        return continuation(args[0]);
+    }
+
+    bool isBuiltin() const override { return true; }
+
+private:
+    ContinuationFunc continuation;
+};
