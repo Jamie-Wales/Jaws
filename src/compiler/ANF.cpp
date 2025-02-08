@@ -38,17 +38,6 @@ void ANF::toString(std::stringstream& ss) const
                        let.body->toString(ss);
                        ss << ")";
                    },
-                   [&](const Function& func) -> void {
-                       ss << "(define " << func.name.lexeme << " (";
-                       for (size_t i = 0; i < func.args.size(); i++) {
-                           if (i > 0)
-                               ss << " ";
-                           ss << func.args[i].lexeme;
-                       }
-                       ss << ") ";
-                       func.body->toString(ss);
-                       ss << ")";
-                   },
                    [&](const Lambda& lambda) -> void {
                        ss << "(lambda (";
                        for (size_t i = 0; i < lambda.params.size(); i++) {

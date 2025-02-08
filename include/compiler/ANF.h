@@ -28,14 +28,6 @@ public:
     bool is_tail;
 };
 
-class Function {
-public:
-    Token name;
-    std::vector<Token> args;
-    std::shared_ptr<ANF> body;
-    bool is_primitive;
-};
-
 class If {
 public:
     Token cond;
@@ -56,7 +48,7 @@ public:
 
 class ANF {
 public:
-    using ANFTerm = std::variant<Let, Atom, Function, If, Lambda, App, Quote>;
+    using ANFTerm = std::variant<Let, Atom, If, Lambda, App, Quote>;
     ANFTerm term;
     ANF(ANFTerm t)
         : term(std::move(t))
