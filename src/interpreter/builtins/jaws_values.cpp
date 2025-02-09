@@ -1,7 +1,7 @@
 // JawsValues.cpp
 #include "builtins/jaws_values.h"
-#include "interpret.h"
 #include "Error.h"
+#include "interpret.h"
 
 namespace jaws_values {
 std::optional<SchemeValue> symbolToString(
@@ -36,20 +36,14 @@ std::optional<SchemeValue> valuesToList(
     const std::vector<SchemeValue>& args)
 {
     std::list<SchemeValue> result;
-    
-    // Handle regular form (values->list v1 v2 ...)
     if (!args.empty() && !args.back().isList()) {
         for (const auto& arg : args) {
             result.push_back(arg);
         }
-    }
-    // Handle variadic form (values->list v1 v2 . rest)
-    else if (args.size() >= 2) {
-        // Add all but last argument
+    } else if (args.size() >= 2) {
         for (size_t i = 0; i < args.size() - 1; i++) {
             result.push_back(args[i]);
         }
-        // Add elements from last argument (which is a list)
         const auto& rest = args.back().asList();
         result.insert(result.end(), rest.begin(), rest.end());
     }
@@ -62,19 +56,13 @@ std::optional<SchemeValue> valuesToVector(
     const std::vector<SchemeValue>& args)
 {
     std::vector<SchemeValue> result;
-    
-    // Handle regular form (values->vector v1 v2 ...)
     if (!args.empty() && !args.back().isList()) {
         result = args;
-    }
-    // Handle variadic form (values->vector v1 v2 . rest)
-    else if (args.size() >= 2) {
+    } else if (args.size() >= 2) {
         result.reserve(args.size() - 1 + args.back().asList().size());
-        // Add all but last argument
         for (size_t i = 0; i < args.size() - 1; i++) {
             result.push_back(args[i]);
         }
-        // Add elements from last argument (which is a list)
         const auto& rest = args.back().asList();
         result.insert(result.end(), rest.begin(), rest.end());
     }
@@ -116,4 +104,4 @@ std::optional<SchemeValue> vectorToList(
     return SchemeValue(std::move(result));
 }
 
-} // namespace jaws_values
+}

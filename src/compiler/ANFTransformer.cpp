@@ -319,7 +319,6 @@ std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>&
                               return Aatom(e);
                           },
                           [&](const ListExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
-                          [&](const BeginExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
                           [&](const sExpression& e) -> std::optional<std::shared_ptr<ANF>> {
                               return ASExpr(e, currentNumber);
                           },

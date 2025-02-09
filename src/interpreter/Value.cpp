@@ -331,16 +331,6 @@ SchemeValue expressionToValue(const Expression& expr)
                           [&](const TailExpression& e) -> SchemeValue {
                               return SchemeValue(expressionToValue(*e.expression));
                           },
-
-                          [&](const BeginExpression& b) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "begin" }));
-                              for (const auto& expr : b.body) {
-                                  values.push_back(expressionToValue(*expr));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
                           [&](const ListExpression& l) -> SchemeValue {
                               std::list<SchemeValue> values;
                               for (const auto& elem : l.elements) {

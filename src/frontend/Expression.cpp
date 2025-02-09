@@ -21,11 +21,6 @@ sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems, bool va
 {
 }
 
-BeginExpression::BeginExpression(std::vector<std::shared_ptr<Expression>> body)
-    : body(std::move(body))
-{
-}
-
 SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression> value)
     : identifier(std::move(identifier))
     , value(std::move(value))
@@ -391,15 +386,6 @@ void Expression::toString(std::stringstream& ss) const
                 e.rule->toString(ss);
                 ss << ")";
             },
-            [&](const BeginExpression& e) {
-                ss << "(begin ";
-                for (size_t i = 0; i < e.body.size(); ++i) {
-                    e.body[i]->toString(ss);
-                    if (i < e.body.size() - 1)
-                        ss << " ";
-                }
-                ss << ")";
-            },
             [&](const LetExpression& e) {
                 ss << "(let ";
                 if (e.name) {
@@ -440,17 +426,6 @@ std::shared_ptr<Expression> Expression::clone() const
                                   LetExpression {
                                       p.name, output, clonedBody },
                                   line });
-                          },
-                          [&](const BeginExpression& b) -> std::shared_ptr<Expression> {
-                              std::vector<std::shared_ptr<Expression>> body = {};
-                              for (const auto& first : b.body) {
-                                  body.push_back(first->clone());
-                              }
-                              return std::make_shared<Expression>(
-                                  BeginExpression {
-                                      std::move(body),
-                                  },
-                                  line);
                           },
                           [&](const SyntaxRulesExpression& s) -> std::shared_ptr<Expression> {
                               std::vector<Token> clonedLiterals = s.literals; // Tokens can be copied directly

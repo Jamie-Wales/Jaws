@@ -74,15 +74,6 @@ std::shared_ptr<Expression> parseSet(ParserState& state)
     return std::make_shared<Expression>(Expression { SetExpression { name, expr }, previousToken(state).line });
 }
 
-std::shared_ptr<Expression> parseBegin(ParserState& state)
-{
-    std::vector<std::shared_ptr<Expression>> body;
-    while (!check(state, Tokentype::RIGHT_PAREN)) {
-        body.push_back(parseExpression(state));
-    }
-    consume(state, Tokentype::RIGHT_PAREN, "Expect ')' after expression");
-    return std::make_shared<Expression>(Expression { BeginExpression { body }, previousToken(state).line });
-}
 std::shared_ptr<Expression> parseDefineSyntax(ParserState& state)
 {
     Token name = consume(state, Tokentype::IDENTIFIER, "Expected macro name after 'define-syntax'");
@@ -109,8 +100,6 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
             return parseLet(state);
         if (match(state, Tokentype::SET))
             return parseSet(state);
-        if (match(state, Tokentype::BEGIN))
-            return parseBegin(state);
         if (match(state, Tokentype::IMPORT))
             return parseImport(state);
         if (match(state, Tokentype::LAMBDA))
@@ -207,7 +196,8 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
     }
 }
 
-std::shared_ptr<Expression> parseLambda(ParserState& state) {
+std::shared_ptr<Expression> parseLambda(ParserState& state)
+{
     std::vector<Token> parameters;
     bool isVariadic = false;
 
@@ -485,7 +475,6 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
         Expression { SyntaxRulesExpression { literals, std::move(rules) }, previousToken(state).line });
 }
 
-// New unified parser for both patterns and templates that doesn't enforce syntax
 std::shared_ptr<Expression> parseMacroExpression(ParserState& state)
 {
     if (match(state, Tokentype::LEFT_PAREN)) {
@@ -510,7 +499,6 @@ std::shared_ptr<Expression> parseMacroExpression(ParserState& state)
         throw ParseError("Expected list when defining vector", previousToken(state), "");
     }
 
-    // Parse any token as an atom without validation
     Token token = advance(state);
     return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });
 }

@@ -86,15 +86,6 @@ std::optional<SchemeValue> interpret(
     return result;
 }
 
-std::optional<SchemeValue> interpretBegin(InterpreterState& state, const BeginExpression& begin)
-{
-    std::optional<SchemeValue> result = std::nullopt;
-    for (const auto& expr : begin.body) {
-        result = interpret(state, expr);
-    }
-    return result;
-}
-
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr)
@@ -105,9 +96,6 @@ std::optional<SchemeValue> interpret(
                           },
                           [&](const ListExpression& e) -> std::optional<SchemeValue> {
                               return interpretList(state, e);
-                          },
-                          [&](const BeginExpression& e) -> std::optional<SchemeValue> {
-                              return interpretBegin(state, e);
                           },
                           [&](const sExpression& e) -> std::optional<SchemeValue> {
                               return interpretSExpression(state, e);

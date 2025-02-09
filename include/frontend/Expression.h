@@ -24,7 +24,6 @@ enum class ExprType {
     Import,
     SyntaxRules,
     DefineSyntax,
-    Begin,
     Let
 };
 
@@ -71,13 +70,6 @@ public:
     std::vector<std::shared_ptr<Expression>> body;
 
     LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body);
-};
-
-class BeginExpression {
-public:
-    std::vector<std::shared_ptr<Expression>> body;
-
-    BeginExpression(std::vector<std::shared_ptr<Expression>> body);
 };
 
 class SyntaxRule {
@@ -292,7 +284,6 @@ public:
         ImportExpression,
         SyntaxRulesExpression,
         DefineSyntaxExpression,
-        BeginExpression,
         LetExpression>;
 
     ExpressionVariant as;
@@ -349,7 +340,6 @@ public:
                               [](const ImportExpression&) { return ExprType::Import; },
                               [](const SyntaxRulesExpression&) { return ExprType::SyntaxRules; },
                               [](const DefineSyntaxExpression&) { return ExprType::DefineSyntax; },
-                              [](const BeginExpression&) { return ExprType::Begin; },
                               [](const LetExpression&) { return ExprType::Let; } },
             as);
     }
@@ -390,8 +380,6 @@ static std::string typeToString(ExprType type)
         return "SyntaxRules";
     case ExprType::DefineSyntax:
         return "DefineSyntax";
-    case ExprType::Begin:
-        return "Begin";
     case ExprType::Let:
         return "Let";
     }

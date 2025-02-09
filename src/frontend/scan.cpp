@@ -19,7 +19,6 @@ const std::unordered_map<std::string, Tokentype> keywords = {
     { "=>", Tokentype::ARROW },
     { "...", Tokentype::ELLIPSIS },
     { "set!", Tokentype::SET },
-    { "begin", Tokentype::BEGIN },
     { "else", Tokentype::ELSE },
 };
 
