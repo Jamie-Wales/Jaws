@@ -31,7 +31,8 @@ std::shared_ptr<Expression> parseImport(ParserState& state);
 std::shared_ptr<Expression> parseDefineSyntax(ParserState& state);
 std::shared_ptr<Expression> parseSyntaxRules(ParserState& state);
 std::shared_ptr<Expression> parseList(ParserState& state);
-
+    std::shared_ptr<Expression> parseMacroExpression(ParserState& state);
+    std::shared_ptr<Expression> parseMacroSExpression(ParserState& state);
 std::shared_ptr<Expression> parseBegin(ParserState& state);
 
 std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state);

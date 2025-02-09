@@ -1,7 +1,6 @@
 #include "parse.h"
 
 namespace parse {
-
 Token peek(const ParserState& state)
 {
     return state.tokens[state.current];
@@ -87,7 +86,7 @@ std::shared_ptr<Expression> parseBegin(ParserState& state)
 std::shared_ptr<Expression> parseDefineSyntax(ParserState& state)
 {
     Token name = consume(state, Tokentype::IDENTIFIER, "Expected macro name after 'define-syntax'");
-    consume(state, Tokentype::LEFT_PAREN, "Expected '(' after macro name"); // Consume the '(' before 'syntax-rules'
+    consume(state, Tokentype::LEFT_PAREN, "Expected '(' after macro name");
 
     if (!match(state, Tokentype::SYNTAX_RULE)) {
         throw ParseError("Expected 'syntax-rules' in 'define-syntax'", peek(state), "");
@@ -208,22 +207,24 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
     }
 }
 
-std::shared_ptr<Expression> parseLambda(ParserState& state)
-{
-    consume(state, Tokentype::LEFT_PAREN, "Lambda expects parameter list");
+std::shared_ptr<Expression> parseLambda(ParserState& state) {
     std::vector<Token> parameters;
     bool isVariadic = false;
 
-    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
-        if (match(state, Tokentype::DOT)) {
-            parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
-            isVariadic = true;
-            break;
+    if (match(state, Tokentype::LEFT_PAREN)) {
+        while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+            if (match(state, Tokentype::DOT)) {
+                parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
+                isVariadic = true;
+                break;
+            }
+            parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
         }
+        consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameters");
+    } else {
         parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
+        isVariadic = true;
     }
-
-    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameters");
 
     std::vector<std::shared_ptr<Expression>> body;
     while (!check(state, Tokentype::RIGHT_PAREN)) {
@@ -471,8 +472,9 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
     std::vector<SyntaxRule> rules;
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         consume(state, Tokentype::LEFT_PAREN, "Expected '(' before pattern in 'syntax-rules'");
-        auto pattern = parseExpression(state);
-        auto template_expr = parseExpression(state);
+        // Use the same macro expression parser for both pattern and template
+        auto pattern = parseMacroExpression(state);
+        auto template_expr = parseMacroExpression(state);
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after template in 'syntax-rules'");
         rules.push_back(SyntaxRule(pattern, template_expr));
     }
@@ -481,5 +483,45 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
 
     return std::make_shared<Expression>(
         Expression { SyntaxRulesExpression { literals, std::move(rules) }, previousToken(state).line });
+}
+
+// New unified parser for both patterns and templates that doesn't enforce syntax
+std::shared_ptr<Expression> parseMacroExpression(ParserState& state)
+{
+    if (match(state, Tokentype::LEFT_PAREN)) {
+        return parseMacroSExpression(state);
+    }
+    if (match(state, Tokentype::QUOTE)) {
+        auto expr = parseMacroExpression(state);
+        return std::make_shared<Expression>(
+            Expression { QuoteExpression { expr }, previousToken(state).line });
+    }
+    if (match(state, Tokentype::HASH)) {
+        // Handle vectors similarly to lists
+        if (match(state, Tokentype::LEFT_PAREN)) {
+            std::vector<std::shared_ptr<Expression>> elements;
+            while (!match(state, Tokentype::RIGHT_PAREN)) {
+                elements.push_back(parseMacroExpression(state));
+            }
+            return std::make_shared<Expression>(Expression {
+                VectorExpression { std::move(elements) },
+                previousToken(state).line });
+        }
+        throw ParseError("Expected list when defining vector", previousToken(state), "");
+    }
+
+    // Parse any token as an atom without validation
+    Token token = advance(state);
+    return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });
+}
+
+std::shared_ptr<Expression> parseMacroSExpression(ParserState& state)
+{
+    std::vector<std::shared_ptr<Expression>> elements;
+    while (!match(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+        elements.push_back(parseMacroExpression(state));
+    }
+    return std::make_shared<Expression>(
+        Expression { ListExpression { std::move(elements) }, previousToken(state).line });
 }
 }

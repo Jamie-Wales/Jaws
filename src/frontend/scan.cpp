@@ -32,7 +32,7 @@ const std::vector<RegexInfo> regexPatterns = {
     { std::regex(R"([+-]?\d+)"), Tokentype::INTEGER },
     { std::regex(R"(#t|#true)"), Tokentype::TRUE },
     { std::regex(R"(#f|#false)"), Tokentype::FALSE },
-    { std::regex(R"(\.)"), Tokentype::DOT }, // Add dot as its own pattern before identifier
+    { std::regex(R"( \. )"), Tokentype::DOT }, // Add dot as its own pattern before identifier
     { std::regex(R"([a-zA-Z!$%&*+\-\./:<=>?@^_~][a-zA-Z0-9!$%&*+\-\./:<=>?@^_~]*)"), Tokentype::IDENTIFIER },
     { std::regex(R"(\|(?:[^\\|]|\\.)*\|)"), Tokentype::IDENTIFIER },
     { std::regex(R"('|quote)"), Tokentype::QUOTE },
