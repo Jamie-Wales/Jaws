@@ -82,16 +82,19 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
 
     if (opts.optimise) {
         auto anf = ir::ANFtransform(expanded);
-        anf = optimise::optimise(anf);
-        if (opts.printANF) {
-            std::cout << "ANF representation:\n";
-            for (const auto& expr : anf) {
-                std::cout << expr->toString() << "\n";
+        if (!anf.empty()) {
+            anf = optimise::optimise(anf);
+            if (opts.printANF) {
+                std::cout << "ANF representation:\n";
+                for (const auto& expr : anf) {
+                    if (expr) {
+                        std::cout << expr->toString() << "\n";
+                    }
+                }
+                std::cout << "\n";
             }
-            std::cout << "\n";
         }
     }
-
     auto val = interpret::interpret(state, expanded);
     if (val) {
         std::cout << val->toString() << std::endl;

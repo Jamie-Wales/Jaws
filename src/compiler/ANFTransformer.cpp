@@ -11,10 +11,16 @@ namespace ir {
 std::vector<std::shared_ptr<ANF>> ANFtransform(const std::vector<std::shared_ptr<Expression>>& expressions)
 {
     size_t currentNumber = 0;
-    std::vector<std::shared_ptr<ANF>> output = {};
+    std::vector<std::shared_ptr<ANF>> output;
+    output.reserve(expressions.size());
+
     for (const auto& expression : expressions) {
-        if (auto element = transform(expression, currentNumber)) {
-            output.push_back(*element);
+        if (!expression)
+            continue;
+
+        auto transformed = transform(expression, currentNumber);
+        if (transformed && *transformed) {
+            output.push_back(*transformed);
         }
     }
 
@@ -248,11 +254,16 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
 
 std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& currentNumber)
 {
+    if (le.body.empty()) {
+        return std::nullopt; // Or handle empty body case
+    }
+
     std::shared_ptr<ANF> body = nullptr;
     for (const auto& expr : std::ranges::reverse_view(le.body)) {
         auto transformed = transform(expr, currentNumber);
         if (!transformed) {
-            throw std::runtime_error("Failed to transform procedure body");
+            // Instead of throwing, we should propagate the nullopt
+            return std::nullopt;
         }
         if (!body) {
             body = *transformed;
@@ -263,6 +274,10 @@ std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& 
                 *transformed,
                 body });
         }
+    }
+
+    if (!body) {
+        return std::nullopt;
     }
 
     return std::make_shared<ANF>(Lambda { le.parameters, body });

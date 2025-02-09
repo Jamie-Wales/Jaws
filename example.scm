@@ -1,16 +1,13 @@
 (import base)
-
 (call-with-values (lambda () (values 4 5))
                   (lambda (a b) (+ a b)))
 
 (cond ((< 1 10) (display "hello")))
+
 (newline)
 
 
-
-
-
-(begin (display "hello johnny") (newline) (display "poop"))
+(begin (display "hello johnny") (newline) (display "poop") (newline))
 
 
 (letrec ((even?
@@ -35,3 +32,6 @@
 
 
 (lej ((a 10) (b 20) (c 50)) (+ a b c))
+
+
+(printTwice 10)

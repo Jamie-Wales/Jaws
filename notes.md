@@ -1,14 +1,23 @@
 # Jaws Scheme Implementation
 
+## To do
+
+Check why dce is breaking - probably something to do with how lets have changed, and single argument funcs
+Check imports again
+Start 3AC
+Add to done list
+
 ## Done
 
 ### Special Forms
+
 - quote
 - define
 - lambda
-- if 
+- if
 
 ### Values
+
 - list
 - vector
 - atom
@@ -16,6 +25,7 @@
 - port
 
 #### Number
+
 - integer
 - rational
 - double
@@ -23,7 +33,9 @@
 Maths operations + - * / <=> ==
 
 ### Procedures
-#list
+
+## List
+
 - map
 - cons
 - length (list)
@@ -32,8 +44,8 @@ Maths operations + - * / <=> ==
 - listRef
 - listTail
 
+## vector
 
-#vector
 - vector
 - make-vector
 - vector-ref
@@ -43,7 +55,7 @@ Maths operations + - * / <=> ==
 - <=> + - / ==
 - eval
 - boolean?
-- car 
+- car
 - cdr
 - cadr
 - open
@@ -55,6 +67,3 @@ Maths operations + - * / <=> ==
 - newline
 - closePort
 - list
-
-
-### To Do
