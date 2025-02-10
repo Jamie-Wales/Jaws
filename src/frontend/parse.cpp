@@ -261,10 +261,7 @@ std::shared_ptr<Expression> parseLet(ParserState& state)
     }
 
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' after let");
-
-    // Add special case for empty binding list
     if (match(state, Tokentype::RIGHT_PAREN)) {
-        // Empty binding list - proceed directly to body
         std::vector<std::shared_ptr<Expression>> body;
         while (!match(state, Tokentype::RIGHT_PAREN)) {
             body.emplace_back(parseExpression(state));
@@ -397,12 +394,10 @@ std::shared_ptr<Expression> parseImport(ParserState& state)
                 consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after rename import");
                 specs.push_back(makeRenameImport(lib, std::move(renames)));
             } else {
-                // Direct library reference
                 auto lib = parseLibraryName(state);
                 specs.push_back(makeDirectImport(lib));
             }
         } else {
-            // Single identifier as direct import
             consume(state, Tokentype::IDENTIFIER, "Expected library identifier");
             std::vector<std::shared_ptr<Expression>> lib;
             lib.push_back(std::make_shared<Expression>(
