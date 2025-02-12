@@ -141,7 +141,6 @@ static std::optional<Constant> evaluateConstantApp(
         return Constant(!std::get<bool>(args[0]));
     }
 
-    // For arithmetic and comparison, convert args to numeric
     std::vector<NumericConstant> nums;
     for (const auto& arg : args) {
         if (!std::holds_alternative<NumericConstant>(arg)) {
@@ -150,7 +149,6 @@ static std::optional<Constant> evaluateConstantApp(
         nums.push_back(std::get<NumericConstant>(arg));
     }
 
-    // Handle empty cases
     if (nums.empty()) {
         if (app.name.lexeme == "+")
             return Constant(NumericConstant(0));
@@ -159,7 +157,6 @@ static std::optional<Constant> evaluateConstantApp(
         return std::nullopt;
     }
 
-    // Handle unary cases
     if (nums.size() == 1) {
         if (app.name.lexeme == "-") {
             return Constant(std::visit([](const auto& x) -> NumericConstant {

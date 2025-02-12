@@ -255,14 +255,13 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
 std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& currentNumber)
 {
     if (le.body.empty()) {
-        return std::nullopt; // Or handle empty body case
+        return std::nullopt;
     }
 
     std::shared_ptr<ANF> body = nullptr;
     for (const auto& expr : std::ranges::reverse_view(le.body)) {
         auto transformed = transform(expr, currentNumber);
         if (!transformed) {
-            // Instead of throwing, we should propagate the nullopt
             return std::nullopt;
         }
         if (!body) {
@@ -280,7 +279,12 @@ std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& 
         return std::nullopt;
     }
 
-    return std::make_shared<ANF>(Lambda { le.parameters, body });
+    const auto lambda = std::make_shared<ANF>(Lambda { le.parameters, body });
+    Token lambdaTemp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
+    return std::make_shared<ANF>(Let {
+        std::optional<Token>(lambdaTemp),
+        lambda,
+        std::make_shared<ANF>(Atom { lambdaTemp }) });
 }
 std::shared_ptr<ANF> AVector(const VectorExpression& ve, size_t& currentNumber)
 {

@@ -12,4 +12,19 @@ void collectUsedVariables(const std::shared_ptr<ir::ANF>& anf, std::unordered_se
 std::shared_ptr<ir::ANF> eliminateUnused(const std::shared_ptr<ir::ANF>& anf, const std::unordered_set<std::string>& used);
 void dce(ir::ANF& anf);
 
+class DependancyGraph {
+public:
+    struct Edge {
+        std::string from;
+        std::string to;
+    };
+    using EdgeMap = std::unordered_map<std::string, std::vector<Edge>>;
+    void addEdge(const std::string& from, const std::string& to);
+    void print();
+
+private:
+    EdgeMap outgoing;
+    EdgeMap incoming;
+};
+
 }

@@ -18,11 +18,12 @@ void printAnf(std::string message, std::vector<std::shared_ptr<ir::ANF>>& anfs, 
 
 std::vector<std::shared_ptr<ir::ANF>> optimise(std::vector<std::shared_ptr<ir::ANF>>& anfs, bool print)
 {
+
     printAnf("Optimising ANF:", anfs, print);
-    elimatedDeadCode(anfs);
-    printAnf("DCE ANF:", anfs, print);
     optimiseConstants(anfs);
     printAnf("Constant Folded ANF:", anfs, print);
+    elimatedDeadCode(anfs);
+    printAnf("DCE ANF:", anfs, print);
 
     return anfs;
 }

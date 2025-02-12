@@ -1,8 +1,85 @@
 #include "DeadCodeElimination.h"
 #include "ANF.h"
 #include "Visit.h"
+#include <iostream>
 
 namespace optimise {
+
+void DependancyGraph::addEdge(const std::string& from, const std::string& to)
+{
+    Edge edge = { from, to };
+    outgoing[from].push_back(edge);
+    incoming[to].push_back(edge);
+}
+
+void DependancyGraph::print()
+{
+    std::cout << "Dependency Graph:\n";
+    for (const auto& [node, edges] : outgoing) {
+        std::cout << node << " -> ";
+        bool first = true;
+        for (const auto& edge : edges) {
+            if (!first)
+                std::cout << ", ";
+            std::cout << edge.to;
+            first = false;
+        }
+        std::cout << "\n";
+    }
+}
+
+void collectDependencies(const std::shared_ptr<ir::ANF>& anf, DependancyGraph& graph,
+    const std::string& currentScope = "")
+{
+    if (!anf)
+        return;
+
+    std::visit(overloaded {
+                   [&](const ir::Let& let) {
+                       if (let.name) {
+                           std::string letName = let.name->lexeme;
+                           collectDependencies(let.binding, graph, letName);
+                           collectDependencies(let.body, graph, letName);
+                       } else {
+                           collectDependencies(let.binding, graph, currentScope);
+                           collectDependencies(let.body, graph, currentScope);
+                       }
+                   },
+                   [&](const ir::App& app) {
+                       if (!currentScope.empty()) {
+                           // Function name depends on current scope
+                           if (app.name.type == Tokentype::IDENTIFIER) {
+                               graph.addEdge(currentScope, app.name.lexeme);
+                           }
+                           // Parameters depend on current scope
+                           for (const auto& param : app.params) {
+                               if (param.type == Tokentype::IDENTIFIER) {
+                                   graph.addEdge(currentScope, param.lexeme);
+                               }
+                           }
+                       }
+                   },
+                   [&](const ir::Lambda& lambda) {
+                       collectDependencies(lambda.body, graph, currentScope);
+                   },
+                   [&](const ir::If& if_) {
+                       if (!currentScope.empty()) {
+                           graph.addEdge(currentScope, if_.cond.lexeme);
+                       }
+                       collectDependencies(if_.then, graph, currentScope);
+                       if (if_._else) {
+                           collectDependencies(*if_._else, graph, currentScope);
+                       }
+                   },
+                   [&](const ir::Atom& atom) {
+                       if (!currentScope.empty() && atom.atom.type == Tokentype::IDENTIFIER) {
+                           graph.addEdge(currentScope, atom.atom.lexeme);
+                       }
+                   },
+                   [&](const ir::Quote&) { /* quotes don't create dependencies */ },
+               },
+        anf->term);
+}
 void collectUsedVariables(const std::shared_ptr<ir::ANF>& anf, std::unordered_set<std::string>& usedList)
 {
     if (!anf) {
@@ -94,7 +171,11 @@ std::shared_ptr<ir::ANF> eliminateUnused(const std::shared_ptr<ir::ANF>& anf,
 void dce(ir::ANF& anf)
 {
     std::unordered_set<std::string> used;
+    DependancyGraph dp;
     auto shared_anf = std::make_shared<ir::ANF>(anf);
+    collectDependencies(shared_anf, dp);
+    dp.print();
+
     collectUsedVariables(shared_anf, used);
     auto optimized = eliminateUnused(shared_anf, used);
 
@@ -110,5 +191,4 @@ void elimatedDeadCode(std::vector<std::shared_ptr<ir::ANF>>& anfs)
         dce(*anf);
     }
 }
-
 }
