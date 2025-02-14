@@ -20,8 +20,8 @@ std::vector<std::shared_ptr<ir::ANF>> optimise(std::vector<std::shared_ptr<ir::A
 {
 
     printAnf("Optimising ANF:", anfs, print);
-    optimiseConstants(anfs);
-    printAnf("Constant Folded ANF:", anfs, print);
+    // optimiseConstants(anfs);
+    // printAnf("Constant Folded ANF:", anfs, print);
     elimatedDeadCode(anfs);
     printAnf("DCE ANF:", anfs, print);
 

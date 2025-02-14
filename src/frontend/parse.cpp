@@ -294,11 +294,6 @@ std::shared_ptr<Expression> parseLet(ParserState& state)
         previousToken(state).line);
 }
 
-std::shared_ptr<Expression> parseLetRec(ParserState& state)
-{
-    throw ParseError("letrec not implemented", peek(state), "");
-}
-
 std::shared_ptr<Expression> parseTailExpression(ParserState& state)
 {
     return std::make_shared<Expression>(
@@ -447,6 +442,7 @@ std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token>
         return std::nullopt;
     }
 }
+
 std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
 {
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' before literals in 'syntax-rules'");

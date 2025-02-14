@@ -163,26 +163,10 @@ std::shared_ptr<ANF> ADefine(const DefineExpression& define, size_t& currentNumb
         throw std::runtime_error("Failed to transform define value");
     }
 
-    Token value_token;
-    std::shared_ptr<ANF> result;
-
-    if (const auto atom = std::get_if<Atom>(&(*transformed_value)->term)) {
-        value_token = atom->atom;
-        result = std::make_shared<ANF>(App {
-            Token { Tokentype::IDENTIFIER, "define", 0, 0 },
-            std::vector<Token> { define.name, value_token },
-            false });
-    } else {
-        Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
-        result = std::make_shared<ANF>(Let {
-            std::optional<Token>(temp),
-            *transformed_value,
-            std::make_shared<ANF>(App {
-                Token { Tokentype::IDENTIFIER, "define", 0, 0 },
-                std::vector<Token> { define.name, temp },
-                false }) });
-    }
-    return result;
+    return std::make_shared<ANF>(Let {
+        std::optional<Token>(define.name),
+        *transformed_value,
+        std::make_shared<ANF>(Atom { define.name }) });
 }
 
 std::shared_ptr<ANF> ASet(const SetExpression& set, size_t& currentNumber)
@@ -223,33 +207,26 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
         if (!body) {
             body = *transformed;
         } else {
-            Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
             body = std::make_shared<ANF>(Let {
-                std::optional<Token>(temp),
+                std::optional<Token>(proc.name),
                 *transformed,
                 body });
         }
     }
 
+    Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
+
     auto lambda = std::make_shared<ANF>(Lambda {
         proc.parameters,
         body });
 
-    if (const auto atom = std::get_if<Atom>(&lambda->term)) {
-        return std::make_shared<ANF>(App {
-            Token { Tokentype::IDENTIFIER, "define", 0, 0 },
-            std::vector<Token> { proc.name, atom->atom },
-            false });
-    } else {
-        Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
-        return std::make_shared<ANF>(Let {
-            std::optional<Token>(temp),
-            lambda,
-            std::make_shared<ANF>(App {
-                Token { Tokentype::IDENTIFIER, "define", 0, 0 },
-                std::vector<Token> { proc.name, temp },
-                false }) });
-    }
+    auto elements = std::make_shared<ANF>(Let {
+        std::optional<Token>(temp),
+        lambda, std::nullopt });
+
+    return std::make_shared<ANF>(Let {
+        std::optional<Token>(proc.name),
+        elements, std::nullopt });
 }
 
 std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& currentNumber)
@@ -322,12 +299,9 @@ std::shared_ptr<ANF> AVector(const VectorExpression& ve, size_t& currentNumber)
 
 std::shared_ptr<ANF> AQuote(const QuoteExpression& qe, size_t& currentNumber)
 {
-    Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
 
-    return std::make_shared<ANF>(Let {
-        std::optional<Token>(temp),
-        std::make_shared<ANF>(Quote { qe.expression }),
-        std::make_shared<ANF>(Atom { temp }) });
+    return std::make_shared<ANF>(ANF {
+        Quote { qe.expression } });
 }
 
 std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)

@@ -21,8 +21,6 @@ public:
     using EdgeMap = std::unordered_map<std::string, std::vector<Edge>>;
     void addEdge(const std::string& from, const std::string& to);
     void print();
-
-private:
     EdgeMap outgoing;
     EdgeMap incoming;
 };

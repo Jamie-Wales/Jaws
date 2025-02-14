@@ -1,8 +1,25 @@
-(define x 42)              ; Expression 1
-(let ((temp (+ x 1)))       ; Expression 2
-  (display temp))          ; temp is used, so keep it
+(define (square sqr) (* sqr sqr))
 
-(let ((a (+ 1 2)))
-  (let ((b (+ a 3)))    ; b is used
-    (let ((c (* a 2)))  ; c is unused
-      (+ b 4))))
+
+(define (sum-list lst)
+  (if (= lst 0)
+      0
+      (+ (car lst)
+         (sum-list (cdr lst)))))
+
+(define (map-square lst)
+  (if (= lst 0)
+      0
+      (cons (square (car lst))
+            (map-square (cdr lst)))))
+
+(define (process-list lst)
+  (let ((squared (map-square lst))
+        (total (sum-list lst)))
+    (if (> total 10)
+        squared
+        lst)))
+
+
+
+(process-list '(1 2 3 4 5))

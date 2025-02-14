@@ -290,15 +290,20 @@ std::shared_ptr<ir::ANF> constantFold(
                               if (let.name) {
                                   if (auto const_val = evaluateIfCondition(new_binding, env)) {
                                       env[let.name->lexeme] = *const_val;
-                                      return constantFold(let.body, env);
+                                      if (let.body)
+                                          return constantFold(*let.body, env);
                                   }
                               }
 
-                              auto new_body = constantFold(let.body, env);
-                              return std::make_shared<ir::ANF>(ir::Let {
-                                  let.name,
-                                  new_binding,
-                                  new_body });
+                              if (let.body) {
+                                  auto new_body = constantFold(*let.body, env);
+                                  return std::make_shared<ir::ANF>(ir::Let {
+                                      let.name,
+                                      new_binding,
+                                      new_body });
+                              }
+
+                              return nullptr;
                           },
                           [&](const ir::App& app) -> std::shared_ptr<ir::ANF> {
                               if (isPureFunction(app.name)) {
