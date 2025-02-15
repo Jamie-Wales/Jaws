@@ -1,12 +1,57 @@
 #include "ANFTransformer.h"
 #include "Visit.h"
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 
 namespace ir {
+
+std::shared_ptr<ANF> flattenLets(std::shared_ptr<ANF> expr)
+{
+    return std::visit(overloaded {
+                          [&](const Atom& a) -> std::shared_ptr<ANF> { return expr; },
+                          [&](Let& l) -> std::shared_ptr<ANF> {
+                              l.binding = flattenLets(l.binding);
+                              l.body = flattenLets(*l.body);
+                              if (auto innerLet = std::get_if<Let>(&l.binding->term)) {
+                                  auto pulledOut = std::make_shared<ANF>(ANF {
+                                      Let {
+                                          innerLet->name,
+                                          innerLet->binding,
+                                          std::make_shared<ANF>(ANF {
+                                              Let {
+                                                  l.name,
+                                                  *innerLet->body,
+                                                  l.body } }) } });
+
+                                  return flattenLets(pulledOut);
+                              }
+                              return expr;
+                          },
+                          [&](const App& app) -> std::shared_ptr<ANF> {
+                              return expr;
+                          },
+                          [&](If& _if) -> std::shared_ptr<ANF> {
+                              _if.then = flattenLets(_if.then);
+                              if (_if._else.has_value()) {
+                                  _if._else = flattenLets(*_if._else);
+                              }
+                              return expr;
+                          },
+
+                          [&](const Quote& _) -> std::shared_ptr<ANF> { return expr; },
+                          [&](Lambda& l) -> std::shared_ptr<ANF> {
+                              l.body = flattenLets(l.body);
+                              return expr;
+                          },
+                          [&](const auto& _) -> std::shared_ptr<ANF> {
+                              throw std::runtime_error("Unable to transform ANF Type");
+                          }
+
+                      },
+        expr->term);
+}
 
 std::vector<std::shared_ptr<TopLevel>> ANFtransform(const std::vector<std::shared_ptr<Expression>>& expressions)
 {
@@ -197,8 +242,9 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
         if (!body) {
             body = *transformed;
         } else {
+            Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
             body = std::make_shared<ANF>(Let {
-                std::optional<Token>(proc.name),
+                std::optional<Token>(temp),
                 *transformed,
                 body });
         }
@@ -208,7 +254,6 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
         proc.parameters,
         body });
 }
-
 std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& currentNumber)
 {
     if (le.body.empty()) {
@@ -334,15 +379,15 @@ std::optional<std::shared_ptr<TopLevel>> transformTop(const std::shared_ptr<Expr
     return std::visit(overloaded {
                           [&](const DefineExpression& e) -> std::optional<std::shared_ptr<TopLevel>> {
                               return std::make_shared<TopLevel>(TDefine {
-                                  e.name, ADefine(e, currentNumber) });
+                                  e.name, flattenLets(ADefine(e, currentNumber)) });
                           },
                           [&](const DefineSyntaxExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; },
                           [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<TopLevel>> {
-                              return std::make_shared<TopLevel>(TDefine { e.name, ADefineProcedure(e, currentNumber) });
+                              return std::make_shared<TopLevel>(TDefine { e.name, flattenLets(ADefineProcedure(e, currentNumber)) });
                           },
                           [&](const auto& _) -> std::optional<std::shared_ptr<TopLevel>> {
                               if (const auto ele = transform(toTransform, currentNumber)) {
-                                  return std::make_shared<TopLevel>(*ele);
+                                  return std::make_shared<TopLevel>(flattenLets(*ele));
                               }
                               return std::nullopt;
                           },
