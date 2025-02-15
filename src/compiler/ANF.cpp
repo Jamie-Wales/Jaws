@@ -54,7 +54,7 @@ void ANF::toString(std::stringstream& ss) const
                        ss << ")";
                    },
                    [&](const Lambda& lambda) -> void {
-                       ss << "(lambda (";
+                       ss << "(λ \n(";
                        for (size_t i = 0; i < lambda.params.size(); i++) {
                            if (i > 0)
                                ss << " ";

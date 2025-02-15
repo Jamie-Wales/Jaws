@@ -6,6 +6,7 @@ const std::unordered_map<std::string, Tokentype> keywords = {
     { "define-syntax", Tokentype::DEFINE_SYTAX },
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
+    { "λ", Tokentype::LAMBDA },
     { "if", Tokentype::IF },
     { "quote", Tokentype::QUOTE },
     { "only", Tokentype::ONLY },

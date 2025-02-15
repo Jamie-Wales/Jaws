@@ -2,6 +2,6 @@
 
 namespace optimise {
 
-std::vector<std::shared_ptr<ir::ANF>> optimise(std::vector<std::shared_ptr<ir::ANF>>& anfs, bool print);
+std::vector<std::shared_ptr<ir::TopLevel>> optimise(std::vector<std::shared_ptr<ir::TopLevel>>& anfs, bool print);
 
 }

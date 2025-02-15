@@ -58,4 +58,44 @@ public:
     std::string toString() const;
 };
 
+class TDefine {
+public:
+    Token name;
+    std::shared_ptr<ANF> body;
+
+    TDefine(Token n, std::shared_ptr<ANF> b)
+        : name(std::move(n))
+        , body(std::move(b))
+    {
+    }
+    void toString(std::stringstream& ss) const
+    {
+    }
+};
+
+class TopLevel {
+public:
+    using Declaration = std::variant<TDefine, std::shared_ptr<ANF>>;
+    Declaration decl;
+
+    explicit TopLevel(Declaration d)
+        : decl(std::move(d))
+    {
+    }
+
+    std::string toString() const
+    {
+        std::stringstream ss;
+        std::visit(overloaded {
+                       [&](const TDefine& def) {
+                           ss << "(define " << def.name.lexeme << " ";
+                           def.body->toString(ss);
+                           ss << ")";
+                       },
+                       [&](const std::shared_ptr<ANF>& exp) { exp->toString(ss); } },
+            decl);
+        return ss.str();
+    }
+};
+
 }

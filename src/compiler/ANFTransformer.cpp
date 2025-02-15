@@ -8,17 +8,16 @@
 
 namespace ir {
 
-std::vector<std::shared_ptr<ANF>> ANFtransform(const std::vector<std::shared_ptr<Expression>>& expressions)
+std::vector<std::shared_ptr<TopLevel>> ANFtransform(const std::vector<std::shared_ptr<Expression>>& expressions)
 {
     size_t currentNumber = 0;
-    std::vector<std::shared_ptr<ANF>> output;
+    std::vector<std::shared_ptr<TopLevel>> output;
     output.reserve(expressions.size());
 
     for (const auto& expression : expressions) {
         if (!expression)
             continue;
-
-        auto transformed = transform(expression, currentNumber);
+        auto transformed = transformTop(expression, currentNumber);
         if (transformed && *transformed) {
             output.push_back(*transformed);
         }
@@ -34,7 +33,6 @@ std::shared_ptr<ANF> Aatom(const AtomExpression& e)
 
 std::shared_ptr<ANF> ALet(const LetExpression& l, size_t currentNumber)
 {
-
     std::vector<std::pair<Token, std::shared_ptr<ANF>>> transformed_bindings;
 
     for (const auto& [name, value] : l.arguments) {
@@ -136,23 +134,18 @@ std::shared_ptr<ANF> AIf(const IfExpression& ie, size_t& currentNumber)
     if (ie.el) {
         anf_else = transform(*ie.el, currentNumber);
         if (!anf_else) {
-            std::cout << typeToString((*ie.el)->type()) << std::endl;
             throw std::runtime_error("Failed to transform else branch");
         }
     }
-    Token cond_name;
-    if (const auto atom = std::get_if<Atom>(&(*anf_cond)->term)) {
-        cond_name = atom->atom;
-    } else {
-        cond_name = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
-    }
+
+    Token cond_name = { Tokentype::IDENTIFIER, std::format("g{}", currentNumber++), 0, 0 };
     auto result = std::make_shared<ANF>(If { cond_name, *anf_then, anf_else });
-    if (!std::get_if<Atom>(&(*anf_cond)->term)) {
-        result = std::make_shared<ANF>(Let {
-            std::optional<Token>(cond_name),
-            *anf_cond,
-            result });
-    }
+
+    result = std::make_shared<ANF>(Let {
+        std::optional<Token>(cond_name),
+        *anf_cond,
+        result });
+
     return result;
 }
 
@@ -163,10 +156,7 @@ std::shared_ptr<ANF> ADefine(const DefineExpression& define, size_t& currentNumb
         throw std::runtime_error("Failed to transform define value");
     }
 
-    return std::make_shared<ANF>(Let {
-        std::optional<Token>(define.name),
-        *transformed_value,
-        std::make_shared<ANF>(Atom { define.name }) });
+    return *transformed_value;
 }
 
 std::shared_ptr<ANF> ASet(const SetExpression& set, size_t& currentNumber)
@@ -214,19 +204,9 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
         }
     }
 
-    Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
-
-    auto lambda = std::make_shared<ANF>(Lambda {
+    return std::make_shared<ANF>(Lambda {
         proc.parameters,
         body });
-
-    auto elements = std::make_shared<ANF>(Let {
-        std::optional<Token>(temp),
-        lambda, std::nullopt });
-
-    return std::make_shared<ANF>(Let {
-        std::optional<Token>(proc.name),
-        elements, std::nullopt });
 }
 
 std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& currentNumber)
@@ -299,14 +279,12 @@ std::shared_ptr<ANF> AVector(const VectorExpression& ve, size_t& currentNumber)
 
 std::shared_ptr<ANF> AQuote(const QuoteExpression& qe, size_t& currentNumber)
 {
-
     return std::make_shared<ANF>(ANF {
         Quote { qe.expression } });
 }
 
 std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)
 {
-
     return std::visit(overloaded {
                           [&](const AtomExpression& e) -> std::optional<std::shared_ptr<ANF>> {
                               return Aatom(e);
@@ -350,4 +328,25 @@ std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>&
                       },
         toTransform->as);
 };
+
+std::optional<std::shared_ptr<TopLevel>> transformTop(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)
+{
+    return std::visit(overloaded {
+                          [&](const DefineExpression& e) -> std::optional<std::shared_ptr<TopLevel>> {
+                              return std::make_shared<TopLevel>(TDefine {
+                                  e.name, ADefine(e, currentNumber) });
+                          },
+                          [&](const DefineSyntaxExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; },
+                          [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<TopLevel>> {
+                              return std::make_shared<TopLevel>(TDefine { e.name, ADefineProcedure(e, currentNumber) });
+                          },
+                          [&](const auto& _) -> std::optional<std::shared_ptr<TopLevel>> {
+                              if (const auto ele = transform(toTransform, currentNumber)) {
+                                  return std::make_shared<TopLevel>(*ele);
+                              }
+                              return std::nullopt;
+                          },
+                      },
+        toTransform->as);
+}
 }

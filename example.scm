@@ -31,9 +31,7 @@
 
 
 
-(lej ((a 10) (b 20) (c 50)) (+ a b c))
 
 
-(printTwice 10)
 
 

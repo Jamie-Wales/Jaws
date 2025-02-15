@@ -5,25 +5,24 @@
 
 namespace optimise {
 
-void printAnf(std::string message, std::vector<std::shared_ptr<ir::ANF>>& anfs, bool print)
+void printAnf(std::string message, std::vector<std::shared_ptr<ir::TopLevel>>& anfs, bool print)
 {
-    std::cout << message << std::endl;
-    std::cout << "--------------------" << std::endl;
     if (print) {
-        for (const auto& anf : anfs)
-            std::cout << anf->toString() << "\n";
+        std::cout << message << std::endl;
+        std::cout << "--------------------" << std::endl;
+        for (const auto& tl : anfs)
+            std::cout << tl->toString() << "\n";
     }
     std::cout << std::endl;
 }
 
-std::vector<std::shared_ptr<ir::ANF>> optimise(std::vector<std::shared_ptr<ir::ANF>>& anfs, bool print)
+std::vector<std::shared_ptr<ir::TopLevel>> optimise(std::vector<std::shared_ptr<ir::TopLevel>>& anfs, bool print)
 {
 
     printAnf("Optimising ANF:", anfs, print);
     // optimiseConstants(anfs);
     // printAnf("Constant Folded ANF:", anfs, print);
-    elimatedDeadCode(anfs);
-    printAnf("DCE ANF:", anfs, print);
+    // elimatedDeadCode(anfs);
 
     return anfs;
 }
