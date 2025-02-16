@@ -19,17 +19,19 @@ Options parse_args(std::vector<std::string> args)
     for (size_t i = 0; i < args.size(); i++) {
         const std::string& arg = args[i];
         if ((arg == "--print" || arg == "-p")) {
-            opts.printAST = true;
-            opts.printANF = true;
+            opts.printCode = true;
             opts.printMacro = true;
+            opts.printANF = true;
         } else if ((arg == "--no-opt" || arg == "-no")) {
             opts.optimise = false;
-        } else if (arg == "--script") {
+        } else if ((arg == "--script")) {
             if (i + 1 >= args.size()) {
                 throw std::runtime_error("--script requires a file path");
             }
             opts.input = readFile(args[++i]);
             opts.file = true;
+        } else if ((arg == "--printast" || arg == "-printast")) {
+            opts.printAST = true;
         } else {
             throw std::runtime_error("Unknown argument: " + arg);
         }
@@ -52,43 +54,68 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
 {
     auto tokens = scanner::tokenize(opts.input);
     auto expressions = parse::parse(std::move(tokens));
-
     if (!expressions) {
         std::cerr << "Parsing failed\n";
         return;
     }
-
-    if (opts.printAST) {
-        std::cout << "Initial Abstract Syntax Tree:\n";
+    if (opts.printCode) {
+        std::cout << "<| Original File |>\n";
         for (const auto& expression : *expressions) {
             std::cout << expression->toString() << "\n";
         }
+        std::cout << "\n"
+                  << std::endl;
     }
-    auto withImports = import::processImports(*expressions);
     if (opts.printAST) {
-        std::cout << "\nAfter Import Processing:\n";
+        std::cout << "\n<| Initial AST |>\n";
+        for (const auto& expression : *expressions) {
+            std::cout << expression->ASTToString() << "\n";
+        }
+
+        std::cout << "\n"
+                  << std::endl;
+    }
+
+    auto withImports = import::processImports(*expressions);
+    if (opts.printCode) {
+        std::cout << "\n<| File After Import |>\n";
         for (const auto& expression : withImports) {
             std::cout << expression->toString() << "\n";
         }
+        std::cout << "\n"
+                  << std::endl;
     }
-    const auto expanded = macroexp::expandMacros(withImports);
 
-    if (opts.printMacro) {
-        std::cout << "Expanded Macro: \n";
-        for (const auto& expression : expanded) {
-            std::cout << expression->toString() << "\n";
+    if (opts.printAST) {
+        std::cout << "\n<| AST After Import |>\n";
+        for (const auto& expression : withImports) {
+            std::cout << expression->ASTToString() << "\n";
         }
     }
 
+    const auto expanded = macroexp::expandMacros(withImports);
+
+    if (opts.printMacro) {
+        std::cout << "\n<| Expanded Macro |>\n";
+        for (const auto& expression : expanded) {
+            std::cout << expression->toString() << "\n";
+        }
+
+        std::cout << "\n"
+                  << std::endl;
+        if (opts.printAST) {
+            std::cout << "\n<| AST After Macro Expansion |>\n";
+            for (const auto& expression : expanded) {
+                std::cout << expression->ASTToString() << "\n";
+            }
+            std::cout << "\n"
+                      << std::endl;
+        }
+    }
     if (opts.optimise) {
         auto anf = ir::ANFtransform(expanded);
         if (!anf.empty()) {
-            bool print = false;
-            if (opts.printANF) {
-                print = true;
-            }
-
-            anf = optimise::optimise(anf, print);
+            anf = optimise::optimise(anf, opts.printANF);
         }
     }
     auto val = interpret::interpret(state, expanded);
@@ -114,8 +141,8 @@ void runFile(Options& opts)
 void runPrompt(Options& opts)
 {
     printJawsLogo();
-    std::cout << "Welcome to the Jaws REPL!\n";
-    std::cout << "Type 'exit' to quit, '(help)' for commands.\n\n";
+    std::cout << "<| Welcome to the Jaws REPL |>\n";
+    std::cout << "<| Type 'exit' to quit, '(help)' for commands |>\n";
 
     auto state = interpret::createInterpreter();
 

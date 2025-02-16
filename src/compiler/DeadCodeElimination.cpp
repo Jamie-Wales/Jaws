@@ -65,7 +65,6 @@ std::unordered_set<std::string> getSideEffectNodes(const DependancyGraph& graph)
 }
 void DependancyGraph::print()
 {
-    std::cout << "Dependency Graph:\n";
     for (const auto& [node, edges] : outgoing) {
         std::cout << node << " -> ";
         bool first = true;
@@ -170,13 +169,18 @@ void collectTopLevelDependencies(const ir::TopLevel& top, DependancyGraph& graph
         top.decl);
 }
 
-void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops)
+void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops, bool print)
 {
     DependancyGraph dp;
     for (const auto& top : tops) {
         collectTopLevelDependencies(*top, dp);
     }
-    dp.print();
+    if (print) {
+        std::cout << "<| DependancyGraph Pre DeadCodeElimination |>\n";
+        dp.print();
+        std::cout << "\n"
+                  << std::endl;
+    }
     std::unordered_set<std::string> initialRoots = getSideEffectNodes(dp);
     initialRoots.insert("root");
 
@@ -184,7 +188,12 @@ void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops)
     dp = filterGraph(dp, liveNodes);
     tops = filterTops(tops, liveNodes);
 
-    dp.print();
+    if (print) {
+        std::cout << "<| DependancyGraph Post DeadCodeElimination |>\n";
+        dp.print();
+        std::cout << "\n"
+                  << std::endl;
+    }
 }
 
 }

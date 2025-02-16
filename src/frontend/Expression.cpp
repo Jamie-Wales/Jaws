@@ -201,6 +201,12 @@ IfExpression::IfExpression(std::shared_ptr<Expression> condition, std::shared_pt
     , el(std::move(el))
 {
 }
+void indent(std::stringstream& ss, int indentLevel)
+{
+    for (int i = 0; i < indentLevel; i++) {
+        ss << "    ";
+    }
+}
 
 std::string Expression::toString() const
 {
@@ -551,4 +557,237 @@ void Expression::print(int indent) const
 {
     std::string indentation(indent * 2, ' ');
     std::cout << indentation << toString() << std::endl;
+}
+
+std::string Expression::ASTToString() const
+{
+    std::stringstream ss;
+    ASTToString(ss, 0);
+    return ss.str();
+}
+
+void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
+{
+    // We'll just do a variant visitor that prints node type + children.
+    std::visit(
+        overloaded {
+            [&](const AtomExpression& e) {
+                indent(ss, indentLevel);
+                ss << "AtomExpression: \"" << e.value.lexeme << "\"\n";
+            },
+            [&](const MacroAtomExpression& e) {
+                indent(ss, indentLevel);
+                ss << "MacroAtomExpression: \"" << e.value.lexeme << "\"";
+                if (e.isVariadic)
+                    ss << " (variadic)";
+                ss << "\n";
+            },
+            [&](const ListExpression& e) {
+                indent(ss, indentLevel);
+                ss << "ListExpression";
+                if (e.isVariadic)
+                    ss << " (variadic)";
+                ss << ":\n";
+                for (auto& elem : e.elements) {
+                    elem->ASTToString(ss, indentLevel + 1);
+                }
+            },
+            [&](const sExpression& e) {
+                indent(ss, indentLevel);
+                ss << "sExpression";
+                if (e.isVariadic)
+                    ss << " (variadic)";
+                ss << ":\n";
+                for (auto& elem : e.elements) {
+                    elem->ASTToString(ss, indentLevel + 1);
+                }
+            },
+            [&](const DefineExpression& e) {
+                indent(ss, indentLevel);
+                ss << "DefineExpression: name=\"" << e.name.lexeme << "\"\n";
+                indent(ss, indentLevel);
+                ss << "Value:\n";
+                e.value->ASTToString(ss, indentLevel + 1);
+            },
+            [&](const DefineProcedure& e) {
+                indent(ss, indentLevel);
+                ss << "DefineProcedure: name=\"" << e.name.lexeme << "\"";
+                if (e.isVariadic)
+                    ss << " (variadic)";
+                ss << "\n";
+                if (!e.parameters.empty()) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Params:\n";
+                    for (auto& param : e.parameters) {
+                        indent(ss, indentLevel + 2);
+                        ss << param.lexeme << "\n";
+                    }
+                }
+                indent(ss, indentLevel + 1);
+                ss << "Body:\n";
+                for (auto& expr : e.body) {
+                    expr->ASTToString(ss, indentLevel + 2);
+                }
+            },
+            [&](const VectorExpression& e) {
+                indent(ss, indentLevel);
+                ss << "VectorExpression:\n";
+                for (auto& elem : e.elements) {
+                    elem->ASTToString(ss, indentLevel + 1);
+                }
+            },
+            [&](const LambdaExpression& e) {
+                indent(ss, indentLevel);
+                ss << "LambdaExpression";
+                if (e.isVariadic)
+                    ss << " (variadic)";
+                ss << ":\n";
+                if (!e.parameters.empty()) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Parameters:\n";
+                    for (auto& param : e.parameters) {
+                        indent(ss, indentLevel + 2);
+                        ss << param.lexeme << "\n";
+                    }
+                }
+                indent(ss, indentLevel + 1);
+                ss << "Body:\n";
+                for (auto& expr : e.body) {
+                    expr->ASTToString(ss, indentLevel + 2);
+                }
+            },
+            [&](const IfExpression& e) {
+                indent(ss, indentLevel);
+                ss << "IfExpression:\n";
+
+                indent(ss, indentLevel + 1);
+                ss << "Condition:\n";
+                e.condition->ASTToString(ss, indentLevel + 2);
+
+                indent(ss, indentLevel + 1);
+                ss << "Then:\n";
+                e.then->ASTToString(ss, indentLevel + 2);
+
+                if (e.el) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Else:\n";
+                    (*e.el)->ASTToString(ss, indentLevel + 2);
+                }
+            },
+            [&](const QuoteExpression& e) {
+                indent(ss, indentLevel);
+                ss << "QuoteExpression:\n";
+                e.expression->ASTToString(ss, indentLevel + 1);
+            },
+            [&](const SetExpression& e) {
+                indent(ss, indentLevel);
+                ss << "SetExpression: identifier=\"" << e.identifier.lexeme << "\"\n";
+                indent(ss, indentLevel);
+                ss << "Value:\n";
+                e.value->ASTToString(ss, indentLevel + 1);
+            },
+            [&](const TailExpression& e) {
+                indent(ss, indentLevel);
+                ss << "TailExpression:\n";
+                e.expression->ASTToString(ss, indentLevel + 1);
+            },
+            [&](const ImportExpression& e) {
+                indent(ss, indentLevel);
+                ss << "ImportExpression:\n";
+                for (auto& spec : e.imports) {
+                    indent(ss, indentLevel + 1);
+                    ss << "ImportSpec: ";
+                    switch (spec.type) {
+                    case ImportExpression::ImportSet::Type::DIRECT:
+                        ss << "DIRECT\n";
+                        break;
+                    case ImportExpression::ImportSet::Type::ONLY:
+                        ss << "ONLY\n";
+                        break;
+                    case ImportExpression::ImportSet::Type::EXCEPT:
+                        ss << "EXCEPT\n";
+                        break;
+                    case ImportExpression::ImportSet::Type::PREFIX:
+                        ss << "PREFIX (prefix=\"" << spec.prefix.lexeme << "\")\n";
+                        break;
+                    case ImportExpression::ImportSet::Type::RENAME:
+                        ss << "RENAME\n";
+                        break;
+                    }
+                    indent(ss, indentLevel + 2);
+                    ss << "Library:\n";
+                    for (auto& part : spec.library) {
+                        part->ASTToString(ss, indentLevel + 3);
+                    }
+                    if (!spec.identifiers.empty()) {
+                        indent(ss, indentLevel + 2);
+                        ss << "Identifiers:\n";
+                        for (auto& id : spec.identifiers) {
+                            indent(ss, indentLevel + 3);
+                            ss << id.lexeme << "\n";
+                        }
+                    }
+                    if (!spec.renames.empty()) {
+                        indent(ss, indentLevel + 2);
+                        ss << "Renames:\n";
+                        for (auto& r : spec.renames) {
+                            indent(ss, indentLevel + 3);
+                            ss << "(" << r.first.lexeme << " -> " << r.second.lexeme << ")\n";
+                        }
+                    }
+                }
+            },
+            [&](const SyntaxRulesExpression& e) {
+                indent(ss, indentLevel);
+                ss << "SyntaxRulesExpression:\n";
+                indent(ss, indentLevel + 1);
+                ss << "Literals:\n";
+                for (auto& lit : e.literals) {
+                    indent(ss, indentLevel + 2);
+                    ss << lit.lexeme << "\n";
+                }
+
+                indent(ss, indentLevel + 1);
+                ss << "Rules:\n";
+                for (auto& rule : e.rules) {
+                    indent(ss, indentLevel + 2);
+                    ss << "Rule:\n";
+                    indent(ss, indentLevel + 3);
+                    ss << "Pattern:\n";
+                    rule.pattern->ASTToString(ss, indentLevel + 4);
+                    indent(ss, indentLevel + 3);
+                    ss << "Template:\n";
+                    rule.template_expr->ASTToString(ss, indentLevel + 4);
+                }
+            },
+            [&](const DefineSyntaxExpression& e) {
+                indent(ss, indentLevel);
+                ss << "DefineSyntaxExpression: name=\"" << e.name.lexeme << "\"\n";
+                indent(ss, indentLevel + 1);
+                ss << "Rule:\n";
+                e.rule->ASTToString(ss, indentLevel + 2);
+            },
+            [&](const LetExpression& e) {
+                indent(ss, indentLevel);
+                ss << "LetExpression";
+                if (e.name.has_value()) {
+                    ss << " named=\"" << e.name->lexeme << "\"";
+                }
+                ss << ":\n";
+                if (!e.arguments.empty()) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Bindings:\n";
+                    for (auto& [tok, boundExpr] : e.arguments) {
+                        indent(ss, indentLevel + 2);
+                        ss << tok.lexeme << " =>\n";
+                        boundExpr->ASTToString(ss, indentLevel + 3);
+                    }
+                }
+                indent(ss, indentLevel + 1);
+                ss << "Body:\n";
+                for (auto& expr : e.body) {
+                    expr->ASTToString(ss, indentLevel + 2);
+                }
+            } },
+        as);
 }

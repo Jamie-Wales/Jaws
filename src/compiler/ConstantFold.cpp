@@ -99,7 +99,6 @@ static std::optional<Constant> evaluateConstantApp(
     std::vector<Constant> args;
     args.reserve(app.params.size());
 
-    // Convert all params to constants
     for (const auto& param : app.params) {
         if (param.type == Tokentype::IDENTIFIER && env.contains(param.lexeme)) {
             args.push_back(env.at(param.lexeme));
@@ -193,7 +192,6 @@ static std::optional<Constant> evaluateConstantApp(
         return std::nullopt;
     }
     if (app.name.lexeme == "/") {
-        // Check for division by zero
         for (size_t i = 1; i < nums.size(); i++) {
             bool isZero = std::visit([](const auto& v) { return v == 0; }, nums[i]);
             if (isZero)

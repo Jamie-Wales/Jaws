@@ -9,18 +9,18 @@ void printAnf(std::string message, std::vector<std::shared_ptr<ir::TopLevel>>& a
 {
     if (print) {
         std::cout << message << std::endl;
-        std::cout << "--------------------" << std::endl;
         for (const auto& tl : anfs)
             std::cout << tl->toString() << "\n";
     }
-    std::cout << std::endl;
+    std::cout << "\n"
+              << std::endl;
 }
 
 std::vector<std::shared_ptr<ir::TopLevel>> optimise(std::vector<std::shared_ptr<ir::TopLevel>>& anfs, bool print)
 {
 
-    printAnf("Optimising ANF:", anfs, print);
-    dce(anfs);
+    printAnf("<| Optimising ANF |>", anfs, print);
+    dce(anfs, print);
 
     return anfs;
 }

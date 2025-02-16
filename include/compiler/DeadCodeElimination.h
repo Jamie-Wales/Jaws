@@ -7,7 +7,7 @@
 
 namespace optimise {
 
-void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops);
+void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops, bool print);
 void elimatedDeadCode(std::vector<std::shared_ptr<ir::ANF>>& anfs);
 void collectUsedVariables(const std::shared_ptr<ir::ANF>& anf, std::unordered_set<std::string>& usedList);
 std::shared_ptr<ir::ANF> eliminateUnused(const std::shared_ptr<ir::ANF>& anf, const std::unordered_set<std::string>& used);

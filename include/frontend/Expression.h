@@ -301,12 +301,15 @@ public:
      * @param ss Output string stream to write to
      */
     void toString(std::stringstream& ss) const;
-
     /**
      * @brief Creates a deep copy of the expression
      * @return Shared pointer to the cloned expression
      */
     std::shared_ptr<Expression> clone() const;
+
+    std::string ASTToString() const;
+
+    void ASTToString(std::stringstream& ss, int indentLevel) const;
 
     /**
      * @brief Prints the expression with proper indentation

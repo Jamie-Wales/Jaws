@@ -5,13 +5,13 @@
 #include <vector>
 
 struct Options {
-    std::string input;
-    bool file = false;
-    bool debug = false;
     bool printAST = false;
-    bool optimise = true;
-    bool printANF = false;
     bool printMacro = false;
+    bool printANF = false;
+    bool optimise = true;
+    bool file = false;
+    bool printCode = false;
+    std::string input;
 };
 
 Options parse_args(std::vector<std::string> args);
