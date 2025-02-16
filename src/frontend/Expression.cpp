@@ -573,7 +573,7 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
         overloaded {
             [&](const AtomExpression& e) {
                 indent(ss, indentLevel);
-                ss << "AtomExpression: \"" << e.value.lexeme << "\"\n";
+                ss << "AtomExpression: " << e.value.lexeme << std::endl;
             },
             [&](const MacroAtomExpression& e) {
                 indent(ss, indentLevel);

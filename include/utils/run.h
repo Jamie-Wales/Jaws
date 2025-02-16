@@ -5,6 +5,7 @@
 #include <vector>
 
 struct Options {
+    bool prettyPrint = false;
     bool printAST = false;
     bool printMacro = false;
     bool printANF = false;

@@ -12,13 +12,57 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <unistd.h>
+
+std::string formatScheme(const std::string& code)
+{
+    char filename[] = "/tmp/schemefmtXXXXXX.scm";
+    int fd = mkstemps(filename, 4); // "XXXXXX.scm", 4 is the length of ".scm"
+    if (fd == -1) {
+        throw std::runtime_error("Could not create temp file");
+    }
+    {
+        std::ofstream tmpOut(filename);
+        if (!tmpOut) {
+            close(fd);
+            throw std::runtime_error("Could not write to temp file");
+        }
+        tmpOut << code;
+    }
+    close(fd);
+    std::string cmd = "scheme-format -i \"";
+    cmd += filename;
+    cmd += "\"";
+
+    int ret = std::system(cmd.c_str());
+    if (ret != 0) {
+        std::remove(filename);
+        throw std::runtime_error("scheme-format failed (non-zero exit).");
+    }
+    std::ifstream tmpIn(filename);
+    if (!tmpIn) {
+        std::remove(filename);
+        throw std::runtime_error("Failed to re-open temp file for reading");
+    }
+    std::string line, result;
+    while (std::getline(tmpIn, line)) {
+        result += line + "\n";
+    }
+    std::remove(filename);
+    return result;
+}
 
 Options parse_args(std::vector<std::string> args)
 {
     Options opts = {};
     for (size_t i = 0; i < args.size(); i++) {
         const std::string& arg = args[i];
-        if ((arg == "--print" || arg == "-p")) {
+        if (arg == "--prettyprint") {
+            opts.prettyPrint = true;
+            opts.printCode = true;
+            opts.printMacro = true;
+            opts.printANF = true;
+        } else if ((arg == "--print" || arg == "-p")) {
             opts.printCode = true;
             opts.printMacro = true;
             opts.printANF = true;
@@ -58,13 +102,18 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         std::cerr << "Parsing failed\n";
         return;
     }
+    std::stringstream ss;
     if (opts.printCode) {
-        std::cout << "<| Original File |>\n";
         for (const auto& expression : *expressions) {
-            std::cout << expression->toString() << "\n";
+            ss << expression->toString() << "\n";
         }
-        std::cout << "\n"
-                  << std::endl;
+        const auto& output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
+        std::cout
+            << "<| Original File |>\n"
+            << output
+            << std::endl;
+
+        ss.clear();
     }
     if (opts.printAST) {
         std::cout << "\n<| Initial AST |>\n";
@@ -78,12 +127,14 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
 
     auto withImports = import::processImports(*expressions);
     if (opts.printCode) {
-        std::cout << "\n<| File After Import |>\n";
         for (const auto& expression : withImports) {
-            std::cout << expression->toString() << "\n";
+            ss << expression->toString() << "\n";
         }
-        std::cout << "\n"
+        const auto& output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
+        std::cout << "\n<| File After Import |>\n"
+                  << output
                   << std::endl;
+        ss.clear();
     }
 
     if (opts.printAST) {
@@ -96,18 +147,23 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
     const auto expanded = macroexp::expandMacros(withImports);
 
     if (opts.printMacro) {
-        std::cout << "\n<| Expanded Macro |>\n";
         for (const auto& expression : expanded) {
-            std::cout << expression->toString() << "\n";
+            ss << expression->toString() << "\n";
         }
+        const auto& output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
 
-        std::cout << "\n"
+        std::cout << "\n<| Expanded Macro |>\n"
+                  << output
                   << std::endl;
+
+        ss.clear();
+
         if (opts.printAST) {
             std::cout << "\n<| AST After Macro Expansion |>\n";
             for (const auto& expression : expanded) {
                 std::cout << expression->ASTToString() << "\n";
             }
+
             std::cout << "\n"
                       << std::endl;
         }
