@@ -9,21 +9,53 @@ namespace ir {
 
 std::shared_ptr<ANF> flattenLets(std::shared_ptr<ANF> expr)
 {
+    if (!expr) {
+        return nullptr;
+    }
+
     return std::visit(overloaded {
-                          [&](const Atom& a) -> std::shared_ptr<ANF> { return expr; },
+                          [&](const Atom& a) -> std::shared_ptr<ANF> {
+                              return expr;
+                          },
                           [&](Let& l) -> std::shared_ptr<ANF> {
+                              // First check if binding exists
+                              if (!l.binding) {
+                                  throw std::runtime_error("Let binding is null");
+                              }
+
+                              // Recursively flatten the binding and body
                               l.binding = flattenLets(l.binding);
-                              l.body = flattenLets(*l.body);
+                              if (l.body) {
+                                  l.body = flattenLets(l.body);
+                              }
+
+                              // Check if binding is a Let expression
                               if (auto innerLet = std::get_if<Let>(&l.binding->term)) {
+                                  // Verify all required components exist
+                                  if (!innerLet->binding || !innerLet->body) {
+                                      throw std::runtime_error("Inner let has null binding or body");
+                                  }
+
+                                  // Create new structure carefully
+                                  auto newBody = std::make_shared<ANF>(ANF {
+                                      Let {
+                                          l.name,
+                                          innerLet->body,
+                                          l.body } });
+
+                                  if (!newBody) {
+                                      throw std::runtime_error("Failed to create new body");
+                                  }
+
                                   auto pulledOut = std::make_shared<ANF>(ANF {
                                       Let {
                                           innerLet->name,
                                           innerLet->binding,
-                                          std::make_shared<ANF>(ANF {
-                                              Let {
-                                                  l.name,
-                                                  *innerLet->body,
-                                                  l.body } }) } });
+                                          newBody } });
+
+                                  if (!pulledOut) {
+                                      throw std::runtime_error("Failed to create pulled out expression");
+                                  }
 
                                   return flattenLets(pulledOut);
                               }
@@ -33,23 +65,30 @@ std::shared_ptr<ANF> flattenLets(std::shared_ptr<ANF> expr)
                               return expr;
                           },
                           [&](If& _if) -> std::shared_ptr<ANF> {
+                              if (!_if.then) {
+                                  throw std::runtime_error("If statement has null then branch");
+                              }
+
                               _if.then = flattenLets(_if.then);
-                              if (_if._else.has_value()) {
+                              if (_if._else) {
                                   _if._else = flattenLets(*_if._else);
                               }
                               return expr;
                           },
-
-                          [&](const Quote& _) -> std::shared_ptr<ANF> { return expr; },
+                          [&](const Quote& _) -> std::shared_ptr<ANF> {
+                              return expr;
+                          },
                           [&](Lambda& l) -> std::shared_ptr<ANF> {
+                              if (!l.body) {
+                                  throw std::runtime_error("Lambda has null body");
+                              }
+
                               l.body = flattenLets(l.body);
                               return expr;
                           },
                           [&](const auto& _) -> std::shared_ptr<ANF> {
                               throw std::runtime_error("Unable to transform ANF Type");
-                          }
-
-                      },
+                          } },
         expr->term);
 }
 

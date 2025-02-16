@@ -5,20 +5,64 @@
 
 namespace optimise {
 
+static const std::unordered_set<std::string> sideEffects = {
+    "display", "newline", "write", "read",
+    "open-input-file", "open-output-file", "close-port",
+    "error", "vector-set!", "list-set!", "load-library",
+    "register-function", "eval", "apply", "call/cc",
+    "call-with-current-continuation"
+};
+std::unordered_set<std::string> getLiveNodes(
+    const DependancyGraph& graph,
+    const std::unordered_set<std::string>& initialRoots)
+{
+    std::unordered_set<std::string> live = initialRoots;
+    std::queue<std::string> worklist(std::deque<std::string>(initialRoots.begin(), initialRoots.end()));
+
+    while (!worklist.empty()) {
+        std::string current = worklist.front();
+        worklist.pop();
+
+        auto it = graph.outgoing.find(current);
+        if (it != graph.outgoing.end()) {
+            for (const auto& edge : it->second) {
+                if (live.insert(edge.to).second) {
+                    worklist.push(edge.to);
+                }
+            }
+        }
+    }
+
+    return live;
+}
+
 void DependancyGraph::addEdge(const std::string& from, const std::string& to)
 {
     Edge edge = { from, to };
-
     auto& edges = outgoing[from];
     if (std::find_if(edges.begin(), edges.end(),
             [&to](const Edge& e) { return e.to == to; })
         == edges.end()) {
-
         edges.push_back(edge);
         incoming[to].push_back(edge);
     }
 }
 
+std::unordered_set<std::string> getSideEffectNodes(const DependancyGraph& graph)
+{
+    std::unordered_set<std::string> roots;
+
+    for (const auto& [node, edges] : graph.outgoing) {
+        for (const auto& edge : edges) {
+            if (sideEffects.count(edge.to) > 0) {
+                roots.insert(node);
+                break;
+            }
+        }
+    }
+
+    return roots;
+}
 void DependancyGraph::print()
 {
     std::cout << "Dependency Graph:\n";
@@ -35,125 +79,112 @@ void DependancyGraph::print()
     }
 }
 
+std::vector<std::shared_ptr<ir::TopLevel>> filterTops(
+    const std::vector<std::shared_ptr<ir::TopLevel>>& tops,
+    const std::unordered_set<std::string>& liveNodes)
+{
+    std::vector<std::shared_ptr<ir::TopLevel>> filtered;
+
+    std::copy_if(tops.begin(), tops.end(),
+        std::back_inserter(filtered),
+        [&liveNodes](const auto& top) {
+            if (auto def = std::get_if<ir::TDefine>(&top->decl)) {
+                return liveNodes.count(def->name.lexeme) > 0;
+            }
+            return true;
+        });
+
+    return filtered;
+}
+
+DependancyGraph filterGraph(
+    const DependancyGraph& graph,
+    const std::unordered_set<std::string>& liveNodes)
+{
+    DependancyGraph filtered;
+
+    for (const auto& [node, edges] : graph.outgoing) {
+        if (liveNodes.count(node) > 0) {
+            for (const auto& edge : edges) {
+                if (liveNodes.count(edge.to) > 0) {
+                    filtered.addEdge(edge.from, edge.to);
+                }
+            }
+        }
+    }
+
+    return filtered;
+}
+
 void collectDependencies(const std::shared_ptr<ir::ANF>& anf, DependancyGraph& graph,
-    std::string currentScope = "root")
+    const std::string& currentScope)
 {
     if (!anf)
         return;
-
     std::visit(overloaded {
                    [&](const ir::Let& let) {
-                       if (let.name) {
-                           collectDependencies(let.binding, graph, let.name->lexeme);
-                           if (!currentScope.empty()) {
-                               graph.addEdge(currentScope, let.name->lexeme);
-                           }
-                           if (let.body)
-                               collectDependencies(*let.body, graph, let.name->lexeme);
-                       } else {
-                           if (let.body)
-                               collectDependencies(*let.body, graph, currentScope);
+                       if (let.binding) {
+                           if (let.name)
+                               collectDependencies(let.binding, graph, let.name->lexeme);
+                           else
+                               collectDependencies(let.binding, graph, currentScope);
+                       }
+                       if (let.body) {
+                           collectDependencies(let.body, graph, currentScope);
                        }
                    },
-
                    [&](const ir::App& app) {
+                       graph.addEdge(currentScope, app.name.lexeme);
                        for (const auto& param : app.params) {
-                           graph.addEdge(app.name.lexeme, param.lexeme);
-                       }
-                       if (!currentScope.empty()) {
-                           graph.addEdge(currentScope, app.name.lexeme);
+                           graph.addEdge(currentScope, param.lexeme);
                        }
                    },
-
                    [&](const ir::Lambda& lambda) {
                        collectDependencies(lambda.body, graph, currentScope);
                    },
-
                    [&](const ir::If& if_) {
-                       if (!currentScope.empty()) {
-                           graph.addEdge(currentScope, if_.cond.lexeme);
-                       }
+                       graph.addEdge(currentScope, if_.cond.lexeme);
                        collectDependencies(if_.then, graph, currentScope);
                        if (if_._else) {
                            collectDependencies(*if_._else, graph, currentScope);
                        }
                    },
-
                    [&](const ir::Atom& atom) {
-                       if (!currentScope.empty()) {
-                           graph.addEdge(currentScope, atom.atom.lexeme);
-                       }
+                       graph.addEdge(currentScope, atom.atom.lexeme);
                    },
-
                    [&](const ir::Quote&) {} },
         anf->term);
 }
 
-std::shared_ptr<ir::ANF> eliminateUnused(const std::shared_ptr<ir::ANF>& anf,
-    const std::unordered_set<std::string>& used)
+void collectTopLevelDependencies(const ir::TopLevel& top, DependancyGraph& graph)
 {
-    if (!anf) {
-        return nullptr;
-    }
-
-    return std::visit(overloaded {
-                          [&](const ir::Let& let) -> std::shared_ptr<ir::ANF> {
-                              auto new_binding = eliminateUnused(let.binding, used);
-                              if (let.body) {
-                                  auto new_body = eliminateUnused(*let.body, used);
-                                  if (let.name && !used.contains(let.name->lexeme)) {
-                                      return new_body;
-                                  }
-                                  return std::make_shared<ir::ANF>(ir::Let {
-                                      let.name,
-                                      new_binding,
-                                      new_body });
-                              }
-
-                              return std::make_shared<ir::ANF>(ir::Let {
-                                  let.name,
-                                  new_binding,
-                                  std::nullopt });
-                          },
-                          [&](const ir::If& if_expr) -> std::shared_ptr<ir::ANF> {
-                              auto new_then = eliminateUnused(if_expr.then, used);
-
-                              std::optional<std::shared_ptr<ir::ANF>> new_else;
-                              if (if_expr._else) {
-                                  new_else = eliminateUnused(*if_expr._else, used);
-                              }
-
-                              return std::make_shared<ir::ANF>(ir::If {
-                                  if_expr.cond,
-                                  new_then,
-                                  new_else });
-                          },
-                          [&](const ir::Lambda& lambda) -> std::shared_ptr<ir::ANF> {
-                              auto new_body = eliminateUnused(lambda.body, used);
-                              return std::make_shared<ir::ANF>(ir::Lambda {
-                                  lambda.params,
-                                  new_body });
-                          },
-                          [&](const auto& x) -> std::shared_ptr<ir::ANF> {
-                              return std::make_shared<ir::ANF>(x);
-                          } },
-        anf->term);
+    std::visit(overloaded {
+                   [&](const ir::TDefine& def) {
+                       if (def.body) {
+                           collectDependencies(def.body, graph, def.name.lexeme);
+                       }
+                   },
+                   [&](const std::shared_ptr<ir::ANF>& expr) {
+                       collectDependencies(expr, graph, "root");
+                   } },
+        top.decl);
 }
 
-void dce(ir::ANF& anf, DependancyGraph& dp)
+void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops)
 {
-    std::unordered_set<std::string> used;
-    auto shared_anf = std::make_shared<ir::ANF>(anf);
-    collectDependencies(shared_anf, dp);
-}
-
-void elimatedDeadCode(std::vector<std::shared_ptr<ir::ANF>>& anfs)
-{
-
     DependancyGraph dp;
-    for (const auto& anf : anfs) {
-        dce(*anf, dp);
+    for (const auto& top : tops) {
+        collectTopLevelDependencies(*top, dp);
     }
     dp.print();
+    std::unordered_set<std::string> initialRoots = getSideEffectNodes(dp);
+    initialRoots.insert("root");
+
+    auto liveNodes = getLiveNodes(dp, initialRoots);
+    dp = filterGraph(dp, liveNodes);
+    tops = filterTops(tops, liveNodes);
+
+    dp.print();
 }
+
 }

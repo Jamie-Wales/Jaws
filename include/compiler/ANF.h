@@ -18,7 +18,7 @@ class Let {
 public:
     std::optional<Token> name;
     std::shared_ptr<ANF> binding;
-    std::optional<std::shared_ptr<ANF>> body;
+    std::shared_ptr<ANF> body;
 };
 
 class App {

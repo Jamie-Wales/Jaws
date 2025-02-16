@@ -291,12 +291,12 @@ std::shared_ptr<ir::ANF> constantFold(
                                   if (auto const_val = evaluateIfCondition(new_binding, env)) {
                                       env[let.name->lexeme] = *const_val;
                                       if (let.body)
-                                          return constantFold(*let.body, env);
+                                          return constantFold(let.body, env);
                                   }
                               }
 
                               if (let.body) {
-                                  auto new_body = constantFold(*let.body, env);
+                                  auto new_body = constantFold(let.body, env);
                                   return std::make_shared<ir::ANF>(ir::Let {
                                       let.name,
                                       new_binding,
