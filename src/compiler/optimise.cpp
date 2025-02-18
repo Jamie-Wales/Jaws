@@ -1,6 +1,7 @@
 #include "ANF.h"
 #include "ConstantFold.h"
 #include "DeadCodeElimination.h"
+#include "ThreeAC.h"
 #include <iostream>
 
 namespace optimise {
@@ -24,6 +25,9 @@ std::vector<std::shared_ptr<ir::TopLevel>> optimise(std::vector<std::shared_ptr<
     optimiseConstants(anfs);
     printAnf("<| Post ConstantFold ANF |>", anfs, print);
 
+    tac::ThreeAddressModule mod = { {}, {} };
+
+    mod.toString();
     return anfs;
 }
 
