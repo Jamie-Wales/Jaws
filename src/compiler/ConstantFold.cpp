@@ -171,7 +171,6 @@ static std::optional<Constant> evaluateConstantApp(
         }
     }
 
-    // Arithmetic operations
     if (app.name.lexeme == "+") {
         if (auto result = foldNums(nums, std::plus {}, NumericConstant(0))) {
             return Constant(*result);
@@ -266,7 +265,17 @@ static std::optional<Constant> evaluateIfCondition(
                               return std::nullopt;
                           },
                           [&](const ir::App& app) -> std::optional<Constant> {
-                              return evaluateConstantApp(app, env);
+                              if (isPureFunction(app.name)) {
+                                  if (auto result = evaluateConstantApp(app, env)) {
+                                      return result;
+                                  }
+                              }
+                              if (app.name.type == Tokentype::IDENTIFIER && env.contains(app.name.lexeme)) {
+                                  const auto& func_value = env.at(app.name.lexeme);
+                                  return std::nullopt;
+                              }
+
+                              return std::nullopt;
                           },
                           [&](const auto&) -> std::optional<Constant> {
                               return std::nullopt;
@@ -309,6 +318,9 @@ std::shared_ptr<ir::ANF> constantFold(
                                       return createConstantNode(*result, app.name);
                                   }
                               }
+                              if (app.name.type == Tokentype::IDENTIFIER && env.contains(app.name.lexeme)) {
+                                  const auto& func_value = env.at(app.name.lexeme);
+                              }
                               return std::make_shared<ir::ANF>(app);
                           },
 
@@ -320,17 +332,23 @@ std::shared_ptr<ir::ANF> constantFold(
                                                                 },
                                                                 [](bool b) -> bool { return b; } },
                                       *cond_val);
-
                                   return constantFold(is_true ? if_.then : *if_._else, env);
                               }
-
                               auto new_then = constantFold(if_.then, env);
                               auto new_else = if_._else ? constantFold(*if_._else, env) : nullptr;
-
                               return std::make_shared<ir::ANF>(ir::If {
                                   if_.cond,
                                   new_then,
                                   new_else });
+                          },
+
+                          [&](const ir::Lambda& lambda) -> std::shared_ptr<ir::ANF> {
+                              auto lambda_env = env;
+                              auto new_body = constantFold(lambda.body, lambda_env);
+
+                              return std::make_shared<ir::ANF>(ir::Lambda {
+                                  lambda.params,
+                                  new_body });
                           },
 
                           [&](const auto& x) -> std::shared_ptr<ir::ANF> {
@@ -339,15 +357,47 @@ std::shared_ptr<ir::ANF> constantFold(
         anf->term);
 }
 
-std::vector<std::shared_ptr<ir::ANF>> optimiseConstants(std::vector<std::shared_ptr<ir::ANF>>& anfs)
+std::shared_ptr<ir::TDefine> constantFoldTDefine(
+    const ir::TDefine& tdefine,
+    std::unordered_map<std::string, Constant>& env)
+{
+    auto new_body = constantFold(tdefine.body, env);
+    if (auto const_val = evaluateIfCondition(new_body, env)) {
+        env[tdefine.name.lexeme] = *const_val;
+    }
+
+    return std::make_shared<ir::TDefine>(tdefine.name, new_body);
+}
+
+std::vector<std::shared_ptr<ir::TopLevel>> optimiseConstants(std::vector<std::shared_ptr<ir::TopLevel>>& topLevels)
 {
     std::unordered_map<std::string, Constant> env;
-    for (auto& anf : anfs) {
-        if (anf) {
-            anf = constantFold(anf, env);
+    for (auto& tl : topLevels) {
+        if (tl) {
+            std::visit(overloaded {
+                           [&](ir::TDefine& def) {
+                               auto new_def = constantFoldTDefine(def, env);
+                               tl = std::make_shared<ir::TopLevel>(ir::TopLevel::Declaration(*new_def));
+                           },
+                           [&](std::shared_ptr<ir::ANF>&) {
+                           } },
+                tl->decl);
         }
     }
-    return anfs;
+    for (auto& tl : topLevels) {
+        if (tl) {
+            std::visit(overloaded {
+                           [&](ir::TDefine& def) {
+                           },
+                           [&](std::shared_ptr<ir::ANF>& anf) {
+                               anf = constantFold(anf, env);
+                               tl = std::make_shared<ir::TopLevel>(ir::TopLevel::Declaration(anf));
+                           } },
+                tl->decl);
+        }
+    }
+
+    return topLevels;
 }
 
 }

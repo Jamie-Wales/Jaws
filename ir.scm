@@ -1,4 +1,3 @@
-; Live code - used from root
 (define (factorial n)
   (if (= n 0)
       1
