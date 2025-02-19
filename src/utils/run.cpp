@@ -175,8 +175,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             anf = optimise::optimise(anf, opts.printANF);
             const auto _3ac = tac::anfToTac(anf);
             std::cout << _3ac.toString() << std::endl;
-            const auto assembly = assembly::generateAssembly(_3ac);
-            std::cout << assembly.output.str() << std::endl;
+            assembly::generateAssembly(_3ac, "/Users/jamie/Dev/jaws/build");
         }
     }
     auto val = interpret::interpret(state, expanded);

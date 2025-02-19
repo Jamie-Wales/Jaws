@@ -31,7 +31,7 @@ struct AssemblyGeneratorState {
 };
 
 std::string regToString(Register reg);
-AssemblyGeneratorState generateAssembly(const tac::ThreeAddressModule& module);
+void generateAssembly(const tac::ThreeAddressModule& module, const std::string& outputPath);
 void convertInstruction(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 void handleCopy(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 void handleCall(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);

@@ -1,11 +1,12 @@
 #include "AssemblyGeneration.h"
+#include <fstream>
+#include <iostream>
 
 namespace assembly {
 
-AssemblyGeneratorState generateAssembly(const tac::ThreeAddressModule& module)
+void generateAssembly(const tac::ThreeAddressModule& module, const std::string& outputPath)
 {
     AssemblyGeneratorState state;
-
     state.output << "section .text\n";
     state.output << "global main\n";
     state.output << "extern alloc\n";
@@ -17,10 +18,38 @@ AssemblyGeneratorState generateAssembly(const tac::ThreeAddressModule& module)
     for (const auto& instr : module.instructions) {
         convertInstruction(instr, state);
     }
+
     state.output << "    mov rsp, rbp\n";
     state.output << "    pop rbp\n";
     state.output << "    ret\n";
-    return state;
+    std::ofstream outFile(outputPath + "/program.asm");
+    if (!outFile) {
+        std::cerr << "Failed to open output file: " << outputPath << std::endl;
+        return;
+    }
+    outFile << state.output.str();
+    outFile.close();
+
+    std::cout << "Assembly code written to " << outputPath << std::endl;
+}
+
+bool assembleIntoExecutable(const std::string& asmPath, const std::string& exePath)
+{
+    std::string assembleCmd = "nasm -f elf64 " + asmPath + " -o " + asmPath + ".o";
+    std::cout << "Assembling: " << assembleCmd << std::endl;
+    if (system(assembleCmd.c_str()) != 0) {
+        std::cerr << "Failed to assemble the code" << std::endl;
+        return false;
+    }
+
+    std::string linkCmd = "g++ " + asmPath + ".o -o " + exePath + " -L./build -lruntime";
+    std::cout << "Linking: " << linkCmd << std::endl;
+    if (system(linkCmd.c_str()) != 0) {
+        std::cerr << "Failed to link the executable" << std::endl;
+        return false;
+    }
+    std::cout << "Successfully built executable: " << exePath << std::endl;
+    return true;
 }
 
 std::string regToString(Register reg)
