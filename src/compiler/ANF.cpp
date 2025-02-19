@@ -35,7 +35,7 @@ void toStringInternal(const If& if_expr, std::stringstream& ss)
     ss << ")";
 }
 
-static void toStringInternal(const App& app, std::stringstream& ss)
+void toStringInternal(const App& app, std::stringstream& ss)
 {
     ss << "(app " << app.name.lexeme;
     for (const auto& param : app.params) {
@@ -44,7 +44,7 @@ static void toStringInternal(const App& app, std::stringstream& ss)
     ss << ")";
 }
 
-static void toStringInternal(const Let& let, std::stringstream& ss)
+void toStringInternal(const Let& let, std::stringstream& ss)
 {
     ss << "(let (";
     if (let.name.has_value()) {
@@ -70,7 +70,7 @@ static void toStringInternal(const Let& let, std::stringstream& ss)
     ss << ")";
 }
 
-static void toStringInternal(const Lambda& lambda, std::stringstream& ss)
+void toStringInternal(const Lambda& lambda, std::stringstream& ss)
 {
     ss << "(lambda (";
     for (size_t i = 0; i < lambda.params.size(); i++) {

@@ -1,8 +1,10 @@
 #include "run.h"
 #include "ANFTransformer.h"
+#include "AssemblyGeneration.h"
 #include "Error.h"
 #include "Import.h"
 #include "MacroTraits.h"
+#include "ThreeAC.h"
 #include "icons.h"
 #include "interpret.h"
 #include "optimise.h"
@@ -17,7 +19,7 @@
 std::string formatScheme(const std::string& code)
 {
     char filename[] = "/tmp/schemefmtXXXXXX.scm";
-    int fd = mkstemps(filename, 4); // "XXXXXX.scm", 4 is the length of ".scm"
+    int fd = mkstemps(filename, 4);
     if (fd == -1) {
         throw std::runtime_error("Could not create temp file");
     }
@@ -112,15 +114,14 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             << "<| Original File |>\n"
             << output
             << std::endl;
-
         ss.clear();
     }
+
     if (opts.printAST) {
         std::cout << "\n<| Initial AST |>\n";
         for (const auto& expression : *expressions) {
             std::cout << expression->ASTToString() << "\n";
         }
-
         std::cout << "\n"
                   << std::endl;
     }
@@ -172,6 +173,10 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         auto anf = ir::ANFtransform(expanded);
         if (!anf.empty()) {
             anf = optimise::optimise(anf, opts.printANF);
+            const auto _3ac = tac::anfToTac(anf);
+            std::cout << _3ac.toString() << std::endl;
+            const auto assembly = assembly::generateAssembly(_3ac);
+            std::cout << assembly.output.str() << std::endl;
         }
     }
     auto val = interpret::interpret(state, expanded);
@@ -199,13 +204,10 @@ void runPrompt(Options& opts)
     printJawsLogo();
     std::cout << "<| Welcome to the Jaws REPL |>\n";
     std::cout << "<| Type 'exit' to quit, '(help)' for commands |>\n";
-
     auto state = interpret::createInterpreter();
-
     while (true) {
         std::cout << "jaws: |> ";
         std::string input;
-
         if (!std::getline(std::cin, input))
             break;
         if (input == "exit") {
@@ -214,7 +216,6 @@ void runPrompt(Options& opts)
         }
         if (input.empty())
             continue;
-
         try {
             opts.input = input;
             evaluate(state, opts);

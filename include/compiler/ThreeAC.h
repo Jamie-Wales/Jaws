@@ -1,4 +1,5 @@
 #pragma once
+#include "ANF.h"
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -28,15 +29,19 @@ public:
     std::optional<std::string> result;
     std::optional<std::string> arg1;
     std::optional<std::string> arg2;
-    std::string toString();
-    void toString(std::stringstream& ss);
+    std::string toString() const;
+    void toString(std::stringstream& ss) const;
 };
 
 class ThreeAddressModule {
 public:
     std::vector<ThreeACInstruction> instructions;
     std::unordered_map<std::string, size_t> functionOffsets;
-    std::string toString();
+    std::string toString() const;
+    void addInstr(const ThreeACInstruction instr);
 };
+
+ThreeAddressModule anfToTac(const std::vector<std::shared_ptr<ir::TopLevel>>& toplevel);
+void convertANF(const std::shared_ptr<ir::ANF>& anf, ThreeAddressModule& module, std::string& result);
 
 }

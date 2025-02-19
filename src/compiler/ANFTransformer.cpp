@@ -28,15 +28,10 @@ std::shared_ptr<ANF> flattenLets(std::shared_ptr<ANF> expr)
                               if (l.body) {
                                   l.body = flattenLets(l.body);
                               }
-
-                              // Check if binding is a Let expression
                               if (auto innerLet = std::get_if<Let>(&l.binding->term)) {
-                                  // Verify all required components exist
                                   if (!innerLet->binding || !innerLet->body) {
                                       throw std::runtime_error("Inner let has null binding or body");
                                   }
-
-                                  // Create new structure carefully
                                   auto newBody = std::make_shared<ANF>(ANF {
                                       Let {
                                           l.name,
