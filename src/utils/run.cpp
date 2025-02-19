@@ -175,7 +175,12 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             anf = optimise::optimise(anf, opts.printANF);
             const auto _3ac = tac::anfToTac(anf);
             std::cout << _3ac.toString() << std::endl;
-            assembly::generateAssembly(_3ac, "/Users/jamie/Dev/jaws/build");
+#ifdef BUILD_DIR
+            assembly::generateAssembly(_3ac, BUILD_DIR "/asm");
+#else
+            std::cerr << "Error: BUILD_DIR not defined" << std::endl;
+            return;
+#endif
         }
     }
     auto val = interpret::interpret(state, expanded);
