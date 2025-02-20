@@ -10,6 +10,7 @@
 #include "optimise.h"
 #include "parse.h"
 #include "scan.h"
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -78,6 +79,15 @@ Options parse_args(std::vector<std::string> args)
             opts.file = true;
         } else if ((arg == "--printast" || arg == "-printast")) {
             opts.printAST = true;
+        } else if ((arg == "--print3ac" || arg == "-3ac")) {
+            opts.print3AC = true;
+        } else if ((arg == "--compile" || arg == "-c")) {
+            opts.compile = true;
+            if (i + 1 < args.size() && args[i + 1][0] != '-') {
+                opts.outputPath = args[++i];
+            } else {
+                opts.outputPath = "build"; // Default to build directory
+            }
         } else {
             throw std::runtime_error("Unknown argument: " + arg);
         }
@@ -164,25 +174,54 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             for (const auto& expression : expanded) {
                 std::cout << expression->ASTToString() << "\n";
             }
-
             std::cout << "\n"
                       << std::endl;
         }
     }
-    if (opts.optimise) {
+
+    if (opts.compile || opts.optimise) {
         auto anf = ir::ANFtransform(expanded);
         if (!anf.empty()) {
             anf = optimise::optimise(anf, opts.printANF);
             const auto _3ac = tac::anfToTac(anf);
-            std::cout << _3ac.toString() << std::endl;
-#ifdef BUILD_DIR
-            assembly::generateAssembly(_3ac, BUILD_DIR "/asm");
-#else
-            std::cerr << "Error: BUILD_DIR not defined" << std::endl;
-            return;
-#endif
+
+            if (opts.print3AC) {
+                std::cout << "\n<| Three Address Code |>\n"
+                          << _3ac.toString() << std::endl;
+            }
+
+            if (opts.compile) {
+                try {
+                    // Create output directory if it doesn't exist
+                    std::filesystem::create_directories(opts.outputPath);
+
+                    // Set up file paths
+                    auto outPath = std::filesystem::path(opts.outputPath);
+                    std::string asmFile = (outPath / "output.asm").string();
+                    std::string objFile = (outPath / "output.o").string();
+
+                    // Generate assembly
+                    std::cout << "Generating assembly to: " << asmFile << std::endl;
+                    assembly::generateAssembly(_3ac, asmFile);
+
+                    // Assemble to object file (ELF64 format for Linux)
+                    std::cout << "Assembling to: " << objFile << std::endl;
+                    std::string asmCmd = "nasm -f elf64 -o " + objFile + " " + asmFile;
+                    if (system(asmCmd.c_str()) != 0) {
+                        throw std::runtime_error("Assembly failed: " + asmCmd);
+                    }
+
+                    std::cout << "Successfully generated object file: " << objFile << std::endl;
+                    return;
+                } catch (const std::filesystem::filesystem_error& e) {
+                    throw std::runtime_error("Filesystem error: " + std::string(e.what()));
+                }
+
+                return;
+            }
         }
     }
+
     auto val = interpret::interpret(state, expanded);
     if (val) {
         std::cout << val->toString() << std::endl;

@@ -10,8 +10,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 
+# Add runtime first
+add_subdirectory(runtime)
+
 include(CTest)
 enable_testing()
+
+cmake_policy(SET CMP0135 NEW)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -21,6 +26,17 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# Find assembler and linker early
+find_program(AS_PATH as)
+find_program(LD_PATH ld)
+if (NOT AS_PATH OR NOT LD_PATH)
+    message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
+endif ()
+
+# Define paths that will be used by multiple targets
+set(RUNTIME_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/runtime/include")
+set(RUNTIME_LIB_PATH "${PROJECT_SOURCE_DIR}/runtime/runtime.a")
+
 # Collect source files
 file(GLOB_RECURSE COMPILER_SOURCES
         "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp"
@@ -29,7 +45,6 @@ file(GLOB_RECURSE COMPILER_SOURCES
         "${PROJECT_SOURCE_DIR}/src/interpreter/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/utils/*.cpp"
 )
-file(GLOB_RECURSE RUNTIME_SOURCES "${PROJECT_SOURCE_DIR}/runtime/src/*.c")
 file(GLOB_RECURSE TEST_SOURCES "${PROJECT_SOURCE_DIR}/tests/*.cpp")
 file(GLOB MAIN_SOURCE "${PROJECT_SOURCE_DIR}/src/main.cpp")
 
@@ -68,6 +83,15 @@ target_include_directories(app_lib PUBLIC
         ${PROJECT_SOURCE_DIR}/include/interpreter/builtins
         ${PROJECT_SOURCE_DIR}/include/interpreter
         ${PROJECT_SOURCE_DIR}/include/utils
+        ${RUNTIME_INCLUDE_DIR}
+)
+
+# Add compile definitions to app_lib
+target_compile_definitions(app_lib PUBLIC
+        AS_PATH="${AS_PATH}"
+        LD_PATH="${LD_PATH}"
+        RUNTIME_INCLUDE_PATH="${RUNTIME_INCLUDE_DIR}"
+        RUNTIME_LIB_PATH="${RUNTIME_LIB_PATH}"
 )
 
 set_target_properties(app_lib PROPERTIES
@@ -84,6 +108,7 @@ target_include_directories(jaws PRIVATE
         ${PROJECT_SOURCE_DIR}/include/interpreter
         ${PROJECT_SOURCE_DIR}/include/utils
         ${PROJECT_SOURCE_DIR}/include/frontend
+        ${RUNTIME_INCLUDE_DIR}
 )
 
 set_target_properties(jaws PROPERTIES
@@ -91,32 +116,15 @@ set_target_properties(jaws PROPERTIES
         CXX_STANDARD_REQUIRED ON
 )
 
-# Create the runtime library
-add_library(runtime STATIC ${RUNTIME_SOURCES})
-target_include_directories(runtime PUBLIC
-        ${PROJECT_SOURCE_DIR}/include/runtime
-)
-
-set_target_properties(runtime PROPERTIES
-        C_STANDARD 17
-        C_STANDARD_REQUIRED ON
-)
-
 target_link_libraries(jaws PRIVATE app_lib runtime)
 
-# Find assembler and linker
-find_program(AS_PATH as)
-find_program(LD_PATH ld)
-if (NOT AS_PATH OR NOT LD_PATH)
-    message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
-endif ()
+# Link filesystem library if needed
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_link_libraries(app_lib PRIVATE stdc++fs)
+    target_link_libraries(jaws PRIVATE stdc++fs)
+endif()
 
-# Set compile definitions
-target_compile_definitions(jaws PRIVATE
-        AS_PATH="${AS_PATH}"
-        LD_PATH="${LD_PATH}"
-        RUNTIME_INCLUDE_PATH="${PROJECT_SOURCE_DIR}/include/runtime"
-)
+# Tests setup
 add_executable(tests ${TEST_SOURCES})
 target_include_directories(tests PRIVATE
     ${PROJECT_SOURCE_DIR}/include
@@ -125,6 +133,7 @@ target_include_directories(tests PRIVATE
     ${PROJECT_SOURCE_DIR}/include/interpreter/builtins
     ${PROJECT_SOURCE_DIR}/include/utils
     ${PROJECT_SOURCE_DIR}/include/frontend
+    ${RUNTIME_INCLUDE_DIR}
     ${gtest_SOURCE_DIR}/include
 )
 
@@ -139,6 +148,5 @@ target_link_libraries(tests PRIVATE
     gtest_main
 )
 
-# Register each individual GoogleTest case with CTest
 include(GoogleTest)
 gtest_discover_tests(tests)

@@ -1,11 +1,13 @@
 #pragma once
-
 #include "ThreeAC.h"
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <set>
+#include <vector>
 
 namespace assembly {
+
 enum class Register {
     RAX,
     RBX,
@@ -25,17 +27,41 @@ enum class Register {
 
 struct AssemblyGeneratorState {
     std::stringstream output;
-    std::unordered_map<std::string, Register> varToReg;
-    std::unordered_map<std::string, std::string> varToStack;
-    int stackOffset = 0;
+    std::unordered_map<std::string, int> varOffsets;  // Maps variables to stack offsets
+    std::set<Register> usedRegisters;
+    int currentStackOffset = 0;
+
+    // Helper to get or create stack offset for a variable
+    int getVarOffset(const std::string& var) {
+        auto it = varOffsets.find(var);
+        if (it != varOffsets.end()) {
+            return it->second;
+        }
+        currentStackOffset += 8;  // Assume 8-byte alignment
+        varOffsets[var] = currentStackOffset;
+        return currentStackOffset;
+    }
 };
 
 std::string regToString(Register reg);
 void generateAssembly(const tac::ThreeAddressModule& module, const std::string& outputPath);
+bool assembleIntoExecutable(const std::string& asmPath, const std::string& exePath);
+
 void convertInstruction(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 void handleCopy(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 void handleCall(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 void handleAlloc(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
+void handleStore(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
+void handleLoad(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
+void handleLabel(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
+void handleJump(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 void handleJumpIf(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
+void handleJumpIfNot(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state);
 
-};
+bool isNumber(const std::string& str);
+
+extern const std::vector<Register> PARAM_REGISTERS;
+extern const std::vector<Register> CALLER_SAVED;
+extern const std::vector<Register> CALLEE_SAVED;
+
+} 

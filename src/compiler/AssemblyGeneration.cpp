@@ -91,7 +91,6 @@ void generateAssembly(const tac::ThreeAddressModule& module, const std::string& 
     state.output << "section .text\n";
     state.output << "global main\n\n";
 
-    // Declare external functions
     state.output << "extern alloc\n";
     state.output << "extern scheme_add\n";
     state.output << "extern scheme_subtract\n";
@@ -123,10 +122,9 @@ void generateAssembly(const tac::ThreeAddressModule& module, const std::string& 
     state.output << "    pop rbp\n";
     state.output << "    ret\n";
 
-    std::ofstream outFile(outputPath + "/program.asm");
+    std::ofstream outFile(outputPath);
     if (!outFile) {
-        std::cerr << "Failed to open output file: " << outputPath << std::endl;
-        return;
+        throw std::runtime_error("Failed to open output file: " + outputPath);
     }
     outFile << state.output.str();
     outFile.close();
