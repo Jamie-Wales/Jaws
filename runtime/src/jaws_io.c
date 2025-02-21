@@ -3,5 +3,5 @@
 
 void display(SchemeObject* obj)
 {
-    printf("%s", to_string(obj));
+    printf("%s\n", to_string(obj));
 }

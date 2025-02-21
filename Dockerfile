@@ -11,11 +11,22 @@ RUN apk update && \
     make \
     libc-dev \
     libstdc++ \
-    libstdc++-dev
+    libstdc++-dev \
+    bash \
+    gcc \
+    g++
 
 # Set clang as the default compiler
 ENV CC=clang
 ENV CXX=clang++
 
 WORKDIR /app
-CMD ["/bin/sh"]
+
+# Add /app to PATH
+ENV PATH="/app:${PATH}"
+
+# Use bash as the shell
+SHELL ["/bin/bash", "-c"]
+
+# Make sure bash is available for interactive use
+RUN ln -sf /bin/bash /bin/sh
