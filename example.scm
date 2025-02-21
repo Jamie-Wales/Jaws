@@ -1,4 +1,5 @@
 (import base)
+
 (call-with-values (lambda () (values 4 5))
                   (lambda (a b) (+ a b)))
 

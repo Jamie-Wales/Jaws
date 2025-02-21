@@ -138,43 +138,28 @@ void handleCall(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& st
     int paramCount = instr.arg2 ? std::stoi(*instr.arg2) : 0;
     std::string funcName = convertPrimitive(*instr.arg1);
 
-    // Save used caller-saved registers
     for (auto reg : state.usedRegisters) {
         if (std::find(CALLER_SAVED.begin(), CALLER_SAVED.end(), reg) != CALLER_SAVED.end()) {
             state.output << "    push " << regToString(reg) << "\n";
         }
     }
-
-    // Align stack to 16 bytes
     state.output << "    and rsp, -16\n";
-
-    // Load parameters into registers
     for (int i = 0; i < paramCount && i < 6; i++) {
         std::string tempVar = "_t" + std::to_string(i + 1);
         state.output << "    mov " << regToString(PARAM_REGISTERS[i])
                      << ", qword [rbp - " << state.getVarOffset(tempVar) << "]\n";
     }
-
-    // Push remaining parameters onto stack
     for (int i = paramCount - 1; i >= 6; i--) {
         std::string tempVar = "_t" + std::to_string(i + 1);
         state.output << "    push qword [rbp - " << state.getVarOffset(tempVar) << "]\n";
     }
-
-    // Make the function call
     state.output << "    call " << funcName << "\n";
-
-    // Clean up stack if needed
     if (paramCount > 6) {
         state.output << "    add rsp, " << ((paramCount - 6) * 8) << "\n";
     }
-
-    // Store result
     if (instr.result) {
         state.output << "    mov qword [rbp - " << state.getVarOffset(*instr.result) << "], rax\n";
     }
-
-    // Restore caller-saved registers
     for (auto it = state.usedRegisters.rbegin(); it != state.usedRegisters.rend(); ++it) {
         if (std::find(CALLER_SAVED.begin(), CALLER_SAVED.end(), *it) != CALLER_SAVED.end()) {
             state.output << "    pop " << regToString(*it) << "\n";
@@ -308,4 +293,4 @@ void handleGC(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& stat
     state.output << "    ; GC instruction - to be implemented\n";
 }
 
-} // namespace assembly
+}
