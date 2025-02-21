@@ -10,8 +10,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 set(CMAKE_OSX_ARCHITECTURES "arm64")
 
-# Add runtime first
-add_subdirectory(runtime)
 
 include(CTest)
 enable_testing()
@@ -33,9 +31,6 @@ if (NOT AS_PATH OR NOT LD_PATH)
     message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
 endif ()
 
-# Define paths that will be used by multiple targets
-set(RUNTIME_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/runtime/include")
-set(RUNTIME_LIB_PATH "${PROJECT_SOURCE_DIR}/runtime/runtime.a")
 
 # Collect source files
 file(GLOB_RECURSE COMPILER_SOURCES
@@ -83,7 +78,6 @@ target_include_directories(app_lib PUBLIC
         ${PROJECT_SOURCE_DIR}/include/interpreter/builtins
         ${PROJECT_SOURCE_DIR}/include/interpreter
         ${PROJECT_SOURCE_DIR}/include/utils
-        ${RUNTIME_INCLUDE_DIR}
 )
 
 # Add compile definitions to app_lib
@@ -108,7 +102,6 @@ target_include_directories(jaws PRIVATE
         ${PROJECT_SOURCE_DIR}/include/interpreter
         ${PROJECT_SOURCE_DIR}/include/utils
         ${PROJECT_SOURCE_DIR}/include/frontend
-        ${RUNTIME_INCLUDE_DIR}
 )
 
 set_target_properties(jaws PROPERTIES
@@ -116,7 +109,7 @@ set_target_properties(jaws PROPERTIES
         CXX_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(jaws PRIVATE app_lib runtime)
+target_link_libraries(jaws PRIVATE app_lib)
 
 # Link filesystem library if needed
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -133,7 +126,6 @@ target_include_directories(tests PRIVATE
     ${PROJECT_SOURCE_DIR}/include/interpreter/builtins
     ${PROJECT_SOURCE_DIR}/include/utils
     ${PROJECT_SOURCE_DIR}/include/frontend
-    ${RUNTIME_INCLUDE_DIR}
     ${gtest_SOURCE_DIR}/include
 )
 
@@ -144,7 +136,6 @@ set_target_properties(tests PROPERTIES
 
 target_link_libraries(tests PRIVATE
     app_lib
-    runtime
     gtest_main
 )
 

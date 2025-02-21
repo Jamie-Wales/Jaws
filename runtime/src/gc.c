@@ -6,6 +6,7 @@
 
 #define HEAP_OBJECT_COUNT 100
 #define INITIAL_HEAP (sizeof(SchemeObject) * HEAP_OBJECT_COUNT)
+#define DEBUG_GC
 static void* heap;
 static size_t heap_size;
 static size_t used;
@@ -85,6 +86,9 @@ extern void mark_object(SchemeObject* obj)
 
 extern void mark_roots()
 {
+#ifdef DEBUG_GC
+    printf("%s", "Mark roots\n");
+#endif
     void* stack_top;
     void* stack_bottom;
     asm("movq %%rbp, %0" : "=r"(stack_bottom));
@@ -93,6 +97,9 @@ extern void mark_roots()
     for (void** p = stack_top; p <= (void**)stack_bottom; p++) {
         SchemeObject* obj = (SchemeObject*)*p;
         if ((char*)obj >= (char*)heap && (char*)obj < (char*)heap + used) {
+#ifdef DEBUG_GC
+            printf("%s %s\n", "Marking object:", to_string(obj));
+#endif
             mark_object(obj);
         }
     }
@@ -103,6 +110,9 @@ extern void sweep_compact()
     SchemeObject* new_end = (SchemeObject*)heap;
     SchemeObject* current = (SchemeObject*)heap;
 
+#ifdef DEBUG_GC
+    printf("Current heap usage %zu\n", used);
+#endif
     while ((char*)current < (char*)heap + used) {
         if (current->type & 0x80) {
             current->type &= 0x7F;
@@ -126,10 +136,16 @@ extern void sweep_compact()
     }
 
     used = (char*)new_end - (char*)heap;
+
+    printf("New heap size %zu\n", used);
 }
 
 void gc()
 {
+
+#ifdef DEBUG_GC
+    printf("%s", "\nGarbage collector called\n");
+#endif
     mark_roots();
     sweep_compact();
 }

@@ -75,9 +75,6 @@ std::string convertPrimitive(const std::string& primitive)
         { "-", "scheme_subtract" },
         { "*", "scheme_multiply" },
         { "/", "scheme_divide" },
-        { "car", "scheme_car" },
-        { "cons", "scheme_cons" },
-        { "cdr", "scheme_cdr" }
     };
 
     auto it = primitiveMap.find(primitive);
@@ -90,18 +87,11 @@ void generateAssembly(const tac::ThreeAddressModule& module, const std::string& 
 
     state.output << "section .text\n";
     state.output << "global main\n\n";
-
-    state.output << "extern alloc\n";
-    state.output << "extern scheme_add\n";
-    state.output << "extern scheme_subtract\n";
-    state.output << "extern scheme_multiply\n";
-    state.output << "extern scheme_divide\n";
+    state.output << "extern gc\n";
     state.output << "extern allocate\n";
     state.output << "extern to_string\n";
     state.output << "extern display\n";
-    state.output << "extern scheme_car\n";
-    state.output << "extern scheme_cdr\n";
-    state.output << "extern scheme_cons\n";
+    state.output << "extern cons\n";
     state.output << "extern init_runtime\n\n";
 
     state.output << "main:\n";
@@ -123,6 +113,7 @@ void generateAssembly(const tac::ThreeAddressModule& module, const std::string& 
         state.output << "    pop " << regToString(*it) << "\n";
     }
 
+    state.output << "    call gc\n";
     state.output << "    mov rsp, rbp\n";
     state.output << "    pop rbp\n";
     state.output << "    ret\n";
