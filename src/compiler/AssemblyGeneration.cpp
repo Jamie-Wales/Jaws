@@ -75,8 +75,8 @@ std::string convertPrimitive(const std::string& primitive)
         { "-", "scheme_subtract" },
         { "*", "scheme_multiply" },
         { "/", "scheme_divide" },
-        { "cons", "scheme_cons" },
         { "car", "scheme_car" },
+        { "cons", "scheme_cons" },
         { "cdr", "scheme_cdr" }
     };
 
@@ -96,14 +96,19 @@ void generateAssembly(const tac::ThreeAddressModule& module, const std::string& 
     state.output << "extern scheme_subtract\n";
     state.output << "extern scheme_multiply\n";
     state.output << "extern scheme_divide\n";
-    state.output << "extern scheme_cons\n";
+    state.output << "extern allocate\n";
+    state.output << "extern to_string\n";
+    state.output << "extern display\n";
     state.output << "extern scheme_car\n";
-    state.output << "extern scheme_cdr\n\n";
+    state.output << "extern scheme_cdr\n";
+    state.output << "extern scheme_cons\n";
+    state.output << "extern init_runtime\n\n";
 
     state.output << "main:\n";
     state.output << "    push rbp\n";
     state.output << "    mov rbp, rsp\n";
     state.output << "    sub rsp, 128  ; Reserve space for locals\n";
+    state.output << "    call init_runtime\n\n";
 
     for (auto reg : CALLEE_SAVED) {
         state.output << "    push " << regToString(reg) << "\n";
@@ -138,43 +143,32 @@ void handleCall(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& st
     int paramCount = instr.arg2 ? std::stoi(*instr.arg2) : 0;
     std::string funcName = convertPrimitive(*instr.arg1);
 
-    for (auto reg : state.usedRegisters) {
-        if (std::find(CALLER_SAVED.begin(), CALLER_SAVED.end(), reg) != CALLER_SAVED.end()) {
-            state.output << "    push " << regToString(reg) << "\n";
+    state.output << "    and rsp, -16\n";
+    if (instr.result) {
+        int resultNum = std::stoi(instr.result->substr(2));
+        for (int i = 0; i < paramCount && i < 6; i++) {
+            std::string tempVar = "_t" + std::to_string(resultNum - paramCount + i);
+            state.output << "    mov " << regToString(PARAM_REGISTERS[i])
+                         << ", qword [rbp - " << state.getVarOffset(tempVar) << "]\n";
         }
     }
-    state.output << "    and rsp, -16\n";
-    for (int i = 0; i < paramCount && i < 6; i++) {
-        std::string tempVar = "_t" + std::to_string(i + 1);
-        state.output << "    mov " << regToString(PARAM_REGISTERS[i])
-                     << ", qword [rbp - " << state.getVarOffset(tempVar) << "]\n";
-    }
-    for (int i = paramCount - 1; i >= 6; i--) {
-        std::string tempVar = "_t" + std::to_string(i + 1);
-        state.output << "    push qword [rbp - " << state.getVarOffset(tempVar) << "]\n";
-    }
+
     state.output << "    call " << funcName << "\n";
-    if (paramCount > 6) {
-        state.output << "    add rsp, " << ((paramCount - 6) * 8) << "\n";
-    }
+
     if (instr.result) {
         state.output << "    mov qword [rbp - " << state.getVarOffset(*instr.result) << "], rax\n";
     }
-    for (auto it = state.usedRegisters.rbegin(); it != state.usedRegisters.rend(); ++it) {
-        if (std::find(CALLER_SAVED.begin(), CALLER_SAVED.end(), *it) != CALLER_SAVED.end()) {
-            state.output << "    pop " << regToString(*it) << "\n";
-        }
-    }
 }
-
 void handleCopy(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& state)
 {
     if (!instr.result || !instr.arg1)
         return;
 
     if (isNumber(*instr.arg1)) {
-        state.output << "    mov qword [rbp - " << state.getVarOffset(*instr.result)
-                     << "], " << *instr.arg1 << "\n";
+        state.output << "    mov rdi, 0  ; TYPE_NUMBER\n";
+        state.output << "    mov rsi, " << *instr.arg1 << "\n";
+        state.output << "    call allocate\n";
+        state.output << "    mov qword [rbp - " << state.getVarOffset(*instr.result) << "], rax\n";
     } else {
         state.output << "    mov rax, qword [rbp - " << state.getVarOffset(*instr.arg1) << "]\n";
         state.output << "    mov qword [rbp - " << state.getVarOffset(*instr.result) << "], rax\n";
@@ -224,7 +218,7 @@ void handleAlloc(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& s
     state.output << "    push rcx\n";
     state.output << "    push rdx\n";
     state.output << "    mov rdi, 8  ; Standard allocation size\n";
-    state.output << "    call alloc\n";
+    state.output << "    call allocate\n";
     state.output << "    mov qword [rbp - " << state.getVarOffset(*instr.result) << "], rax\n";
     state.output << "    pop rdx\n";
     state.output << "    pop rcx\n";
@@ -292,5 +286,4 @@ void handleGC(const tac::ThreeACInstruction& instr, AssemblyGeneratorState& stat
 {
     state.output << "    ; GC instruction - to be implemented\n";
 }
-
 }

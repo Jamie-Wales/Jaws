@@ -135,7 +135,7 @@ std::optional<SchemeValue> write(
 }
 
 std::optional<SchemeValue> display(
-    interpret::InterpreterState&, // Note: we don't need the state parameter anymore
+    interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)
 {
     if (args.size() < 1 || args.size() > 2) {
