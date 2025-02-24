@@ -112,13 +112,12 @@ std::optional<SchemeValue> map(
         }
 
         auto procResult = interpret::executeProcedure(state, proc, procArgs);
-        if (!procResult) {
-            throw InterpreterError("map: procedure returned no value");
+        if (procResult) {
+            result.push_back(*procResult);
         }
-        result.push_back(*procResult);
     }
-
-    return SchemeValue(std::move(result));
+    std::optional<SchemeValue> item = std::nullopt;
+    return result.empty() ? item : SchemeValue(std::move(result));
 }
 
 std::optional<SchemeValue> cons(

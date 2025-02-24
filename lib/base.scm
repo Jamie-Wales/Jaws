@@ -130,11 +130,6 @@
      (if (not test)
          (begin result1 result2 ...)))))
 
-(define-syntax printTwice
-  (syntax-rules ()
-    ((printTwice expr)
-     (begin (display expr) (display expr)))))
-
 
 
 

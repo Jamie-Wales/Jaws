@@ -65,10 +65,12 @@ Options parse_args(std::vector<std::string> args)
             opts.printCode = true;
             opts.printMacro = true;
             opts.printANF = true;
+            opts.print3AC = true;
         } else if ((arg == "--print" || arg == "-p")) {
             opts.printCode = true;
             opts.printMacro = true;
             opts.printANF = true;
+            opts.print3AC = true;
         } else if ((arg == "--no-opt" || arg == "-no")) {
             opts.optimise = false;
         } else if ((arg == "--script")) {
@@ -86,7 +88,7 @@ Options parse_args(std::vector<std::string> args)
             if (i + 1 < args.size() && args[i + 1][0] != '-') {
                 opts.outputPath = args[++i];
             } else {
-                opts.outputPath = "build"; // Default to build directory
+                opts.outputPath = "build";
             }
         } else {
             throw std::runtime_error("Unknown argument: " + arg);
@@ -119,7 +121,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         for (const auto& expression : *expressions) {
             ss << expression->toString() << "\n";
         }
-        const auto& output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
+        const auto output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
         std::cout
             << "<| Original File |>\n"
             << output
@@ -134,6 +136,8 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         }
         std::cout << "\n"
                   << std::endl;
+
+        ss.clear();
     }
 
     auto withImports = import::processImports(*expressions);
@@ -141,7 +145,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         for (const auto& expression : withImports) {
             ss << expression->toString() << "\n";
         }
-        const auto& output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
+        const auto output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
         std::cout << "\n<| File After Import |>\n"
                   << output
                   << std::endl;
@@ -158,6 +162,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
     const auto expanded = macroexp::expandMacros(withImports);
 
     if (opts.printMacro) {
+        ss.clear();
         for (const auto& expression : expanded) {
             ss << expression->toString() << "\n";
         }
@@ -192,25 +197,17 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
 
             if (opts.compile) {
                 try {
-                    // Create output directory if it doesn't exist
                     std::filesystem::create_directories(opts.outputPath);
-
-                    // Set up file paths
                     auto outPath = std::filesystem::path(opts.outputPath);
                     std::string asmFile = (outPath / "output.asm").string();
                     std::string objFile = (outPath / "output.o").string();
-
-                    // Generate assembly
                     std::cout << "Generating assembly to: " << asmFile << std::endl;
                     assembly::generateAssembly(_3ac, asmFile);
-
-                    // Assemble to object file (ELF64 format for Linux)
                     std::cout << "Assembling to: " << objFile << std::endl;
-                    std::string asmCmd = "nasm -f elf64 -o " + objFile + " " + asmFile;
+                    std::string asmCmd = "nasm -f elf64 -g -F dwarf -o " + objFile + " " + asmFile + " 2>&1";
                     if (system(asmCmd.c_str()) != 0) {
                         throw std::runtime_error("Assembly failed: " + asmCmd);
                     }
-
                     std::cout << "Successfully generated object file: " << objFile << std::endl;
                     return;
                 } catch (const std::filesystem::filesystem_error& e) {

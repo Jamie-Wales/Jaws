@@ -1,4 +1,5 @@
 #include "../include/types.h"
+#include "../include/gc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,14 @@ static char* to_string_pair(SchemeObject* pair, int* depth)
     (*depth)--;
 
     return result;
+}
+
+SchemeObject* make_function(void* code, struct SchemeEnvironment* env)
+{
+    SchemeObject* obj = allocate(TYPE_FUNCTION, 0);
+    obj->value.function.code = code;
+    obj->value.function.env = env;
+    return obj;
 }
 
 char* to_string(SchemeObject* object)
@@ -73,8 +82,24 @@ char* to_string(SchemeObject* object)
         return strdup("<unknown-type>");
     }
 }
-
 int is_nil(SchemeObject* obj)
 {
     return obj == SCHEME_NIL || obj == NULL;
+}
+SchemeObject* make_closure(void* code)
+{
+    SchemeEnvironment* env = current_environment; // Capture current env
+    return make_function(code, env);
+}
+void call_closure(SchemeObject* func, SchemeObject** args, int arg_count)
+{
+    if (func->type != TYPE_FUNCTION) {
+        // Handle error
+        return;
+    }
+    SchemeEnvironment* saved_env = current_environment;
+    current_environment = func->value.function.env;
+    void (*func_ptr)() = func->value.function.code;
+    func_ptr();
+    current_environment = saved_env;
 }

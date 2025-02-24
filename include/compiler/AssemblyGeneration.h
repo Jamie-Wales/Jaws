@@ -1,9 +1,10 @@
 #pragma once
 #include "ThreeAC.h"
+#include <set>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace assembly {
@@ -24,20 +25,20 @@ enum class Register {
     R14,
     R15
 };
-
 struct AssemblyGeneratorState {
     std::stringstream output;
-    std::unordered_map<std::string, int> varOffsets;  // Maps variables to stack offsets
+    std::unordered_set<std::string> declaredStrings;
+    std::unordered_map<std::string, int> varOffsets;
     std::set<Register> usedRegisters;
     int currentStackOffset = 0;
 
-    // Helper to get or create stack offset for a variable
-    int getVarOffset(const std::string& var) {
+    int getVarOffset(const std::string& var)
+    {
         auto it = varOffsets.find(var);
         if (it != varOffsets.end()) {
             return it->second;
         }
-        currentStackOffset += 8;  // Assume 8-byte alignment
+        currentStackOffset += 8;
         varOffsets[var] = currentStackOffset;
         return currentStackOffset;
     }
@@ -63,5 +64,4 @@ bool isNumber(const std::string& str);
 extern const std::vector<Register> PARAM_REGISTERS;
 extern const std::vector<Register> CALLER_SAVED;
 extern const std::vector<Register> CALLEE_SAVED;
-
-} 
+}

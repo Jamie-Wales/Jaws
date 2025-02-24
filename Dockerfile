@@ -14,7 +14,11 @@ RUN apk update && \
     libstdc++-dev \
     bash \
     gcc \
-    g++
+    g++ \
+    gdb \
+    strace \
+    binutils \
+    ltrace
 
 # Set clang as the default compiler
 ENV CC=clang
@@ -22,11 +26,8 @@ ENV CXX=clang++
 
 WORKDIR /app
 
-# Add /app to PATH
 ENV PATH="/app:${PATH}"
 
-# Use bash as the shell
 SHELL ["/bin/bash", "-c"]
 
-# Make sure bash is available for interactive use
 RUN ln -sf /bin/bash /bin/sh

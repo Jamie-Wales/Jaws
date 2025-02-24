@@ -15,7 +15,7 @@ cd ../../
 
 echo "Building generated assembly..."
 # Use the correct path for output.o
-gcc -o build/_prog build/build/output.o runtime/build/libruntime.a
+gcc -g -o build/_prog build/build/output.o runtime/build/libruntime.a
 
 echo "Build successful!"
 echo "Run with: ./build/_prog"

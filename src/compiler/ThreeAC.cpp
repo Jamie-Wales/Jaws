@@ -110,7 +110,6 @@ void convertANF(const std::shared_ptr<ir::ANF>& anf, ThreeAddressModule& module,
                                std::string paramTemp = generateTemp();
                                module.addInstr({ Operation::COPY, paramTemp, param.lexeme, {} });
                            }
-                           result = generateTemp();
                            module.addInstr({ Operation::CALL, result, app.name.lexeme,
                                std::to_string(app.params.size()) });
 
