@@ -1,11 +1,9 @@
 var searchData=
 [
-  ['false_0',['FALSE',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba946003f97ccc52d5d3b54ac0ec31bbfc',1,'Token.h']]],
-  ['float_1',['FLOAT',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2bae738c26bf4ce1037fa81b039a915cbf6',1,'Token.h']]],
-  ['formaterror_2',['formatError',['../class_parse_error.html#a2eba6cc9d4f8585cd7651d5a62e01596',1,'ParseError::formatError()'],['../class_interpreter_error.html#a9e87d2796f7395dbfb8113b29ae8d04e',1,'InterpreterError::formatError()']]],
-  ['forwarddecs_2eh_3',['ForwardDecs.h',['../_forward_decs_8h.html',1,'']]],
-  ['frame_4',['Frame',['../struct_environment_1_1_frame.html',1,'Environment']]],
-  ['frames_5',['frames',['../class_environment.html#a5daad7ccf2aa55edbc42c1d676e5c77b',1,'Environment']]],
-  ['func_6',['Func',['../class_built_in_procedure.html#a43e01f6d154aee247d782fd7202864fa',1,'BuiltInProcedure']]],
-  ['func_7',['func',['../class_built_in_procedure.html#aeebb5123dbbd27443590e5f1b0599bad',1,'BuiltInProcedure']]]
+  ['edge_0',['Edge',['../structoptimise_1_1_dependancy_graph_1_1_edge.html',1,'optimise::DependancyGraph']]],
+  ['edgemap_1',['EdgeMap',['../classoptimise_1_1_dependancy_graph.html#a02114ee1c8734ce449717221f3ee608f',1,'optimise::DependancyGraph']]],
+  ['elimateddeadcode_2',['elimatedDeadCode',['../namespaceoptimise.html#a18e5418bc87d550b55f79d529efe8d9f',1,'optimise']]],
+  ['eliminateunused_3',['eliminateUnused',['../namespaceoptimise.html#aecdab01c47241ddb4886fad267eb4e85',1,'optimise']]],
+  ['end_5ffunc_4',['END_FUNC',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a856be2d85133e0ec2bac06c89ee23c9a',1,'tac']]],
+  ['expr_5',['expr',['../classir_1_1_quote.html#a8fecb32f439eb722c39fcd4eb663c2a5',1,'ir::Quote']]]
 ];

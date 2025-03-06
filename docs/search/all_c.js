@@ -1,28 +1,5 @@
 var searchData=
 [
-  ['macro_2eh_0',['Macro.h',['../_macro_8h.html',1,'']]],
-  ['macrodefinition_1',['MacroDefinition',['../struct_macro_expander_1_1_macro_definition.html',1,'MacroExpander::MacroDefinition'],['../struct_macro_processor_1_1_macro_definition.html',1,'MacroProcessor::MacroDefinition']]],
-  ['macroexpander_2',['MacroExpander',['../class_macro_expander.html',1,'']]],
-  ['macroprocessor_3',['MacroProcessor',['../class_macro_processor.html',1,'']]],
-  ['macroprocessor_4',['macroProcessor',['../class_interpreter.html#a09c4137439ef0a92ae93e6efaf2616a1',1,'Interpreter']]],
-  ['macroprocessor_2ecpp_5',['MacroProcessor.cpp',['../_macro_processor_8cpp.html',1,'']]],
-  ['macroprocessor_2eh_6',['MacroProcessor.h',['../_macro_processor_8h.html',1,'']]],
-  ['macros_7',['macros',['../class_macro_expander.html#ae0059bfdea7a66caee5af88453cc4b3f',1,'MacroExpander::macros'],['../class_macro_processor.html#a688defaecf1e9b636c02d22f247059a8',1,'MacroProcessor::macros']]],
-  ['main_8',['main',['../main_8cpp.html#ac0f2228420376f4db7e1274f2b41667c',1,'main.cpp']]],
-  ['main_2ecpp_9',['main.cpp',['../main_8cpp.html',1,'']]],
-  ['makeatom_10',['makeAtom',['../_expression_utils_8h.html#a9dd1dd44ffd9aec271ebbf068214b0e0',1,'makeAtom(const std::string &amp;lexeme, Tokentype type=Tokentype::IDENTIFIER):&#160;ExpressionUtils.cpp'],['../_expression_utils_8cpp.html#ac52bae2aca3042f12a2bf0a5b710fd41',1,'makeAtom(const std::string &amp;lexeme, Tokentype type):&#160;ExpressionUtils.cpp']]],
-  ['makevector_11',['makeVector',['../namespacejaws__vec.html#ad5e9648931ffde7fe17129ca00f7a3fc',1,'jaws_vec']]],
-  ['map_12',['map',['../namespacejaws__list.html#a33b0916df3d5d73ed59daa1bf1a28f83',1,'jaws_list']]],
-  ['match_13',['match',['../class_macro_expander.html#a89482c5cec930c0dab5cc18fd359d596',1,'MacroExpander::match()'],['../class_parser.html#a1f03b181e30d954c2637e7e74ab63b8c',1,'Parser::match()'],['../class_pattern_matcher.html#a17646e18ffa2cf033c36753c46ec3b15',1,'PatternMatcher::match()']]],
-  ['matcher_14',['matcher',['../class_macro_processor.html#a9add320b66cee8240dceb5f1e11df034',1,'MacroProcessor']]],
-  ['matchlist_15',['matchList',['../class_pattern_matcher.html#ab21b690d2096d47cd4d168a3ba71bbaf',1,'PatternMatcher']]],
-  ['matchliteral_16',['matchLiteral',['../class_pattern_matcher.html#af142701540fa5c005f75cfd288415363',1,'PatternMatcher']]],
-  ['matchmap_17',['MatchMap',['../class_macro_expander.html#a03a1fc2927f1b1546381117569e97449',1,'MacroExpander']]],
-  ['matchtoken_18',['matchToken',['../class_scanner.html#a9f01af97399eb085ed7fe67f2163208d',1,'Scanner']]],
-  ['matchvariadiclist_19',['matchVariadicList',['../class_pattern_matcher.html#a1b1209e280e2e96b6722d49cdc191121',1,'PatternMatcher']]],
-  ['merge_20',['merge',['../class_pattern_environment.html#ad48f013dec1282c31d891a2ee6fd26bf',1,'PatternEnvironment']]],
-  ['minus_21',['MINUS',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2baffc0d9b54a1fe677c4c9e6b050e67c81',1,'Token.h']]],
-  ['minus_22',['minus',['../namespacejaws__math.html#a1b18584d3699031b61f263c3317fcda1',1,'jaws_math']]],
-  ['mult_23',['mult',['../namespacejaws__math.html#a4d0836dfe1cbbd0400930619e7d1fd68',1,'jaws_math']]],
-  ['multiply_24',['MULTIPLY',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba080aaf8d817ada96fca7096b7b55bd30',1,'Token.h']]]
+  ['name_0',['name',['../classir_1_1_let.html#af1bf52fdc7048a13dc4bb67edcf5a6a8',1,'ir::Let::name'],['../classir_1_1_app.html#a7f2d9546260bb882287de1098380c504',1,'ir::App::name'],['../classir_1_1_t_define.html#aa0e1ab381fcbcd7d3adf83dd1e187ba1',1,'ir::TDefine::name']]],
+  ['numericconstant_1',['NumericConstant',['../namespaceoptimise.html#ac6a7f28a4a548d5778e029352b8eb700',1,'optimise']]]
 ];

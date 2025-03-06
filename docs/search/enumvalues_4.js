@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['false_0',['FALSE',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba946003f97ccc52d5d3b54ac0ec31bbfc',1,'Token.h']]],
-  ['float_1',['FLOAT',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2bae738c26bf4ce1037fa81b039a915cbf6',1,'Token.h']]]
+  ['gc_0',['GC',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a7359c3eb5c57547295a76ac1bf775b29',1,'tac']]]
 ];

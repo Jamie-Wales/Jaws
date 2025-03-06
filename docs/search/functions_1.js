@@ -1,6 +1,14 @@
 var searchData=
 [
-  ['bind_0',['bind',['../class_pattern_environment.html#a8b0956629bb62603caea1b9437ed00c4',1,'PatternEnvironment']]],
-  ['bindlist_1',['bindList',['../class_pattern_environment.html#ae5d2757c44ad4502451250738bc8e16e',1,'PatternEnvironment']]],
-  ['builtinprocedure_2',['BuiltInProcedure',['../class_built_in_procedure.html#a1445da5ee42d63548b65808024e83a2b',1,'BuiltInProcedure::BuiltInProcedure(Func f)'],['../class_built_in_procedure.html#a1bc3947cb5cb74a6aa9de91c8f9b931e',1,'BuiltInProcedure::BuiltInProcedure(std::optional&lt; SchemeValue &gt;(*f)(Interpreter &amp;, const std::vector&lt; SchemeValue &gt; &amp;))']]]
+  ['collectdependencies_0',['collectDependencies',['../namespaceoptimise.html#a3835fb91e80c7e21470666415682a614',1,'optimise']]],
+  ['collecttopleveldependencies_1',['collectTopLevelDependencies',['../namespaceoptimise.html#a09a55a8069a65a7401c05fa5e20984a8',1,'optimise']]],
+  ['collectusedvariables_2',['collectUsedVariables',['../namespaceoptimise.html#a464cec08ec4c54fb6ecaa9c544a29274',1,'optimise']]],
+  ['constantfold_3',['constantFold',['../namespaceoptimise.html#aaa3f4ef3cfb5958b2525331f95d7db8f',1,'optimise']]],
+  ['constantfoldtdefine_4',['constantFoldTDefine',['../namespaceoptimise.html#a0c7cfd9730e301d99148884db2edac1e',1,'optimise']]],
+  ['convertanf_5',['convertANF',['../namespacetac.html#a62c345665121dbb6897827bd22b1080b',1,'tac']]],
+  ['convertinstruction_6',['convertInstruction',['../namespaceassembly.html#a4cd69339169a300abcd13588cdb9e069',1,'assembly']]],
+  ['convertprimitive_7',['convertPrimitive',['../namespaceassembly.html#a1f80e8759f62f9c83feeefac7af74b2b',1,'assembly']]],
+  ['createbooltoken_8',['createBoolToken',['../namespaceoptimise.html#a6dbd1ab93158ed0c015904f6ec9f8f55',1,'optimise']]],
+  ['createconstantnode_9',['createConstantNode',['../namespaceoptimise.html#a9b2284d22480a99debf3540249f8dc9a',1,'optimise']]],
+  ['createnumbertoken_10',['createNumberToken',['../namespaceoptimise.html#a3ca220563c6489bf347489c83646a6db',1,'optimise']]]
 ];

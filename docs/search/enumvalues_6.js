@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['hash_0',['HASH',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba50b7748612b28db487d115f220bb77ab',1,'Token.h']]]
+  ['label_0',['LABEL',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a6f434c508ad901b8667ed22f713e52bb',1,'tac']]],
+  ['lcall_1',['LCALL',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190ad63795393d85fb970443bb429fb910af',1,'tac']]],
+  ['load_2',['LOAD',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a615d2885ef7576cedd9aafbb2578f028',1,'tac']]]
 ];

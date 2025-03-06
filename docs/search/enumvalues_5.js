@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['greater_5fthan_0',['GREATER_THAN',['../_token_8h.html#ad65a532dd54987dd394ec78744700b2ba1625ef4fe09f68fa20d3ff6e02cd5c8e',1,'Token.h']]]
+  ['jump_0',['JUMP',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a40222410c7347ec4b6bcaba3bcb21f3b',1,'tac']]],
+  ['jump_5fif_1',['JUMP_IF',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a1d1f07e000d730605f77c81d133bbf58',1,'tac']]],
+  ['jump_5fif_5fnot_2',['JUMP_IF_NOT',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190a338fa39aeab09279ef65d92cf9eec76a',1,'tac']]]
 ];

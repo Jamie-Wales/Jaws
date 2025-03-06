@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['complextype_0',['ComplexType',['../class_number.html#af330352ad3f91be2186a2d91d4c704d0',1,'Number']]]
+  ['constant_0',['Constant',['../namespaceoptimise.html#a2b27fb5ca346317e524193fddb2508f9',1,'optimise']]]
 ];

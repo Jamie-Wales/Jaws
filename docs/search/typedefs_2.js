@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['expressionvariant_0',['ExpressionVariant',['../class_expression.html#a8f961e6f82f3018ff184a9677cbefad3',1,'Expression']]]
+  ['declaration_0',['Declaration',['../classir_1_1_top_level.html#a0923a186e42d30a0bb5b22c0daa1178c',1,'ir::TopLevel']]]
 ];

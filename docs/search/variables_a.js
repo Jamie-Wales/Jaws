@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['macroprocessor_0',['macroProcessor',['../class_interpreter.html#a09c4137439ef0a92ae93e6efaf2616a1',1,'Interpreter']]],
-  ['macros_1',['macros',['../class_macro_expander.html#ae0059bfdea7a66caee5af88453cc4b3f',1,'MacroExpander::macros'],['../class_macro_processor.html#a688defaecf1e9b636c02d22f247059a8',1,'MacroProcessor::macros']]],
-  ['matcher_2',['matcher',['../class_macro_processor.html#a9add320b66cee8240dceb5f1e11df034',1,'MacroProcessor']]]
+  ['param_5fregisters_0',['PARAM_REGISTERS',['../namespaceassembly.html#ababf85728825b55e941df18955c35846',1,'assembly']]],
+  ['params_1',['params',['../classir_1_1_app.html#a362b25c37d6147d178200826db8ed28f',1,'ir::App::params'],['../classir_1_1_lambda.html#af86c956125365271da6ffdaa40dc7d9d',1,'ir::Lambda::params']]]
 ];
