@@ -59,20 +59,20 @@ export function EditorView() {
 
     return (
         <div className="space-y-6">
-            <Card className="gradient-card">
+            <Card className="gradient-card animate-fadeScale">
                 <CardHeader className="gradient-card-header">
                     <div className="flex flex-row items-center justify-between space-y-0">
                         <div>
                             <CardTitle className="gradient-title">Editor</CardTitle>
                             {isLoadedFromExample && (
-                                <CardDescription className="gradient-description">
+                                <CardDescription className="gradient-description animate-fadeSlideIn">
                                     Example code loaded - ready to run!
                                 </CardDescription>
                             )}
                         </div>
                         <Button
                             onClick={handleRunCode}
-                            className="primary-button"
+                            className="primary-button transition-all duration-200"
                             disabled={interpreter.loading}
                         >
                             <Play className="h-4 w-4 mr-2" />
@@ -91,7 +91,7 @@ export function EditorView() {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="gradient-card">
+            <Card className="gradient-card animate-fadeScale animation-delay-200">
                 <CardHeader className="gradient-card-header">
                     <CardTitle className="gradient-title">Output</CardTitle>
                     <CardDescription className="gradient-description">

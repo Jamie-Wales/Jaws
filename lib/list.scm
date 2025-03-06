@@ -1,3 +1,4 @@
+(import base loops)
 (define (cadr x) (car (cdr x)))     ; Second element
 (define (cddr x) (cdr (cdr x)))     ; Rest after the second element
 (define (caddr x) (car (cddr x)))   ; Third element
@@ -42,3 +43,55 @@
 (define (cddada x) (cdr (cdadar x)))
 (define (cdddaa x) (cdr (cddaar x)))
 (define (cdddda x) (cdr (cdddar x)))
+
+
+(define (reverse lst)
+  (let loop ([lst lst] [lst-reversed '()])
+    (if (null? lst)
+        lst-reversed
+        (loop (cdr lst) (cons (car lst) lst-reversed)))))
+
+
+(define (list-tail lst)
+  (let loop ([lst lst])
+    (if (null? (cdr lst))
+        (car lst)
+        (loop (cdr lst)))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

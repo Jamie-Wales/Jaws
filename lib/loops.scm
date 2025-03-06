@@ -1,4 +1,3 @@
-(import base)
 (define-syntax while
   (syntax-rules ()
     ((while condition body ...)

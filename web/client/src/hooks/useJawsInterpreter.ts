@@ -6,6 +6,7 @@ declare global {
             JawsWrapper: new () => {
                 evaluate: (input: string) => string;
                 getEnvironment: () => string;
+                setOption?: (option: string, value: boolean) => void;
             };
         }>;
     }
@@ -19,6 +20,7 @@ const useJawsInterpreter = () => {
     useEffect(() => {
         const initializeInterpreter = async () => {
             try {
+                // Wait for the WebAssembly module to load
                 const checkModule = () => {
                     return new Promise<void>((resolve) => {
                         const check = () => {
@@ -33,10 +35,14 @@ const useJawsInterpreter = () => {
                 };
 
                 await checkModule();
-                if (!window.createJawsModule) throw new Error('WASM module not loaded');
+
+                if (!window.createJawsModule) {
+                    throw new Error('WASM module not loaded');
+                }
 
                 const module = await window.createJawsModule();
                 const jawsInstance = new module.JawsWrapper();
+
                 setInterpreter(jawsInstance);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to initialize WASM module');
@@ -50,10 +56,28 @@ const useJawsInterpreter = () => {
 
     const evaluate = (input: string): string => {
         if (!interpreter) return 'Interpreter not initialized';
-        return interpreter.evaluate(input);
+        try {
+            return interpreter.evaluate(input);
+        } catch (err) {
+            console.error("Evaluation error:", err);
+            return `Evaluation error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        }
     };
 
-    return { evaluate, loading, error };
+    // Add option setter if available
+    const setOption = (option: string, value: boolean): void => {
+        if (interpreter && typeof interpreter.setOption === 'function') {
+            interpreter.setOption(option, value);
+        }
+    };
+
+    return {
+        evaluate,
+        setOption,
+        loading,
+        error,
+        instance: interpreter
+    };
 };
 
 export default useJawsInterpreter;

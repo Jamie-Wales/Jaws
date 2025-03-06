@@ -57,9 +57,7 @@ InterpreterState createInterpreter()
     define("append", jaws_list::append);
     define("load-library", jaws_ffi::loadLibrary);
     define("register-function", jaws_ffi::registerFunction);
-    define("reverse", jaws_list::reverse);
     define("list-ref", jaws_list::listRef);
-    define("list-tail", jaws_list::listTail);
     define("list-set!", jaws_list::listSet);
     define("member", jaws_list::member);
     define("assq", jaws_list::assq);

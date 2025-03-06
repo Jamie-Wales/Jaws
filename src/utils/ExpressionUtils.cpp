@@ -17,6 +17,16 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const AtomExpression& e) -> std::shared_ptr<Expression> {
                               return expr;
                           },
+
+                          [&](const QuasiQuoteExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("quasiquote", Tokentype::IDENTIFIER));
+                              for (const auto& elem : e.elements) {
+                                  elements.push_back(exprToList(elem));
+                              }
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
                           [&](const MacroAtomExpression& e) -> std::shared_ptr<Expression> {
                               return expr;
                           },

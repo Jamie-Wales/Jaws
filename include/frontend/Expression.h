@@ -10,6 +10,7 @@ class Expression;
 
 enum class ExprType {
     MacroAtom,
+    QuasiQuote,
     Atom,
     SExpr,
     List,
@@ -25,6 +26,12 @@ enum class ExprType {
     SyntaxRules,
     DefineSyntax,
     Let
+};
+
+class QuasiQuoteExpression {
+public:
+    std::vector<std::shared_ptr<Expression>> elements;
+    QuasiQuoteExpression(std::vector<std::shared_ptr<Expression>> elements);
 };
 
 /**
@@ -284,7 +291,8 @@ public:
         ImportExpression,
         SyntaxRulesExpression,
         DefineSyntaxExpression,
-        LetExpression>;
+        LetExpression,
+        QuasiQuoteExpression>;
 
     ExpressionVariant as;
     int line;
@@ -328,6 +336,8 @@ public:
     ExprType type() const
     {
         return std::visit(overloaded {
+
+                              [](const QuasiQuoteExpression&) { return ExprType::QuasiQuote; },
                               [](const MacroAtomExpression&) { return ExprType::MacroAtom; },
                               [](const AtomExpression&) { return ExprType::Atom; },
                               [](const sExpression&) { return ExprType::SExpr; },
@@ -353,6 +363,8 @@ public:
 static std::string typeToString(ExprType type)
 {
     switch (type) {
+    case ExprType::QuasiQuote:
+        return "QuasiQuote";
     case ExprType::MacroAtom:
         return "MacroAtom";
     case ExprType::Atom:

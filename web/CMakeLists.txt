@@ -6,8 +6,13 @@ set(CMAKE_TOOLCHAIN_FILE $ENV{EMSDK}/upstream/emscripten/cmake/Modules/Platform/
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 file(GLOB SOURCES
+
+
+    "../src/utils/*.cpp"
+    "../src/interpreter/*.cpp"
+    "../src/frontend/*.cpp"
     "../src/compiler/*.cpp"
-    "../src/compiler/builtins/*.cpp"
+    "../src/interpreter/builtins/*.cpp"
 )
 list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
 list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/JawsWrapper.cpp")
@@ -36,7 +41,10 @@ set_target_properties(jaws_wasm PROPERTIES
 
 target_include_directories(jaws_wasm PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include/frontend"
     "${CMAKE_CURRENT_SOURCE_DIR}/../include/compiler"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include/utils"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include/interpreter"
 )
 # Copy to the client directory inside web
 add_custom_command(TARGET jaws_wasm POST_BUILD

@@ -7,9 +7,11 @@ import { ExamplesView } from '@/views/example';
 import { GetStartedView } from '@/views/getStarted';
 import "@/styles/globals.css"
 
+const basename = import.meta.env.BASE_URL || '/';
+
 export default function App() {
     return (
-        <BrowserRouter basename={process.env.PUBLIC_URL}>
+        <BrowserRouter basename={basename}>
             <Routes>
                 <Route path="/Jaws" element={<WelcomePage />} />
                 <Route element={<Layout />}>

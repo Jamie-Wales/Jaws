@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['ifexpression_0',['IfExpression',['../class_if_expression.html',1,'']]],
-  ['importexpression_1',['ImportExpression',['../class_import_expression.html',1,'']]],
-  ['interpreter_2',['Interpreter',['../class_interpreter.html',1,'']]],
-  ['interpretererror_3',['InterpreterError',['../class_interpreter_error.html',1,'']]]
+  ['quote_0',['Quote',['../classir_1_1_quote.html',1,'ir']]]
 ];

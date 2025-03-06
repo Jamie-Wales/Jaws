@@ -1,12 +1,13 @@
 var searchData=
 [
-  ['generateerrorindicator_0',['generateErrorIndicator',['../class_parse_error.html#a2fdc9c8ba543c64491233a5282933bdd',1,'ParseError']]],
-  ['generatetokens_1',['generateTokens',['../class_scanner.html#a57fb23e9b0531d1dab75835349b22e50',1,'Scanner']]],
-  ['get_2',['get',['../class_environment.html#a8dfe49a19d9884865bf8e6f64dae6099',1,'Environment::get()'],['../class_port.html#aa1dae976e5f24a917edc1dd649dcb71a',1,'Port::get()']]],
-  ['getline_3',['getLine',['../class_scanner.html#ae66fbf528919d657c9ca944e9710782b',1,'Scanner']]],
-  ['getoutput_4',['getOutput',['../class_port.html#a2899a41c9ea8df6237c9700b6377b7ac',1,'Port']]],
-  ['gettype_5',['getType',['../class_port.html#aefeaa218383ed3480eca325f02444204',1,'Port']]],
-  ['getvalue_6',['getValue',['../class_scheme_value.html#a6a0962bcb5a07c7ba4674a4c4ff33108',1,'SchemeValue']]],
-  ['greater_7',['greater',['../namespacejaws__math.html#ac8bb81cb8a4dda3d7e22e0e6b14e6051',1,'jaws_math::greater()'],['../namespacejaws__eq.html#a2f9e894f4fa2ebd7b8ddca33bfe74653',1,'jaws_eq::greater()']]],
-  ['greaterorequal_8',['greaterOrEqual',['../namespacejaws__math.html#a47c5ed97be976b95daba293c555541c9',1,'jaws_math']]]
+  ['handlealloc_0',['handleAlloc',['../namespaceassembly.html#a5978307952341a67bb1e090d96464433',1,'assembly']]],
+  ['handlecall_1',['handleCall',['../namespaceassembly.html#a3a984d6000141bfe82f5cf89e532fd6a',1,'assembly']]],
+  ['handlecopy_2',['handleCopy',['../namespaceassembly.html#ae1b738849a3e06fae42048b1efe86520',1,'assembly']]],
+  ['handlegc_3',['handleGC',['../namespaceassembly.html#a1bf8e9cc7aabcebe2bed8bb0a5c49d0a',1,'assembly']]],
+  ['handlejump_4',['handleJump',['../namespaceassembly.html#a6b6f9466a921474909d24521136489c7',1,'assembly']]],
+  ['handlejumpif_5',['handleJumpIf',['../namespaceassembly.html#a1ce2f16e041b53931f6c7e4627aba77e',1,'assembly']]],
+  ['handlejumpifnot_6',['handleJumpIfNot',['../namespaceassembly.html#a1b234bb42fa2dc21f497ce7d557f18f9',1,'assembly']]],
+  ['handlelabel_7',['handleLabel',['../namespaceassembly.html#aa14533c4742c7d976d03b55979c74b45',1,'assembly']]],
+  ['handleload_8',['handleLoad',['../namespaceassembly.html#ae020b42150b5285670eb3394031a08ce',1,'assembly']]],
+  ['handlestore_9',['handleStore',['../namespaceassembly.html#adc9fa2670870b7b1191c0068b54ca43c',1,'assembly']]]
 ];

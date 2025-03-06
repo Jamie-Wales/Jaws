@@ -77,13 +77,71 @@ export default {
                 "accordion-up": {
                     from: { height: "var(--radix-accordion-content-height)" },
                     to: { height: 0 }
+                },
+                "fadeSlideIn": {
+                    from: { opacity: 0, transform: "translateY(10px)" },
+                    to: { opacity: 1, transform: "translateY(0)" }
+                },
+                "slideFromLeft": {
+                    from: { opacity: 0, transform: "translateX(-10px)" },
+                    to: { opacity: 1, transform: "translateX(0)" }
+                },
+                "floatIn": {
+                    "0%": { opacity: 0, transform: "translateY(30px)" },
+                    "100%": { opacity: 1, transform: "translateY(0)" }
+                },
+                "slideInRight": {
+                    "0%": { opacity: 0, transform: "translateX(-30px)" },
+                    "100%": { opacity: 1, transform: "translateX(0)" }
+                },
+                "fadeScale": {
+                    "0%": { opacity: 0, transform: "scale(0.95)" },
+                    "100%": { opacity: 1, transform: "scale(1)" }
+                },
+                "gradientFlow": {
+                    "0%": { backgroundPosition: "0% 50%" },
+                    "50%": { backgroundPosition: "100% 50%" },
+                    "100%": { backgroundPosition: "0% 50%" }
+                },
+                "shimmer": {
+                    "0%": { backgroundPosition: "-200% 0" },
+                    "100%": { backgroundPosition: "200% 0" }
                 }
             },
             animation: {
                 "accordion-down": "accordion-down 0.2s ease-out",
-                "accordion-up": "accordion-up 0.2s ease-out"
+                "accordion-up": "accordion-up 0.2s ease-out",
+                "fadeSlideIn": "fadeSlideIn 0.3s ease-out forwards",
+                "slideFromLeft": "slideFromLeft 0.3s ease-out forwards",
+                "floatIn": "floatIn 0.8s ease-out forwards",
+                "slideInRight": "slideInRight 0.6s ease-out forwards",
+                "fadeScale": "fadeScale 0.6s ease-out forwards",
+                "gradientFlow": "gradientFlow 15s ease infinite",
+                "shimmer": "shimmer 3s linear infinite"
             }
         }
     },
-    plugins: [animatePlugin]
+    plugins: [
+        animatePlugin,
+        function ({ addUtilities }) {
+            const newUtilities = {
+                '.animation-delay-100': {
+                    'animation-delay': '0.1s',
+                },
+                '.animation-delay-200': {
+                    'animation-delay': '0.2s',
+                },
+                '.animation-delay-300': {
+                    'animation-delay': '0.3s',
+                },
+                '.animation-delay-400': {
+                    'animation-delay': '0.4s',
+                },
+                '.animation-delay-500': {
+                    'animation-delay': '0.5s',
+                },
+            }
+            addUtilities(newUtilities)
+        }
+    ]
 }

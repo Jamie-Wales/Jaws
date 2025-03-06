@@ -104,13 +104,13 @@ export function WelcomePage() {
 
     return (
         <div className="min-h-screen bg-white">
-            <header className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white">
+            <header className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white animate-gradientFlow">
                 <nav className="container mx-auto px-4 py-4">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <div className="text-2xl md:text-3xl font-bold animate-[slideInRight_0.6s_ease-out_forwards]">JAWS</div>
-                                <ParenthesesIcon className="animate-[slideInRight_0.6s_ease-out_forwards]" />
+                                <div className="text-2xl md:text-3xl font-bold animate-slideInRight">JAWS</div>
+                                <ParenthesesIcon className="animate-slideInRight" />
                             </div>
                             <Button
                                 variant="ghost"
@@ -151,12 +151,12 @@ export function WelcomePage() {
 
                 <div className="container mx-auto px-4 py-12 md:py-24">
                     <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-                        <div className="space-y-6 animate-[floatIn_0.8s_ease-out_forwards]">
+                        <div className="space-y-6 animate-floatIn">
                             <div className="space-y-2">
                                 <h1 className="text-4xl md:text-6xl font-bold leading-tight">
                                     JAWS
                                 </h1>
-                                <p className="text-lg md:text-xl text-cyan-400 font-medium tracking-wide bg-gradient-text">
+                                <p className="text-lg md:text-xl text-cyan-400 font-medium tracking-wide animate-shimmer">
                                     Jaws Awesomely Wrangles Scheme
                                 </p>
                             </div>
@@ -183,7 +183,7 @@ export function WelcomePage() {
                                 </Button>
                             </div>
                         </div>
-                        <div className="bg-zinc-900 rounded-lg p-4 md:p-6 shadow-xl ring-1 ring-white/10 overflow-x-auto animate-[fadeScale_0.8s_ease-out_0.4s_forwards] opacity-0">
+                        <div className="bg-zinc-900 rounded-lg p-4 md:p-6 shadow-xl ring-1 ring-white/10 overflow-x-auto animate-fadeScale animation-delay-400">
                             <MultiLineCode code={sampleCode} />
                         </div>
                     </div>
@@ -221,8 +221,8 @@ export function WelcomePage() {
                         ].map((feature, index) => (
                             <Card
                                 key={feature.title}
-                                className="bg-white border-slate-200 hover:transform hover:-translate-y-1 transition-all duration-300 opacity-0"
-                                style={{ animation: `fadeScale 0.6s ease-out ${index * 0.1}s forwards` }}
+                                className={`bg-white border-slate-200 hover:transform hover:-translate-y-1 transition-all duration-300 animate-fadeScale`}
+                                style={{ animationDelay: `${index * 0.1}s` }}
                             >
                                 <CardContent className="pt-6 text-center">
                                     <feature.Icon className="h-12 w-12 mb-4 mx-auto transition-transform duration-300 text-cyan-500" />

@@ -1,0 +1,11 @@
+<map id="jaws_io::newline" name="jaws_io::newline">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,56,123,82"/>
+<area shape="rect" id="Node000002" href="$class_scheme_value.html#ad2f08a680d2b5ed19ae74d8b786cbda4" title=" " alt="" coords="171,5,321,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,53,182,33,184,38,114,58"/>
+<area shape="rect" id="Node000003" href="$class_scheme_value.html#ae7fe4d1f95f7fafbbf9f88a923659a35" title=" " alt="" coords="369,31,515,56"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="123,62,353,47,353,52,123,68"/>
+<area shape="rect" id="Node000004" href="$_value_8cpp.html#a7b493a4583793ef1da75b5f126e5417d" title=" " alt="" coords="181,131,311,156"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="98,80,199,122,197,127,96,85"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="322,25,354,29,353,35,321,31"/>
+<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="215,132,209,122,213,112,225,106,246,104,268,107,279,113,277,118,266,112,246,109,227,111,217,116,214,121,220,129"/>
+</map>

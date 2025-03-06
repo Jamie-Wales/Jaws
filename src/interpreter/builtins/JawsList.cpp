@@ -174,22 +174,24 @@ std::optional<SchemeValue> append(
     return SchemeValue(std::move(result));
 }
 
-std::optional<SchemeValue> reverse(
-    interpret::InterpreterState&,
-    const std::vector<SchemeValue>& args)
-{
-    if (args.size() != 1) {
-        throw InterpreterError("reverse: requires exactly 1 argument");
-    }
-
-    auto val = args[0].ensureValue();
-    if (!val.isList()) {
-        throw InterpreterError("reverse: argument must be a list");
-    }
-
-    auto list = val.asList();
-    return SchemeValue(std::list<SchemeValue>(list.rbegin(), list.rend()));
-}
+// This has been moved to (base list)
+//
+// std::optional<SchemeValue> reverse(
+//     interpret::InterpreterState&,
+//     const std::vector<SchemeValue>& args)
+// {
+//     if (args.size() != 1) {
+//         throw InterpreterError("reverse: requires exactly 1 argument");
+//     }
+//
+//     auto val = args[0].ensureValue();
+//     if (!val.isList()) {
+//         throw InterpreterError("reverse: argument must be a list");
+//     }
+//
+//     auto list = val.asList();
+//     return SchemeValue(std::list<SchemeValue>(list.rbegin(), list.rend()));
+// }
 
 std::optional<SchemeValue> listRef(
     interpret::InterpreterState&,
@@ -221,35 +223,36 @@ std::optional<SchemeValue> listRef(
     return *it;
 }
 
-std::optional<SchemeValue> listTail(
-    interpret::InterpreterState&,
-    const std::vector<SchemeValue>& args)
-{
-    if (args.size() != 2) {
-        throw InterpreterError("list-tail: requires exactly 2 arguments");
-    }
-
-    auto list = args[0].ensureValue();
-    if (!list.isList()) {
-        throw InterpreterError("list-tail: first argument must be a list");
-    }
-
-    auto index = args[1].ensureValue();
-    if (!index.isNumber()) {
-        throw InterpreterError("list-tail: second argument must be a number");
-    }
-
-    int idx = index.asNumber().toInt();
-    const auto& lst = list.asList();
-
-    if (idx < 0 || static_cast<size_t>(idx) >= lst.size()) {
-        throw InterpreterError("list-tail: index out of bounds");
-    }
-
-    auto it = lst.begin();
-    std::advance(it, idx);
-    return SchemeValue(std::list<SchemeValue>(it, lst.end()));
-}
+// Can be found in (base list)
+// std::optional<SchemeValue> listTail(
+//     interpret::InterpreterState&,
+//     const std::vector<SchemeValue>& args)
+// {
+//     if (args.size() != 2) {
+//         throw InterpreterError("list-tail: requires exactly 2 arguments");
+//     }
+//
+//     auto list = args[0].ensureValue();
+//     if (!list.isList()) {
+//         throw InterpreterError("list-tail: first argument must be a list");
+//     }
+//
+//     auto index = args[1].ensureValue();
+//     if (!index.isNumber()) {
+//         throw InterpreterError("list-tail: second argument must be a number");
+//     }
+//
+//     int idx = index.asNumber().toInt();
+//     const auto& lst = list.asList();
+//
+//     if (idx < 0 || static_cast<size_t>(idx) >= lst.size()) {
+//         throw InterpreterError("list-tail: index out of bounds");
+//     }
+//
+//     auto it = lst.begin();
+//     std::advance(it, idx);
+//     return SchemeValue(std::list<SchemeValue>(it, lst.end()));
+// }
 
 std::optional<SchemeValue> listSet(
     interpret::InterpreterState&,

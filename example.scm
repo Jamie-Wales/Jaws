@@ -1,1 +1,5 @@
-(import base loops print)
+(import loops)
+
+
+
+(repeat 10 (display "hello"))

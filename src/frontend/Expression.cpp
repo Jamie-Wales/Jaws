@@ -21,6 +21,11 @@ sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems, bool va
 {
 }
 
+QuasiQuoteExpression::QuasiQuoteExpression(std::vector<std::shared_ptr<Expression>> elems)
+    : elements(std::move(elems))
+{
+}
+
 SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression> value)
     : identifier(std::move(identifier))
     , value(std::move(value))
@@ -222,6 +227,15 @@ void Expression::toString(std::stringstream& ss) const
             [&](const AtomExpression& e) {
                 ss << e.value.lexeme;
             },
+
+            [&](const QuasiQuoteExpression& e) {
+                ss << "'(";
+                for (const auto& ele : e.elements) {
+                    ele->type() != ExprType::Quote ? ss << "," << ele->toString()
+                                                   : ss << ele->toString();
+                }
+                ss << ")";
+            },
             [&](const MacroAtomExpression& e) {
                 ss << e.value.lexeme;
                 if (e.isVariadic)
@@ -419,6 +433,17 @@ void Expression::toString(std::stringstream& ss) const
 std::shared_ptr<Expression> Expression::clone() const
 {
     return std::visit(overloaded {
+
+                          [&](const QuasiQuoteExpression& p) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements = {};
+                              for (const auto& ele : p.elements) {
+                                  elements.push_back(ele->clone());
+                              }
+                              return std::make_shared<Expression>(Expression {
+                                  QuasiQuoteExpression {
+                                      elements },
+                                  line });
+                          },
                           [&](const LetExpression& p) -> std::shared_ptr<Expression> {
                               LetExpression::Args output;
                               for (const auto& [first, second] : p.arguments) {
@@ -568,12 +593,20 @@ std::string Expression::ASTToString() const
 
 void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
 {
-    // We'll just do a variant visitor that prints node type + children.
     std::visit(
         overloaded {
             [&](const AtomExpression& e) {
                 indent(ss, indentLevel);
                 ss << "AtomExpression: " << e.value.lexeme << std::endl;
+            },
+
+            [&](const QuasiQuoteExpression& e) {
+                indent(ss, indentLevel);
+                ss << "QuasiQuoteExpression: ";
+                for (const auto& ele : e.elements) {
+                    ele->toString(ss);
+                }
+                ss << std::endl;
             },
             [&](const MacroAtomExpression& e) {
                 indent(ss, indentLevel);
