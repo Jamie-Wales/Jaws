@@ -4,6 +4,7 @@
 #include "Error.h"
 #include "Import.h"
 #include "MacroTraits.h"
+#include "QBEGenerator.h"
 #include "ThreeAC.h"
 #include "icons.h"
 #include "interpret.h"
@@ -202,7 +203,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                     std::string asmFile = (outPath / "output.asm").string();
                     std::string objFile = (outPath / "output.o").string();
                     std::cout << "Generating assembly to: " << asmFile << std::endl;
-                    assembly::generateAssembly(_3ac, asmFile);
+                    generateQBEIr(_3ac, asmFile);
                     std::cout << "Assembling to: " << objFile << std::endl;
                     std::string asmCmd = "nasm -f elf64 -g -F dwarf -o " + objFile + " " + asmFile + " 2>&1";
                     if (system(asmCmd.c_str()) != 0) {

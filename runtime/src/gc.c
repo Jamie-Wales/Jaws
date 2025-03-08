@@ -198,8 +198,8 @@ void mark_roots()
     }
     void* stack_top;
     void* stack_bottom;
-    asm("movq %%rbp, %0" : "=r"(stack_bottom));
-    asm("movq %%rsp, %0" : "=r"(stack_top));
+    asm("mov %0, fp" : "=r"(stack_bottom));
+    asm("mov %0, sp" : "=r"(stack_top));
     for (void** p = stack_top; p <= (void**)stack_bottom; p++) {
         SchemeObject* obj = (SchemeObject*)*p;
         if ((char*)obj >= (char*)heap && (char*)obj < (char*)heap + used) {

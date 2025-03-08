@@ -21,7 +21,7 @@ std::vector<std::shared_ptr<ir::TopLevel>> optimise(std::vector<std::shared_ptr<
 
     printAnf("<| Optimising ANF |>", anfs, print);
     dce(anfs, print);
-    optimiseConstants(anfs);
+    // optimiseConstants(anfs);
     printAnf("<| Post ConstantFold ANF |>", anfs, print);
     return anfs;
 }

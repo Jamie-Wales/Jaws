@@ -1,6 +1,6 @@
 #pragma once
 #include "types.h"
 
-void display(SchemeObject* SchemeObject);
+void scheme_display(SchemeObject* SchemeObject);
 
-int64_t scheme_multiply(SchemeObject* a, SchemeObject* b);
+SchemeObject* scheme_multiply(SchemeObject* a, SchemeObject* b);

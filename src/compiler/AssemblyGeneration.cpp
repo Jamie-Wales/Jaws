@@ -188,7 +188,7 @@ void convertInstruction(const tac::ThreeACInstruction& instr, AssemblyGeneratorS
     case tac::Operation::COPY:
         handleCopy(instr, state);
         break;
-    case tac::Operation::LCALL:
+    case tac::Operation::CALL:
         handleCall(instr, state);
         break;
     case tac::Operation::ALLOC:

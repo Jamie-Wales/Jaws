@@ -1,12 +1,16 @@
 #include "../include/jaws_io.h"
+#include "../include/gc.h"
 #include <stdio.h>
 
-void display(SchemeObject* obj)
+// Function should be named scheme_display to match QBE
+void scheme_display(SchemeObject* obj)
 {
     printf("%s\n", to_string(obj));
 }
 
-int64_t scheme_multiply(SchemeObject* a, SchemeObject* b)
+// Return type should be SchemeObject*, not int64_t
+SchemeObject* scheme_multiply(SchemeObject* a, SchemeObject* b)
 {
-    return a->value.number * b->value.number;
+    int64_t result = a->value.number * b->value.number;
+    return allocate(TYPE_NUMBER, result);
 }
