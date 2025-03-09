@@ -63,8 +63,5 @@ std::shared_ptr<MacroExpression> transformMacro(const std::shared_ptr<Expression
     const std::string& macroName,
     pattern::MacroEnvironment& macroEnv);
 
-std::shared_ptr<Expression> expandMacro(std::shared_ptr<Expression> expr,
-    pattern::MacroEnvironment& env);
-
 std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_ptr<Expression>> exprs);
 }

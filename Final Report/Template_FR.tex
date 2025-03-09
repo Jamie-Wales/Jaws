@@ -9,6 +9,19 @@
 % Some package I am using. You may not need them
 %
 \usepackage{rotating}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily,
+  keywordstyle=\color{blue},
+  commentstyle=\color{green!60!black},
+  stringstyle=\color{red},
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=5pt,
+  frame=single,
+  breaklines=true
+}
 \usepackage{subfloat}
 \usepackage{color}
 \usepackage{pdfpages}
@@ -124,18 +137,76 @@ A tree-walk interpreter is the simplest of the approaches to interpretation wher
 It is important to note that a compiler, would use the same front-end as an interpreter but split it's pipeline off. The compiler would generate some sort of intermediate representation (IR) which would then be converted into machine code.
 
 \subsection{Interpreter}
+
+\subsubsection{Lexer}
 The initial development of any compiler/interpreter project begins with establishing an effective front-end strategy. This critical first phase involves selecting appropriate approaches for lexing and parsing to transform raw text into a structured format.
 For lexical analysis, several methodologies were considered, including, manual character-by-character scanning with explicit state management. Using lexer generator tools like Flex or ANTLR; Or finally, Regular expression-based pattern matching
 The regular expression approach was selected for several key reasons. 
-
 First, regular expressions naturally map to the deterministic finite automaton (DFA) model described by Cooper and Torczon (ADD REF) for lexical analysis. Second, they offer a more concise and maintainable way to express token patterns compared to manual character processing. Third, they avoid the additional learning curve and external dependencies associated with lexer generators, keeping the project self-contained.
-This methodology involves organizing token patterns in a prioritised list, with more specific patterns (like keywords) checked before more general ones (like identifiers). This prioritisation is crucial for correct tokenization since patterns may overlap. For instance, scheme-specific patterns for complex numbers needed to be checked before simpler numeric patterns to ensure proper recognition.
+This methodology involves organising token patterns in a prioritised list, with more specific patterns (like keywords) checked before more general ones (like identifiers). This prioritisation is crucial for correct tokenization since patterns may overlap. For instance, scheme-specific patterns for complex numbers needed to be checked before simpler numeric patterns to ensure proper recognition.
 For keyword handling, a two-stage approach was selected: first identify all text as a general identifier, then check a keyword map to determine if it's actually a reserved word. This approach simplifies the regex patterns while maintaining the language's semantics.
-The complete set of token patterns and their priorities were determined by analyzing the R7RS Scheme specification (ADD REF), ensuring comprehensive coverage of the language syntax.
+The complete set of token patterns and their priorities were determined by analysing the R7RS Scheme specification (ADD REF), ensuring comprehensive coverage of the language syntax.
 
-Parsing would be the natural next step in construction of a parser. Academically, there is much debate among parsing strategies the entirity of the dragon book is effectively a love letter to parsing startegies. As with lexing, there are tools in which a parser is generated this generally builds a table based approach which can be far to diffficult to be written by scratch. A recursive decent parsing approach was picked due to the fact that Scheme is homoiconic.
-The amount of parsing strategies are generally due to the difficulty of (REF THIS WORD) order of operations. In a standard programming language there are a number of operation types postfix (after the token) prefix (before the token) infix inbetween the token, even mixfix which the terniary operator is, which is an operator within an operation. Different parsing strategies are an attempt to performatly destinguish these. However, a lot of the writing on parsing strategies comes from a time where we had to be more performance minded. 
-further more the homoiconic nature of scheme means that every operation is postfix and is handled by parentheses.
+\subsubsection{Parser}
+Parsing naturally follows lexing in the construction of an interpreter. The academic literature on parsing strategies is extensive, (ADD REF "Dragon Book") dedicating significant coverage to the topic. 
+As with lexing, there exist tools that generate parsers automatically, typically producing table-based implementations that would be prohibitively complex to write manually. For this project, a recursive descent parsing (Algorithm) approach was selected, leveraging Scheme's homoiconic nature.
+The extensive amount of parsing strategies in compiler theory largely stems from the complexity of handling operator precedence. Standard programming languages employ various operator types: postfix (after the operands), prefix (before the operands), infix (between operands), and even mixfix (such as the ternary operator, which interleaves with its operands). Different parsing techniques attempt to efficiently distinguish between these forms.
+However, much of the literature on parsing optimisation originates from an era when computational efficiency was more constrained. Modern hardware has somewhat diminished these concerns relative to implementation simplicity and maintainability.
+Furthermore, Scheme's homoiconic syntax, where every operation is uniformly expressed with parentheses in prefix notation. This significantly simplifies the parsing challenge. Ultimately, it eliminates the need for complex precedence handling, making recursive descent parsing a straightforward and appropriate methodology for this project.
+
+\subsubsection{Macros}
+While most programming languages proceed directly from parsing to interpretation, Scheme introduces a crucial intermediate step: macro expansion. Scheme's powerful macro system represents one of its most distinctive features, enabling sophisticated syntactic extensions that transform the Abstract Syntax Tree before evaluation begins.
+
+Unlike traditional C-style preprocessor macros that operate through simple text substitution, Scheme implements a hygienic macro system that works with structured expressions. This methodological approach provides significant advantages:
+
+\begin{itemize}
+    \item Elimination of variable capture problems and unintended evaluation order issues
+    \item Pattern-matching capabilities that recognize and transform complex syntax patterns
+    \item Preservation of lexical scoping during expansion
+    \item The ability to create domain-specific language extensions within Scheme itself
+\end{itemize}
+
+The implementation for this project follows the R7RS specification's syntax-rules system, which defines macros as pairs of patterns and templates. When a macro is invoked, the system matches the invocation against defined patterns sequentially until finding a match, then generates the corresponding template with appropriate substitutions.
+
+For example, the following macro definition creates an intuitive 'for' loop syntax that expands to a map operation:
+
+\begin{figure}[h!]
+\caption{Example Scheme Macro Definition}
+\begin{lstlisting}[language=Lisp]
+(define-syntax for
+  (syntax-rules (in as)
+    ((for element in list body ...)
+     (map (lambda (element)
+            body ...)
+          list))
+    ((for list as element body ...)
+     (for element in list body ...))))
+\end{lstlisting}
+\end{figure}
+
+This macro enables more readable code like this:
+
+\begin{figure}[h!]
+\caption{Example Macro Usage}
+\begin{lstlisting}[language=Lisp]
+(for x in '(1 2 3 4)
+     (display x)
+     (* x x))
+
+(* This expands to: *)
+(map (lambda (x)
+       (display x)
+       (* x x))
+     '(1 2 3 4))
+
+\end{lstlisting}
+\end{figure}
+
+To ensure proper hygiene, the implementation required a separate evaluation environment for macro expansion. This methodology involves tracking the origin of each identifier and performing appropriate renaming during expansion, preventing variables in the macro definition from capturing variables at the macro use site.
+The macro expansion process transforms the initial AST into an expanded form where all macros have been replaced with their expansions. This approach aligns with the classic Scheme philosophy of providing a minimal core language with powerful syntactic extensions built on top, effectively creating an extended language that is expressed in terms of simpler core constructs.
+
+\subsubsection{Evaluation}
+Once an AST has been developed we then must walk the AST interpreting each node and pasing the result to the next node. This is a recursive process that will continue until the entire AST has been walked. This is the simplest form of interpretation and is the most common form of interpretation for simple languages like Scheme.
 
 
 
@@ -170,7 +241,7 @@ Another essential section that should keep its title as suggested. Briefly discu
 \section{Lexer Implementation Details} \label{app:regex}
 
 \subsection{Regular Expression Patterns}
-The lexer for the Scheme interpreter utilizes the following regular expression patterns to identify tokens:
+The lexer for the Scheme interpreter utilises the following regular expression patterns to identify tokens:
 
 \begin{table}[h]
 \caption{Regular Expression Patterns for Scheme Lexer}
@@ -179,7 +250,7 @@ The lexer for the Scheme interpreter utilizes the following regular expression p
 \hline
 \textbf{Token Type} & \textbf{Regex Pattern} \\
 \hline
-COMMENT & Pattern for comments \\
+COMMENT & comments \\
 \hline
 STRING & Pattern for string literals \\
 \hline
@@ -229,5 +300,48 @@ WHITESPACE & Pattern for whitespace characters \\
 \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+\caption{Recursive Descent Parser for Scheme}
+\label{alg:recursive-descent}
+\begin{algorithmic}[1]
+\Procedure{Parse}{tokens}
+    \State \Return \Call{ParseExpression}{}
+\EndProcedure
+
+\Procedure{ParseExpression}{}
+    \State token $\gets$ current token
+    
+    \If{token is LEFT\_PAREN}
+        \State Consume LEFT\_PAREN
+        \State expressions $\gets$ Parse all expressions until RIGHT\_PAREN
+        \State Consume RIGHT\_PAREN
+        
+        \If{expressions is empty}
+            \State \Return new EmptyList()
+        \ElsIf{first expression is "define"}
+            \If{second expression is identifier}
+                \State \Return new Definition(name, value)
+            \Else
+                \State \Return new FunctionDefinition(name, params, body)
+            \EndIf
+        \ElsIf{first expression is "let"}
+            \State \Return new LetExpression(bindings, body)
+        \Else
+            \State \Return new FunctionApplication(operator, arguments)
+        \EndIf
+        
+    \ElsIf{token is QUOTE}
+        \State Advance token
+        \State \Return new QuoteExpression(\Call{ParseExpression}{})
+    \ElsIf{token is literal}
+        \State Advance token
+        \State \Return new LiteralExpression(token.value)
+    \ElsIf{token is IDENTIFIER}
+        \State Advance token
+        \State \Return new VariableExpression(token.lexeme)
+    \EndIf
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 \end{document}
 

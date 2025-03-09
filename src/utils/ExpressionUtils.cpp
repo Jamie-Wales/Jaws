@@ -57,9 +57,9 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const DefineProcedure& d) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("define"));
-                              elements.push_back(std::make_shared<Expression>(Expression { AtomExpression { d.name }, expr->line }));
 
                               std::vector<std::shared_ptr<Expression>> params;
+                              params.push_back(std::make_shared<Expression>(Expression { AtomExpression { d.name }, expr->line }));
                               for (const auto& param : d.parameters) {
                                   params.push_back(std::make_shared<Expression>(
                                       Expression { AtomExpression { param }, expr->line }));

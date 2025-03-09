@@ -396,24 +396,6 @@ std::shared_ptr<MacroExpression> transformTemplate(const std::shared_ptr<MacroEx
         template_expr->value);
 }
 
-std::shared_ptr<Expression> exprFromMacro(const std::shared_ptr<MacroExpression>& macro)
-{
-    return std::visit(overloaded {
-                          [&](const MacroAtom& atom) -> std::shared_ptr<Expression> {
-                              return std::make_shared<Expression>(Expression {
-                                  AtomExpression { atom.token }, macro->line });
-                          },
-                          [&](const MacroList& list) -> std::shared_ptr<Expression> {
-                              std::vector<std::shared_ptr<Expression>> elements;
-                              for (const auto& elem : list.elements) {
-                                  elements.push_back(exprFromMacro(elem));
-                              }
-                              return std::make_shared<Expression>(Expression {
-                                  ListExpression { std::move(elements) }, macro->line });
-                          } },
-        macro->value);
-}
-
 std::shared_ptr<MacroExpression> transformMacroRecursive(
     const std::shared_ptr<MacroExpression>& expr,
     pattern::MacroEnvironment& env)
@@ -499,127 +481,11 @@ std::shared_ptr<MacroExpression> transformMacro(
     return fullyExpanded;
 }
 
-std::shared_ptr<Expression> expandMacro(
-    std::shared_ptr<Expression> expr,
-    pattern::MacroEnvironment& env)
-{
-    std::cout << typeToString(expr->type()) << std::endl;
-    bool isProcDef = false;
-    std::visit(overloaded {
-                   [&](const DefineExpression& def) {
-                       isProcDef = def.value->type() == ExprType::Lambda;
-                   },
-                   [&](const DefineProcedure&) {
-                       isProcDef = true;
-                   },
-                   [&](const auto&) {
-                   } },
-        expr->as);
-    if (isProcDef) {
-        std::cout << "here" << std::endl;
-        return std::visit(overloaded {
-                              [&](const DefineExpression& def) -> std::shared_ptr<Expression> {
-                                  auto expandedBody = expandMacro(def.value, env);
-                                  return std::make_shared<Expression>(
-                                      Expression { DefineExpression { def.name, expandedBody },
-                                          expr->line });
-                              },
-                              [&](const DefineProcedure& proc) -> std::shared_ptr<Expression> {
-                                  std::vector<std::shared_ptr<Expression>> expandedBody;
-                                  for (const auto& bodyExpr : proc.body) {
-                                      expandedBody.push_back(expandMacro(bodyExpr, env));
-                                  }
-                                  return std::make_shared<Expression>(
-                                      Expression { DefineProcedure { proc.name, proc.parameters, expandedBody },
-                                          expr->line });
-                              },
-                              [&](const auto&) -> std::shared_ptr<Expression> {
-                                  throw std::runtime_error("Should not happen");
-                              } },
-            expr->as);
-    }
-
-    // Convert to MacroExpression for standard macro expansion
-    auto userExpr = fromExpr(expr);
-
-    return std::visit(overloaded {
-                          [&](const MacroAtom& ma) -> std::shared_ptr<Expression> {
-                              if (env.isMacro(ma.token.lexeme)) {
-                                  auto synt = env.getMacroDefinition(ma.token.lexeme);
-                                  auto rules = std::get<SyntaxRulesExpression>((*synt)->as).rules;
-                                  auto literals = std::get<SyntaxRulesExpression>((*synt)->as).literals;
-
-                                  for (const auto& rule : rules) {
-                                      auto patternExpr = fromExpr(rule.pattern);
-                                      auto [matchEnv, success] = tryMatch(
-                                          patternExpr, userExpr, literals, ma.token.lexeme);
-                                      if (success) {
-                                          auto expanded = transformMacro(
-                                              rule.template_expr, matchEnv, ma.token.lexeme, env);
-                                          auto tokens = scanner::tokenize(expanded->toString());
-                                          return (*parse::parse(std::move(tokens)))[0];
-                                      }
-                                  }
-                              }
-                              return expr;
-                          },
-                          [&](const MacroList& ml) -> std::shared_ptr<Expression> {
-                              // First try to expand as a macro application
-                              if (!ml.elements.empty()) {
-                                  if (auto* firstAtom = std::get_if<MacroAtom>(&ml.elements[0]->value)) {
-                                      if (env.isMacro(firstAtom->token.lexeme)) {
-                                          auto synt = env.getMacroDefinition(firstAtom->token.lexeme);
-                                          auto rules = std::get<SyntaxRulesExpression>((*synt)->as).rules;
-                                          auto literals = std::get<SyntaxRulesExpression>((*synt)->as).literals;
-
-                                          for (const auto& rule : rules) {
-                                              auto patternExpr = fromExpr(rule.pattern);
-                                              auto [matchEnv, success] = tryMatch(
-                                                  patternExpr, userExpr, literals, firstAtom->token.lexeme);
-                                              if (success) {
-                                                  auto expanded = transformMacro(
-                                                      rule.template_expr, matchEnv, firstAtom->token.lexeme, env);
-                                                  auto tokens = scanner::tokenize(expanded->toString());
-                                                  return (*parse::parse(std::move(tokens)))[0];
-                                              }
-                                          }
-                                      }
-                                  }
-                              }
-
-                              // Then try to expand any sub-expressions
-                              std::vector<std::shared_ptr<MacroExpression>> expandedElements;
-                              bool anyChanged = false;
-
-                              for (const auto& elem : ml.elements) {
-                                  auto expandedElem = transformMacroRecursive(elem, env);
-                                  if (expandedElem->toString() != elem->toString()) {
-                                      anyChanged = true;
-                                  }
-                                  expandedElements.push_back(expandedElem);
-                              }
-
-                              if (anyChanged) {
-                                  auto macroResult = std::make_shared<MacroExpression>(
-                                      MacroList { std::move(expandedElements) },
-                                      userExpr->isVariadic,
-                                      userExpr->line);
-                                  auto tokens = scanner::tokenize(macroResult->toString());
-                                  return (*parse::parse(std::move(tokens)))[0];
-                              }
-
-                              return expr;
-                          } },
-        userExpr->value);
-}
-
 std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_ptr<Expression>> exprs)
 {
     std::vector<std::shared_ptr<Expression>> toExpand;
     std::vector<std::shared_ptr<Expression>> expanded;
     pattern::MacroEnvironment env;
-
-    // First collect macro definitions
     for (const auto& expr : exprs) {
         std::visit(overloaded {
                        [&](const DefineSyntaxExpression& de) {
@@ -632,64 +498,15 @@ std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_pt
                        } },
             expr->as);
     }
-
-    // Then expand each expression
     for (const auto& expr : toExpand) {
         auto userExpr = fromExpr(expr);
-        auto expandedExpr = std::visit(overloaded {
-                                           [&](const MacroAtom& ma) -> std::shared_ptr<Expression> {
-                                               if (env.isMacro(ma.token.lexeme)) {
-                                                   auto synt = env.getMacroDefinition(ma.token.lexeme);
-                                                   auto rules = std::get<SyntaxRulesExpression>((*synt)->as).rules;
-                                                   auto literals = std::get<SyntaxRulesExpression>((*synt)->as).literals;
+        auto expandedMacro = transformMacroRecursive(userExpr, env);
 
-                                                   for (const auto& rule : rules) {
-                                                       auto patternExpr = fromExpr(rule.pattern);
-                                                       auto [matchEnv, success] = tryMatch(
-                                                           patternExpr, userExpr, literals, ma.token.lexeme);
-                                                       if (success) {
-                                                           auto expanded = transformMacro(
-                                                               rule.template_expr, matchEnv, ma.token.lexeme, env);
-                                                           auto tokens = scanner::tokenize(expanded->toString());
-                                                           return (*parse::parse(std::move(tokens)))[0];
-                                                       }
-                                                   }
-                                               }
-                                               return expr;
-                                           },
-                                           [&](const MacroList& ml) -> std::shared_ptr<Expression> {
-                                               if (!ml.elements.empty()) {
-                                                   if (auto* firstAtom = std::get_if<MacroAtom>(
-                                                           &ml.elements[0]->value)) {
-                                                       if (env.isMacro(firstAtom->token.lexeme)) {
-                                                           auto synt = env.getMacroDefinition(
-                                                               firstAtom->token.lexeme);
-                                                           auto rules = std::get<SyntaxRulesExpression>((*synt)->as)
-                                                                            .rules;
-                                                           auto literals = std::get<SyntaxRulesExpression>(
-                                                               (*synt)->as)
-                                                                               .literals;
+        // Reparse the expanded expression
+        auto tokens = scanner::tokenize(expandedMacro->toString());
+        std::cout << expandedMacro->toString() << std::endl;
 
-                                                           for (const auto& rule : rules) {
-                                                               auto patternExpr = fromExpr(rule.pattern);
-                                                               auto [matchEnv, success] = tryMatch(
-                                                                   patternExpr, userExpr, literals,
-                                                                   firstAtom->token.lexeme);
-                                                               if (success) {
-                                                                   auto expanded = transformMacro(
-                                                                       rule.template_expr, matchEnv,
-                                                                       firstAtom->token.lexeme, env);
-                                                                   auto tokens = scanner::tokenize(
-                                                                       expanded->toString());
-                                                                   return (*parse::parse(std::move(tokens)))[0];
-                                                               }
-                                                           }
-                                                       }
-                                                   }
-                                               }
-                                               return expr;
-                                           } },
-            userExpr->value);
+        auto expandedExpr = (*parse::parse(std::move(tokens)))[0];
 
         expanded.push_back(expandedExpr);
     }
