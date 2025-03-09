@@ -503,6 +503,43 @@ std::shared_ptr<Expression> expandMacro(
     std::shared_ptr<Expression> expr,
     pattern::MacroEnvironment& env)
 {
+    std::cout << typeToString(expr->type()) << std::endl;
+    bool isProcDef = false;
+    std::visit(overloaded {
+                   [&](const DefineExpression& def) {
+                       isProcDef = def.value->type() == ExprType::Lambda;
+                   },
+                   [&](const DefineProcedure&) {
+                       isProcDef = true;
+                   },
+                   [&](const auto&) {
+                   } },
+        expr->as);
+    if (isProcDef) {
+        std::cout << "here" << std::endl;
+        return std::visit(overloaded {
+                              [&](const DefineExpression& def) -> std::shared_ptr<Expression> {
+                                  auto expandedBody = expandMacro(def.value, env);
+                                  return std::make_shared<Expression>(
+                                      Expression { DefineExpression { def.name, expandedBody },
+                                          expr->line });
+                              },
+                              [&](const DefineProcedure& proc) -> std::shared_ptr<Expression> {
+                                  std::vector<std::shared_ptr<Expression>> expandedBody;
+                                  for (const auto& bodyExpr : proc.body) {
+                                      expandedBody.push_back(expandMacro(bodyExpr, env));
+                                  }
+                                  return std::make_shared<Expression>(
+                                      Expression { DefineProcedure { proc.name, proc.parameters, expandedBody },
+                                          expr->line });
+                              },
+                              [&](const auto&) -> std::shared_ptr<Expression> {
+                                  throw std::runtime_error("Should not happen");
+                              } },
+            expr->as);
+    }
+
+    // Convert to MacroExpression for standard macro expansion
     auto userExpr = fromExpr(expr);
 
     return std::visit(overloaded {
@@ -527,6 +564,7 @@ std::shared_ptr<Expression> expandMacro(
                               return expr;
                           },
                           [&](const MacroList& ml) -> std::shared_ptr<Expression> {
+                              // First try to expand as a macro application
                               if (!ml.elements.empty()) {
                                   if (auto* firstAtom = std::get_if<MacroAtom>(&ml.elements[0]->value)) {
                                       if (env.isMacro(firstAtom->token.lexeme)) {
@@ -548,6 +586,28 @@ std::shared_ptr<Expression> expandMacro(
                                       }
                                   }
                               }
+
+                              // Then try to expand any sub-expressions
+                              std::vector<std::shared_ptr<MacroExpression>> expandedElements;
+                              bool anyChanged = false;
+
+                              for (const auto& elem : ml.elements) {
+                                  auto expandedElem = transformMacroRecursive(elem, env);
+                                  if (expandedElem->toString() != elem->toString()) {
+                                      anyChanged = true;
+                                  }
+                                  expandedElements.push_back(expandedElem);
+                              }
+
+                              if (anyChanged) {
+                                  auto macroResult = std::make_shared<MacroExpression>(
+                                      MacroList { std::move(expandedElements) },
+                                      userExpr->isVariadic,
+                                      userExpr->line);
+                                  auto tokens = scanner::tokenize(macroResult->toString());
+                                  return (*parse::parse(std::move(tokens)))[0];
+                              }
+
                               return expr;
                           } },
         userExpr->value);

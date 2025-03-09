@@ -12,6 +12,9 @@
 \usepackage{subfloat}
 \usepackage{color}
 \usepackage{pdfpages}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
 
 %\setkeys{Gin}{draft}
 
@@ -74,7 +77,7 @@ The abstract of your report summarises your entire work (and as such, your repor
 }
 
 \acknowledgements{
-This section is used to acknowledge support and would typically include your supervisor, other staff, family and friends, etc. that supported you throughout the course of your project.
+Thank you to Dr. Rudy Lapeer, who helped channel my enthusiasum into a well rounded academic project. Thank you to Ella my partner who is the glue that holds my life together. To my brother, who will always listen to me go on a tangent about compilers and to my parents for their love and support.
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -115,6 +118,27 @@ Another section that is essential and should keep its title as is! Although you 
 
 \section{Methodology}
 
+The way in which this project was approached was in three seperate sections. First, develop a interpreter for the scheme programming language. Second, develop a compiler for the scheme programming language. Third, develop a web-based interface for the scheme programming language.
+From the outset it was clear that there was a huge amount of work to be done in order to complete the project. To give the project the best chance of developing every part a standard tree-walk interpreter approach was selected for the interpreter.
+A tree-walk interpreter is the simplest of the approaches to interpretation where we walk an abstract syntax tree evaluating it as we process it. This approach was selected as it is the simplest to implement and would allow for the development of the compiler and web-based to be developed thereafter.
+It is important to note that a compiler, would use the same front-end as an interpreter but split it's pipeline off. The compiler would generate some sort of intermediate representation (IR) which would then be converted into machine code.
+
+\subsection{Interpreter}
+The initial development of any compiler/interpreter project begins with establishing an effective front-end strategy. This critical first phase involves selecting appropriate approaches for lexing and parsing to transform raw text into a structured format.
+For lexical analysis, several methodologies were considered, including, manual character-by-character scanning with explicit state management. Using lexer generator tools like Flex or ANTLR; Or finally, Regular expression-based pattern matching
+The regular expression approach was selected for several key reasons. 
+
+First, regular expressions naturally map to the deterministic finite automaton (DFA) model described by Cooper and Torczon (ADD REF) for lexical analysis. Second, they offer a more concise and maintainable way to express token patterns compared to manual character processing. Third, they avoid the additional learning curve and external dependencies associated with lexer generators, keeping the project self-contained.
+This methodology involves organizing token patterns in a prioritised list, with more specific patterns (like keywords) checked before more general ones (like identifiers). This prioritisation is crucial for correct tokenization since patterns may overlap. For instance, scheme-specific patterns for complex numbers needed to be checked before simpler numeric patterns to ensure proper recognition.
+For keyword handling, a two-stage approach was selected: first identify all text as a general identifier, then check a keyword map to determine if it's actually a reserved word. This approach simplifies the regex patterns while maintaining the language's semantics.
+The complete set of token patterns and their priorities were determined by analyzing the R7RS Scheme specification (ADD REF), ensuring comprehensive coverage of the language syntax.
+
+Parsing would be the natural next step in construction of a parser. Academically, there is much debate among parsing strategies the entirity of the dragon book is effectively a love letter to parsing startegies. As with lexing, there are tools in which a parser is generated this generally builds a table based approach which can be far to diffficult to be written by scratch. A recursive decent parsing approach was picked due to the fact that Scheme is homoiconic.
+The amount of parsing strategies are generally due to the difficulty of (REF THIS WORD) order of operations. In a standard programming language there are a number of operation types postfix (after the token) prefix (before the token) infix inbetween the token, even mixfix which the terniary operator is, which is an operator within an operation. Different parsing strategies are an attempt to performatly destinguish these. However, a lot of the writing on parsing strategies comes from a time where we had to be more performance minded. 
+further more the homoiconic nature of scheme means that every operation is postfix and is handled by parentheses.
+
+
+
 This is my preferred title for the section that follows the background but it may not work for all types of projects, in particular if your methodology is more related to planning and/or design. Either way, this section falls in the scope of \textbf{preparing your project} for action and where you list all the \textbf{methods, algorithms, tools, plans and designs} that you will need later on, as discussed in the next section. As also outlined in the project portfolio brief, one or more of the following is what would be covered in this section:
 
 \begin{itemize}
@@ -143,8 +167,67 @@ Another essential section that should keep its title as suggested. Briefly discu
 
 \appendix
 \clearpage
-\section{Producing tables, figures, etc.} \label{sec2}
-Please refer to the original template for different ways of formatting tables \cite{PCTut5}, figures, code snippets and pseudo code for algorithms. Make sure the caption of each of these is self-explanatory which means that you should be able to understand the figure, what's in the table, what the code is about, etc. without having to consult the text where they are referenced from.
+\section{Lexer Implementation Details} \label{app:regex}
+
+\subsection{Regular Expression Patterns}
+The lexer for the Scheme interpreter utilizes the following regular expression patterns to identify tokens:
+
+\begin{table}[h]
+\caption{Regular Expression Patterns for Scheme Lexer}
+\label{tab:regexpatterns}
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{Token Type} & \textbf{Regex Pattern} \\
+\hline
+COMMENT & Pattern for comments \\
+\hline
+STRING & Pattern for string literals \\
+\hline
+COMPLEX & Pattern for complex numbers \\
+\hline
+RATIONAL & Pattern for rational numbers \\
+\hline
+FLOAT & Pattern for floating-point numbers \\
+\hline
+INTEGER & Pattern for integers \\
+\hline
+BOOLEAN & Patterns for true and false values \\
+\hline
+IDENTIFIER & Pattern for identifiers \\
+\hline
+PARENTHESES & Patterns for opening and closing parentheses \\
+\hline
+SPECIAL SYMBOLS & Patterns for quote, dot, and other special symbols \\
+\hline
+WHITESPACE & Pattern for whitespace characters \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Tokenization Algorithm} \label{app:tokenize}
+\begin{algorithm}
+\caption{Tokenization Algorithm for Scheme}
+\label{alg:tokenize}
+\begin{algorithmic}[1]
+\Procedure{Tokenize}{input}
+    \State Initialize token collection and state
+    \While{not at end of input}
+        \State Find next matching pattern
+        \If{no match found}
+            \State Report error for unexpected character
+        \Else
+            \State Create token from matched text
+            \If{token is not whitespace or comment}
+                \State Add to token collection
+            \EndIf
+            \State Update position in input
+        \EndIf
+    \EndWhile
+    \State Add end-of-file token
+    \State \Return token collection
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 
 \end{document}
 
