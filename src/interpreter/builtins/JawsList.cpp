@@ -46,11 +46,11 @@ std::optional<SchemeValue> cdrProcedure(
         throw InterpreterError("cdr: argument must be a list");
     }
     auto list = val.asList();
+    auto tail = std::list<SchemeValue>(std::next(list.begin()), list.end());
     if (list.empty()) {
         throw InterpreterError("cdr: argument cannot be empty list");
     }
-    list.pop_front();
-    return SchemeValue(std::move(list));
+    return SchemeValue(tail);
 }
 
 std::optional<SchemeValue> cadrProcedure(

@@ -3,6 +3,7 @@
 
 enum class Tokentype {
     ELSE,
+    CHAR,
     DOT,
     ELLIPSIS,
     INTEGER,

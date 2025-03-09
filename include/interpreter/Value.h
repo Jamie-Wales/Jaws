@@ -26,7 +26,8 @@ public:
         std::vector<SchemeValue>,
         std::shared_ptr<Procedure>,
         Port,
-        std::shared_ptr<Expression>>;
+        std::shared_ptr<Expression>,
+        char>;
     SchemeValue(SchemeValue&& other) noexcept
         : value(std::move(other.value))
     {

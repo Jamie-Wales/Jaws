@@ -180,6 +180,24 @@ std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpr
         case Tokentype::FALSE:
             return SchemeValue(false);
 
+        case Tokentype::CHAR: // or Tokentype::CHAR
+        {
+            std::string charLiteral = token.lexeme;
+            std::string charValue = charLiteral.substr(2);
+            if (charValue == "space") {
+                return SchemeValue(char(' '));
+            } else if (charValue == "newline") {
+                return SchemeValue(char('\n'));
+            } else if (charValue == "tab") {
+                return SchemeValue(char('\t'));
+            } else if (charValue == "return") {
+                return SchemeValue(char('\r'));
+            } else if (charValue.length() == 1) {
+                return SchemeValue(charValue[0]);
+            } else {
+                throw InterpreterError("Unknown character literal: " + charLiteral);
+            }
+        }
         case Tokentype::IDENTIFIER:
             if (auto value = state.env->get(token.lexeme)) {
                 return value;

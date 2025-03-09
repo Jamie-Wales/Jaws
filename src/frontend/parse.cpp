@@ -116,7 +116,9 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
     if (match(state, Tokentype::QUOTE))
         return parseQuoted(state);
     if (match(state, Tokentype::HASH))
-        return parseVector(state);
+        if (match(state, Tokentype::LEFT_PAREN))
+            return parseVector(state);
+
     return parseAtom(state);
 }
 
@@ -138,6 +140,7 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     case Tokentype::LAMBDA:
     case Tokentype::ARROW:
     case Tokentype::IF:
+    case Tokentype::CHAR:
     case Tokentype::SYNTAX_RULE:
         return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });
     default:
@@ -477,7 +480,6 @@ std::shared_ptr<Expression> parseMacroExpression(ParserState& state)
             Expression { QuoteExpression { expr }, previousToken(state).line });
     }
     if (match(state, Tokentype::HASH)) {
-        // Handle vectors similarly to lists
         if (match(state, Tokentype::LEFT_PAREN)) {
             std::vector<std::shared_ptr<Expression>> elements;
             while (!match(state, Tokentype::RIGHT_PAREN)) {

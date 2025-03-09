@@ -471,6 +471,13 @@ std::string SchemeValue::toString() const
                           [](const Port& p) {
                               return std::string(p.type == PortType::Input ? "<input-port>" : "<output-port>");
                           },
+                          [](const char& c) {
+                              if (c == ' ')
+                                  return std::string("#\\space");
+                              if (c == '\n')
+                                  return std::string("#\\newline");
+                              return std::string("#\\") + c;
+                          },
                           [](const std::shared_ptr<Expression>& e) {
                               return e->toString();
                           },
