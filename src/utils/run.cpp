@@ -200,16 +200,29 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                 try {
                     std::filesystem::create_directories(opts.outputPath);
                     auto outPath = std::filesystem::path(opts.outputPath);
+                    std::string qbeFile = (outPath / "output.qbe").string();
                     std::string asmFile = (outPath / "output.asm").string();
-                    std::string objFile = (outPath / "output.o").string();
-                    std::cout << "Generating assembly to: " << asmFile << std::endl;
-                    generateQBEIr(_3ac, asmFile);
-                    std::cout << "Assembling to: " << objFile << std::endl;
-                    std::string asmCmd = "nasm -f elf64 -g -F dwarf -o " + objFile + " " + asmFile + " 2>&1";
-                    if (system(asmCmd.c_str()) != 0) {
-                        throw std::runtime_error("Assembly failed: " + asmCmd);
+                    std::string exeFile = (outPath / "scheme_program").string();
+
+                    // Generate QBE IR
+                    std::cout << "Generating QBE IR to: " << qbeFile << std::endl;
+                    generateQBEIr(_3ac, qbeFile);
+
+                    // Compile QBE IR to assembly (redirect output to file)
+                    std::cout << "Compiling QBE IR to assembly: " << asmFile << std::endl;
+                    std::string qbeCmd = "qbe " + qbeFile + " > " + asmFile;
+                    if (system(qbeCmd.c_str()) != 0) {
+                        throw std::runtime_error("QBE compilation failed: " + qbeCmd);
                     }
-                    std::cout << "Successfully generated object file: " << objFile << std::endl;
+
+                    // Compile assembly to executable, linking with runtime
+                    std::cout << "Compiling assembly to executable: " << exeFile << std::endl;
+                    std::string linkCmd = "clang -o " + exeFile + " " + asmFile + " ../runtime/build/libruntime.a";
+                    if (system(linkCmd.c_str()) != 0) {
+                        throw std::runtime_error("Linking failed: " + linkCmd);
+                    }
+
+                    std::cout << "Successfully generated executable: " << exeFile << std::endl;
                     return;
                 } catch (const std::filesystem::filesystem_error& e) {
                     throw std::runtime_error("Filesystem error: " + std::string(e.what()));

@@ -33,6 +33,7 @@ InterpreterState createInterpreter()
     define("equal?", jaws_math::equal);
     define("boolean?", jaws_eq::isBooleanProc);
     define("procedure?", jaws_eq::isProcedure);
+    define("char?", jaws_eq::isChar);
     define("pair?", jaws_eq::isPair);
     define("null?", jaws_eq::isNull);
     define("port?", jaws_eq::isPort);

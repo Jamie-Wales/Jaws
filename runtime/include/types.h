@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 typedef enum {
@@ -7,7 +8,8 @@ typedef enum {
     TYPE_PAIR,
     TYPE_SYMBOL,
     TYPE_NIL,
-    TYPE_FUNCTION
+    TYPE_FUNCTION,
+    TYPE_BOOL
 } SchemeType;
 
 typedef struct {
@@ -19,6 +21,7 @@ typedef struct SchemeObject {
     SchemeType type;
     union {
         int64_t number;
+        bool boolean;
         struct {
             struct SchemeObject* car;
             struct SchemeObject* cdr;

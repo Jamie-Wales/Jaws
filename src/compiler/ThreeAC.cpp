@@ -105,15 +105,12 @@ void convertANF(const std::shared_ptr<ir::ANF>& anf, ThreeAddressModule& module,
                        },
 
                        [&](const ir::App& app) {
-                           // First generate temps for all parameters
                            std::vector<std::string> paramTemps;
                            for (const auto& param : app.params) {
                                std::string paramTemp = generateTemp();
                                module.addInstr({ Operation::COPY, paramTemp, param.lexeme, {} });
                                paramTemps.push_back(paramTemp);
                            }
-
-                           // Then generate result temp and call
                            result = generateTemp();
                            module.addInstr({ Operation::CALL, result, app.name.lexeme,
                                std::to_string(app.params.size()) });
@@ -190,4 +187,4 @@ ThreeAddressModule anfToTac(const std::vector<std::shared_ptr<ir::TopLevel>>& to
     return module;
 }
 
-} // namespace tac
+}

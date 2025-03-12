@@ -1,4 +1,4 @@
 
 #include "../include/types.h"
 
-SchemeObject* scheme(SchemeObject* car, SchemeObject* cdr);
+SchemeObject* scheme_cons(SchemeObject* car, SchemeObject* cdr);

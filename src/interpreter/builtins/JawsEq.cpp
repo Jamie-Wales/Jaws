@@ -187,4 +187,12 @@ std::optional<SchemeValue> isBooleanProc(
     return SchemeValue(std::holds_alternative<bool>(args[0].value));
 }
 
+std::optional<SchemeValue> isChar(interpret::InterpreterState&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("char?: expected 1 argument");
+    }
+    return SchemeValue(std::holds_alternative<char>(args[0].value));
+}
+
 } // namespace jaws_eq

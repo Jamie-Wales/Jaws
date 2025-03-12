@@ -504,8 +504,6 @@ std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_pt
 
         // Reparse the expanded expression
         auto tokens = scanner::tokenize(expandedMacro->toString());
-        std::cout << expandedMacro->toString() << std::endl;
-
         auto expandedExpr = (*parse::parse(std::move(tokens)))[0];
 
         expanded.push_back(expandedExpr);

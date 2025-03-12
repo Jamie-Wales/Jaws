@@ -94,7 +94,6 @@ SchemeObject* make_closure(void* code)
 void call_closure(SchemeObject* func, SchemeObject** args, int arg_count)
 {
     if (func->type != TYPE_FUNCTION) {
-        // Handle error
         return;
     }
     SchemeEnvironment* saved_env = current_environment;

@@ -1,7 +1,7 @@
 #include "../include/jaws_list.h"
 #include "../include/gc.h"
 
-SchemeObject* cons(SchemeObject* car, SchemeObject* cdr)
+SchemeObject* scheme_cons(SchemeObject* car, SchemeObject* cdr)
 {
     SchemeObject* pair = alloc_object();
 

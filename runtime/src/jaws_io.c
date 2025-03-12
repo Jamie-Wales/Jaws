@@ -9,8 +9,12 @@ void scheme_display(SchemeObject* obj)
 }
 
 // Return type should be SchemeObject*, not int64_t
-SchemeObject* scheme_multiply(SchemeObject* a, SchemeObject* b)
+SchemeObject* scheme_add(SchemeObject* a, SchemeObject* b)
 {
-    int64_t result = a->value.number * b->value.number;
+    int64_t result = a->value.number + b->value.number;
     return allocate(TYPE_NUMBER, result);
+}
+void scheme_newline()
+{
+    printf("%s", "\n");
 }

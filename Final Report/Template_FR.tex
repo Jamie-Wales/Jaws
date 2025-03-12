@@ -206,7 +206,49 @@ To ensure proper hygiene, the implementation required a separate evaluation envi
 The macro expansion process transforms the initial AST into an expanded form where all macros have been replaced with their expansions. This approach aligns with the classic Scheme philosophy of providing a minimal core language with powerful syntactic extensions built on top, effectively creating an extended language that is expressed in terms of simpler core constructs.
 
 \subsubsection{Evaluation}
-Once an AST has been developed we then must walk the AST interpreting each node and pasing the result to the next node. This is a recursive process that will continue until the entire AST has been walked. This is the simplest form of interpretation and is the most common form of interpretation for simple languages like Scheme.
+Once an AST has been developed and processed through macro expansion, the evaluation phase begins. This phase is where the Scheme language's semantics are applied to execute the program. The R7RS Scheme specification defines several key requirements that any compliant implementation must satisfy.
+
+Scheme's evaluation model requires lexical scoping, where variables are resolved in the environment where they were defined, not where they are used. This contrasts with dynamic scoping found in some other languages and necessitates a hierarchical environment structure. Additionally, Scheme treats procedures as first-class values that can be passed as arguments, returned from functions, and stored in data structures, requiring the evaluation system to handle functions as ordinary values.
+
+The language specification also defines special forms such as \texttt{if}, \texttt{lambda}, and \texttt{define} that follow unique evaluation rules different from regular function calls.To clarify why define must be a special form in Scheme: If define were implemented as a regular procedure call, the interpreter would evaluate its arguments before applying the procedure, following standard applicative-order evaluation. This would cause the interpreter to evaluate the variable name before it's defined, leading to errors or incorrect bindings. Additionally, the environment in which definitions occur is crucial - define must create bindings in the current lexical environment rather than in the evaluation environment of a procedure call. These requirements necessitate that define be implemented as a special form with its own unique evaluation rules that differ from regular procedure calls, allowing it to properly manipulate the environment structure according to Scheme's lexical scoping rules. For instance, conditional expressions only evaluate the necessary branches, and lambda expressions create closures without evaluating their bodies. Perhaps most importantly, the R7RS specification mandates tail call optimisation, requiring implementations to optimise tail calls to prevent stack overflow in recursive procedures. This optimization allows recursive procedures to execute in constant space when the recursion occurs in tail position.
+
+The evaluation process uses a dispatch mechanism that selects the appropriate evaluation strategy based on the node type. Self-evaluating forms like numbers and strings simply return their value. Variable references are resolved by searching the environment chain. Special forms are handled by dedicated evaluation functions that implement their specific rules. For example, the \texttt{lambda} evaluator creates a closure object containing both the function definition and a reference to the current environment, capturing the lexical context.
+
+The requirement for tail call optimisation presented a significant challenge, particularly when implementing in a host language that doesn't natively support this feature. To address this, a technique known as "trampolining" \ref{alg:trampoline}was selected. When a procedure call is identified as being in tail position (the final expression to be evaluated in a function body or conditional branch), instead of executing the call directly, the evaluator returns a tailcall object containing the procedure and arguments. The main evaluation loop detects these tailcall objects and executes them iteratively without growing the call stack. This effectively transforms recursive processes into iterative ones at the implementation level.
+
+\subsubsection{Values}
+During interpretiation objects must be created to represent the values that are being manipulated. These objects need represent the many different types as per the RSR7 specification. These objects are as follows:
+\begin{itemize}
+    \item \textbf{Number}: Scheme's numeric tower includes integers, rationals, and floating-point numbers. The interpreter must support all these types and provide appropriate arithmetic operations for each.
+    \item \textbf{String}: Scheme strings are sequences of characters enclosed in double quotes. The interpreter must provide operations for creating, accessing, and manipulating strings.
+    \item \textbf{Character}: Scheme has a distinct character type for representing individual characters. The interpreter must provide operations for creating, comparing, and manipulating characters.
+    \item \textbf{Symbol}: Symbols are unique identifiers used to represent variables, functions, and other named entities in Scheme. The interpreter must provide operations for creating, comparing, and interning symbols.
+    \item \textbf{Boolean}: Boolean values in Scheme are \texttt{\#t} for true and \texttt{\#f} for false. The interpreter must provide operations for creating, comparing, and manipulating boolean values.
+    \item \textbf{Pair}: The fundamental data structure in Scheme, pairs are used to construct lists and other compound data structures. The interpreter must provide operations for creating, accessing, and manipulating pairs.
+    \item \textbf{Vector} Vectors are fixed-length sequences of elements that can contain any type of value. The interpreter must provide operations for creating, accessing, and manipulating vectors. This includes bytevectors which are vectors of bytes.
+    \item \textbf{Procedure} Procedures in Scheme are first-class values, the interpreter needs to treat these as such. Procedures need to store their own environment of symbboles and values. As well as constructing closures, which are procedures that return procedures, that have access to their parents scope.
+    \item \textbf{Port}: Ports are schemes abstraction around input and output. The interpreter must provide operations for creating, reading, and writing to ports.
+    \item \textbf{Continuations}: Continuations are a powerful feature of Scheme that allow for the capture and reification of the current state of the program. The interpreter must provide operations for creating, capturing, and invoking continuations.
+\end{itemize}
+
+Scheme is dynamically typed, which means an objects type is deterimined at runtime. Therefore the interpreter must be able to handle the many different types of objects that can be created. 
+Approaches on how to handle this within the host language differ (ADD REF). There are three main approaches, these are bloated structs, tagged unions/polymorphic variants, tagged pointers. 
+Bloated structs refer to a structure that holds all the possible values that an object can hold. This is the most memory intensive approach but is the fastest. Tagged unions are a more memory efficient approach but are slower than bloated structs. Tagged pointers are the most memory efficient approach but are the slowest.
+During implementation polymorphic variants were selected as the approach to handle the many different types of objects that can be created, whilst maintaining type safety and satisfying the host langauges type system. 
+This approach was selected as it is middle ground between tagged pointers and bloated structs, and makes imeplementation easier and more maintainable.
+
+\subsection{Compiler}
+A major part of this project was working toward a compiler for the Scheme programming language. Modern are complex programs in their own right. In order to understand the complexity of these programs, two intermediate steps we're delivered.
+First was transforming the AST into an intermediate representation (IR). This IR is a data structure that represents the program in a way that is easier to manipulate and transform. The second was to perform to perform performance optimisations on these representations.
+The intermediate representation (IR) is the core data structure in a compiler, serving as the central model of the program being compiled. Most compiler components interact with this IR, reading from it and modifying it. Therefore, the design choices about what information to include in the IR and how to structure it significantly impact both compilation efficiency and the quality of the resulting code. \cite{cooper2011engineering}
+The intermediate representations chosen for the project we're A Normal Form (ANF) and Three Address Code (TAC). For ANF the optimisation chosen is dead code elimination and constant folding. For TAC the optimisation chosen was scope hoisting and inline definition.
+
+\subsubsection{A Normal Form}
+[write some shit here jamie]
+
+\subsubsection{Three Address Code}
+[write some shit here jamie]
+
 
 
 
@@ -296,6 +338,40 @@ WHITESPACE & Pattern for whitespace characters \\
     \EndWhile
     \State Add end-of-file token
     \State \Return token collection
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+\subsection{Trampolining Algorithm} \label{app:trampoline}
+
+\begin{algorithm}
+\caption{Trampolining Algorithm for Tail Call Optimization}
+\label{alg:trampoline}
+\begin{algorithmic}[1]
+\Procedure{ExecuteProcedure}{state, procedure, arguments}
+\State currentProc $\gets$ procedure
+\State currentArgs $\gets$ arguments
+\While{true}
+    \While{currentProc is TailCall}
+        \State currentProc $\gets$ tailCall.proc
+        \State currentArgs $\gets$ tailCall.args
+    \EndWhile
+    
+    \State result $\gets$ currentProc(state, currentArgs)
+    
+    \If{result is not TailCall}
+        \State \Return result
+    \Else
+        \State currentProc $\gets$ result
+    \EndIf
+\EndWhile
+\EndProcedure
+\Procedure{InterpretTailCall}{state, expression}
+\If{expression is a procedure call}
+\State Create TailCall object
+\State \Return ExecuteProcedure with TailCall
+\Else
+\State \Return normal interpretation
+\EndIf
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}

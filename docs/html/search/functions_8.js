@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['operationtostring_0',['operationToString',['../namespacetac.html#a8e2a2f80aa4601f8d4ab3d7ea8fbe720',1,'tac']]],
-  ['optimise_1',['optimise',['../namespaceoptimise.html#ac9ae27c5800a673bd111051502a39144',1,'optimise']]],
-  ['optimiseconstants_2',['optimiseConstants',['../namespaceoptimise.html#afe4d2c3d4b6157ebd44d6e8d52921b86',1,'optimise']]]
+  ['newtemp_0',['newTemp',['../struct_q_b_e_generator_state.html#aaf1ec9da1ff42987f635e112032a0002',1,'QBEGeneratorState']]]
 ];

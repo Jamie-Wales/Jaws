@@ -2,5 +2,5 @@
 #include "types.h"
 
 void scheme_display(SchemeObject* SchemeObject);
-
-SchemeObject* scheme_multiply(SchemeObject* a, SchemeObject* b);
+SchemeObject* scheme_add(SchemeObject* a, SchemeObject* b);
+void scheme_newline();

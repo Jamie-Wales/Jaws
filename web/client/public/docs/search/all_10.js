@@ -16,6 +16,5 @@ var searchData=
   ['register_13',['Register',['../namespaceassembly.html#a3a4d91e13625c92859dba4db0c4bba70',1,'assembly']]],
   ['regtostring_14',['regToString',['../namespaceassembly.html#ae6a644fe13ee970d2662c87c8c23532c',1,'assembly']]],
   ['result_15',['result',['../classtac_1_1_three_a_c_instruction.html#aa7f20f475710f7b8667758a330fd0f6e',1,'tac::ThreeACInstruction']]],
-  ['return_16',['RETURN',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190aa2bec276a54439fe011eb523b845dac5',1,'tac']]],
-  ['rsi_17',['RSI',['../namespaceassembly.html#a3a4d91e13625c92859dba4db0c4bba70a643f8aeac63ad74266191eb6da0b09e9',1,'assembly']]]
+  ['rsi_16',['RSI',['../namespaceassembly.html#a3a4d91e13625c92859dba4db0c4bba70a643f8aeac63ad74266191eb6da0b09e9',1,'assembly']]]
 ];
