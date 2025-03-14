@@ -244,7 +244,15 @@ The intermediate representation (IR) is the core data structure in a compiler, s
 The intermediate representations chosen for the project we're A Normal Form (ANF) and Three Address Code (TAC). For ANF the optimisation chosen is dead code elimination and constant folding. For TAC the optimisation chosen was scope hoisting and inline definition.
 
 \subsubsection{A Normal Form}
-[write some shit here jamie]
+Administrative Normal Form \cite{flanagan1993essence} is a compiler intermediate representation where every non-trivial expression is assigned to a variable, ensuring that function arguments are always simple atomic values (like variables or constants) rather than complex expressions. This transformation makes the evaluation order explicit and simplifies subsequent compiler optimizations by breaking complex nested expressions into a sequence of simpler statements, similar to how statements work in imperative languages but preserving functional semantics.
+There are two compelling reasons ANF was selected as the first intermediate representation in many functional language compilers. First, ANF naturally corresponds to Scheme's fundamental structure, as Scheme programs can be expressed as nested let-bindings, making ANF transformations particularly elegant. Second, ANF serves as an ideal bridge between high-level functional code and lower-level representations, facilitating subsequent optimisation passes by exposing the program's evaluation order while maintaining its pure functional semantics.
+
+\subsubsection{Dead Code Elimination}
+Dead code elimination (DCE) integrates seamlessly with ANF due to the clear execution flow that ANF provides. Each variable binding in ANF creates an explicit dependency relationship, making it straightforward to construct a dependency graph where nodes represent variables and edges represent usage relationships. This directed graph can then be systematically traversed to identify nodes with no dependents, indicating unused computations. By removing these unreachable nodes from the graph and their corresponding code from the program, we eliminate dead code without altering program semantics. This approach is particularly effective because ANF's explicit naming of intermediate values makes dependencies immediately visible, enabling more precise identification of truly dead code than would be possible with nested expressions. 
+(As shown in Appendix \ref{alg:dce})
+
+The other optimisation that has been developed is constant folding. This process becomes easier at the ANF stage as all expressions are assigned to variables. We can guarante that  This allows for the easy identification of constant expressions that can be evaluated at compile time. This optimisation is crucial as it reduces the number of instructions that are ultimately generated.
+
 
 \subsubsection{Three Address Code}
 [write some shit here jamie]
@@ -416,6 +424,33 @@ WHITESPACE & Pattern for whitespace characters \\
         \State Advance token
         \State \Return new VariableExpression(token.lexeme)
     \EndIf
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+\begin{algorithm}
+\caption{Dead Code Elimination using Dependency Graph}
+\label{alg:dce}
+\begin{algorithmic}[1]
+\Procedure{DeadCodeElimination}{$Program$}
+    \State $G \gets \text{ConstructDependencyGraph}(Program)$
+    \State $Roots \gets \text{GetRootNodes}(G)$ \Comment{Nodes with side effects or program outputs}
+    \State $LiveNodes \gets \emptyset$
+    \State $WorkList \gets Roots$
+    
+    \While{$WorkList \neq \emptyset$}
+        \State $node \gets \text{Dequeue}(WorkList)$
+        \State $LiveNodes \gets LiveNodes \cup \{node\}$
+        \For{each edge $(node, dependent)$ in $G$}
+            \If{$dependent \notin LiveNodes$}
+                \State $\text{Enqueue}(WorkList, dependent)$
+                \State $LiveNodes \gets LiveNodes \cup \{dependent\}$
+            \EndIf
+        \EndFor
+    \EndWhile
+    
+    \State $G' \gets \text{FilterGraph}(G, LiveNodes)$ \Comment{Remove dead nodes and edges}
+    \State $Program' \gets \text{RemoveDeadCode}(Program, LiveNodes)$
+    \State \Return $Program'$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
