@@ -1,2 +1,3 @@
-(define x (cons 2 3))
-(display x)
+(define (x y) (* y y))
+
+(x 10)

@@ -275,7 +275,7 @@ void handleJumpIf(const tac::ThreeACInstruction& instr, QBEGeneratorState& state
     }
 
     state.output << "    %cond" << state.tempCount << " =l ceql %" << condVar << ", $nil_obj\n";
-    state.output << "    %cond" << (state.tempCount + 1) << " =l ceql %" << condVar << ", $false_obj\n";
+    state.output << "    %cond" << (state.tempCount + 1) << " =l ceql %" << condVar << ", $true_obj\n";
     state.output << "    %cond" << (state.tempCount + 2) << " =l or %cond"
                  << state.tempCount << ", %cond" << (state.tempCount + 1) << "\n";
     state.output << "    jnz %cond" << (state.tempCount + 2) << ", @" << *instr.arg2 << ", @next" << state.labelCount << "\n";
