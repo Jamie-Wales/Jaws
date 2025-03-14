@@ -104,4 +104,27 @@ std::optional<SchemeValue> vectorToList(
     return SchemeValue(std::move(result));
 }
 
+std::optional<SchemeValue> charToString(interpret::InterpreterState&, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("char->string requires exactly 1 argument");
+    }
+
+    if (args[0].isValue<std::list<SchemeValue>>()) {
+        auto list = args[0].as<std::list<SchemeValue>>();
+        std::string to_return;
+        for (const auto& item : list) {
+            if (!item.isValue<char>()) {
+                throw InterpreterError("char->string argument must be a list of characters");
+            } else {
+                to_return += item.as<char>();
+            }
+        }
+
+        return SchemeValue(to_return);
+    }
+
+    return SchemeValue(std::string(1, args[0].as<char>()));
+}
+
 }
