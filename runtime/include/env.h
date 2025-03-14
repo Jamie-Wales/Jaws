@@ -5,29 +5,26 @@
 #include <stdio.h>
 
 typedef struct Entry {
-   SchemeObject* key;
-   SchemeObject* value; 
-   struct Entry* next;
+    SchemeObject* key;
+    SchemeObject* value;
+    struct Entry* next;
 } Entry;
 
 typedef struct HashMap {
-   Entry** entries;
-   size_t capacity;
-   size_t count;
+    Entry** entries;
+    size_t capacity;
+    size_t count;
 } HashMap;
 
 typedef struct SymbolTable {
-   HashMap* symbols;  
+    HashMap* symbols;
 } SymbolTable;
 
 typedef struct SchemeEnvironment {
-   struct SchemeEnvironment* enclosing;
-   HashMap* bindings;  
+    struct SchemeEnvironment* enclosing;
+    HashMap* bindings;
 } SchemeEnvironment;
 
-extern SymbolTable* SYMBOL_TABLE;
-extern SchemeEnvironment* GLOBAL_ENVIRONMENT;
-extern SchemeEnvironment* current_environment;
 SchemeObject* intern_symbol(const char* name);
 SchemeObject* env_lookup(SchemeEnvironment* env, SchemeObject* symbol);
 void env_define(SchemeEnvironment* env, SchemeObject* symbol, SchemeObject* value);

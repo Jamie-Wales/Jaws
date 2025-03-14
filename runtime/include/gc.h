@@ -10,5 +10,3 @@ extern void gc();
 extern SchemeObject* alloc_object();
 extern SchemeObject* allocate(SchemeType type, int64_t immediate);
 extern SchemeObject* allocate_pair(SchemeObject* car, SchemeObject* cdr);
-extern void mark_environment(SchemeEnvironment* env);
-extern SchemeEnvironment* current_environment; // Add this

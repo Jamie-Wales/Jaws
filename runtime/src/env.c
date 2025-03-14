@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-SymbolTable* SYMBOL_TABLE = NULL;
-SchemeEnvironment* GLOBAL_ENVIRONMENT = NULL;
-SchemeEnvironment* current_environment = NULL;
-
 #define INITIAL_CAPACITY 75
 #define TABLE_MAX_LOAD 100
 
@@ -112,22 +108,7 @@ static void hashmap_put(HashMap* map, SchemeObject* key, SchemeObject* value)
 
 SchemeObject* intern_symbol(const char* name)
 {
-    // Search for existing symbol
-    for (size_t i = 0; i < SYMBOL_TABLE->symbols->capacity; i++) {
-        Entry* entry = SYMBOL_TABLE->symbols->entries[i];
-        while (entry != NULL) {
-            SchemeObject* sym = entry->key;
-            if (strcmp(sym->value.symbol, name) == 0) {
-                return sym;
-            }
-            entry = entry->next;
-        }
-    }
-
-    // Create new symbol
-    SchemeObject* sym = allocate(TYPE_SYMBOL, (int64_t)strdup(name));
-    hashmap_put(SYMBOL_TABLE->symbols, sym, sym);
-    return sym;
+    return NULL;
 }
 
 SchemeObject* env_lookup(SchemeEnvironment* env, SchemeObject* symbol)
@@ -156,25 +137,12 @@ SchemeEnvironment* new_environment(SchemeEnvironment* enclosing)
     }
     env->enclosing = enclosing;
     env->bindings = hashmap_new();
-    current_environment = env;
     return env;
 }
 
 void init_global_environment(void)
 {
-    if (!SYMBOL_TABLE) {
-        SYMBOL_TABLE = malloc(sizeof(SymbolTable));
-        if (!SYMBOL_TABLE) {
-            fprintf(stderr, "Failed to allocate symbol table\n");
-            exit(1);
-        }
-        SYMBOL_TABLE->symbols = hashmap_new();
-    }
-
-    GLOBAL_ENVIRONMENT = new_environment(NULL);
-    current_environment = GLOBAL_ENVIRONMENT;
 }
-
 void cleanup_environment(SchemeEnvironment* env)
 {
     if (!env)

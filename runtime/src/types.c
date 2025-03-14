@@ -86,19 +86,14 @@ int is_nil(SchemeObject* obj)
 {
     return obj == SCHEME_NIL || obj == NULL;
 }
+/* #TODO: Implement this function */
 SchemeObject* make_closure(void* code)
 {
-    SchemeEnvironment* env = current_environment; // Capture current env
+    SchemeEnvironment* env = NULL; // Capture current env
     return make_function(code, env);
 }
+/* #TODO: Implement this function */
 void call_closure(SchemeObject* func, SchemeObject** args, int arg_count)
 {
-    if (func->type != TYPE_FUNCTION) {
-        return;
-    }
-    SchemeEnvironment* saved_env = current_environment;
-    current_environment = func->value.function.env;
-    void (*func_ptr)() = func->value.function.code;
-    func_ptr();
-    current_environment = saved_env;
+    return;
 }

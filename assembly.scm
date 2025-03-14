@@ -1,2 +1,2 @@
-(define x 10)
+(define x (cons 2 3))
 (display x)

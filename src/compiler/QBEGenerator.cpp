@@ -1,10 +1,12 @@
 #include "QBEGenerator.h"
 #include <fstream>
+#include <iostream>
 #include <map>
+#include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-// Helper function to check if a string is a number
 bool isNumber(const std::string& str)
 {
     if (str.empty())
@@ -14,7 +16,6 @@ bool isNumber(const std::string& str)
     return *end == '\0';
 }
 
-// Convert primitive operation names to scheme runtime functions
 std::string convertPrimitive(const std::string& primitive)
 {
     static std::map<std::string, std::string> primitiveMap = {
@@ -41,14 +42,27 @@ void generateQBEIr(const tac::ThreeAddressModule& module, const std::string& out
 {
     QBEGeneratorState state;
 
-    // Include necessary declarations
-    state.output << "# QBE IR generated for Scheme compiler\n\n";
-    state.output << "\n# Data definitions\n";
-    state.output << "data $nil_obj = { l 3, b 0 }\n"; // TYPE_NIL is 3
-    state.output << "data $true_obj = { l 4, b 1 }\n"; // TYPE_BOOLEAN is 4, value true
-    state.output << "data $false_obj = { l 4, b 0 }\n"; // TYPE_BOOLEAN is 4, value false
+    std::set<std::string> globalVars;
+    for (const auto& instr : module.instructions) {
+        if (instr.op == tac::Operation::STORE && instr.arg1) {
+            if (!isNumber(*instr.arg1)) {
+                globalVars.insert(*instr.arg1);
+            }
+        }
+    }
 
-    // Generate a lambda function for each set of instructions with a function label
+    state.output << "# QBE IR generated for Scheme compiler\n\n";
+
+    state.output << "# Global variable declarations\n";
+    for (const auto& global : globalVars) {
+        state.output << "data $" << global << "_global = { l $nil_obj }\n";
+    }
+
+    state.output << "\n# Predefined Scheme objects\n";
+    state.output << "data $nil_obj = { l 3, b 0 }\n";
+    state.output << "data $true_obj = { l 4, b 1 }\n";
+    state.output << "data $false_obj = { l 4, b 0 }\n";
+
     std::map<std::string, std::vector<int>> functionBlocks;
     for (int i = 0; i < module.instructions.size(); i++) {
         const auto& instr = module.instructions[i];
@@ -58,7 +72,6 @@ void generateQBEIr(const tac::ThreeAddressModule& module, const std::string& out
         }
     }
 
-    // Generate function definitions for each lambda
     for (const auto& [label, indices] : functionBlocks) {
         if (module.functionOffsets.find(label) != module.functionOffsets.end()) {
             state.output << "\nfunction l $" << label << "() {\n";
@@ -68,7 +81,7 @@ void generateQBEIr(const tac::ThreeAddressModule& module, const std::string& out
             int end = (module.functionOffsets.find(label) != module.functionOffsets.end()) ? module.functionOffsets.at(label) : module.instructions.size() - 1;
 
             for (int i = start + 1; i <= end; i++) {
-                convertInstruction(module.instructions[i], state);
+                convertInstruction(module.instructions[i], state, globalVars);
             }
 
             state.output << "    ret %return\n";
@@ -76,17 +89,14 @@ void generateQBEIr(const tac::ThreeAddressModule& module, const std::string& out
         }
     }
 
-    // Generate the main function
     state.output << "\nexport function w $main() {\n";
     state.output << "@start\n";
     state.output << "    call $init_runtime()\n\n";
 
-    // Process instructions not in lambda functions
     bool inLambda = false;
     for (int i = 0; i < module.instructions.size(); i++) {
         const auto& instr = module.instructions[i];
 
-        // Skip instructions that are part of lambda functions
         if (instr.op == tac::Operation::LABEL && instr.arg1 && instr.arg1->substr(0, 1) == "L") {
             std::string label = *instr.arg1;
             if (module.functionOffsets.find(label) != module.functionOffsets.end()) {
@@ -95,10 +105,9 @@ void generateQBEIr(const tac::ThreeAddressModule& module, const std::string& out
         }
 
         if (!inLambda) {
-            convertInstruction(instr, state);
+            convertInstruction(instr, state, globalVars);
         }
 
-        // Check if we're exiting a lambda
         if (inLambda && module.functionOffsets.find(*instr.arg1) != module.functionOffsets.end() && i == module.functionOffsets.at(*instr.arg1)) {
             inLambda = false;
         }
@@ -111,13 +120,13 @@ void generateQBEIr(const tac::ThreeAddressModule& module, const std::string& out
     outFile << state.output.str();
 }
 
-void convertInstruction(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
+void convertInstruction(const tac::ThreeACInstruction& instr, QBEGeneratorState& state, const std::set<std::string>& globalVars)
 {
     state.output << "\n    # " << instr.toString();
 
     switch (instr.op) {
     case tac::Operation::COPY:
-        handleCopy(instr, state);
+        handleCopy(instr, state, globalVars);
         break;
     case tac::Operation::LABEL:
         handleLabel(instr, state);
@@ -129,19 +138,19 @@ void convertInstruction(const tac::ThreeACInstruction& instr, QBEGeneratorState&
         handleCall(instr, state);
         break;
     case tac::Operation::JUMP_IF:
-        handleJumpIf(instr, state);
+        handleJumpIf(instr, state, globalVars);
         break;
     case tac::Operation::JUMP_IF_NOT:
-        handleJumpIfNot(instr, state);
+        handleJumpIfNot(instr, state, globalVars);
         break;
     case tac::Operation::ALLOC:
         handleAlloc(instr, state);
         break;
     case tac::Operation::LOAD:
-        handleLoad(instr, state);
+        handleLoad(instr, state, globalVars);
         break;
     case tac::Operation::STORE:
-        handleStore(instr, state);
+        handleStore(instr, state, globalVars);
         break;
     case tac::Operation::GC:
         handleGC(instr, state);
@@ -151,29 +160,37 @@ void convertInstruction(const tac::ThreeACInstruction& instr, QBEGeneratorState&
     }
 }
 
-void handleCopy(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
+void handleCopy(const tac::ThreeACInstruction& instr, QBEGeneratorState& state, const std::set<std::string>& globalVars)
 {
     if (!instr.result || !instr.arg1)
         return;
 
-    if (isNumber(*instr.arg1)) {
-        // For numbers, allocate a new scheme object
-        state.output << "    %t" << state.tempCount++ << " =l copy 0    # TYPE_NUMBER\n";
-        state.output << "    %t" << state.tempCount++ << " =l copy " << *instr.arg1 << "\n";
-        state.output << "    %" << *instr.result << " =l call $allocate(l %t" << (state.tempCount - 2)
-                     << ", l %t" << (state.tempCount - 1) << ")\n";
-    } else if (*instr.arg1 == "#t") {
-        // True boolean value
-        state.output << "    %" << *instr.result << " =l copy $true_obj\n";
-    } else if (*instr.arg1 == "#f") {
-        // False boolean value
-        state.output << "    %" << *instr.result << " =l copy $false_obj\n";
-    } else if (*instr.arg1 == "()") {
-        // Nil/empty list
-        state.output << "    %" << *instr.result << " =l copy $nil_obj\n";
+    std::string resultVar = *instr.result;
+    std::string sourceVar = *instr.arg1;
+
+    if (globalVars.find(sourceVar) != globalVars.end()) {
+        state.output << "    # Load from global variable: " << sourceVar << "\n";
+        state.output << "    %" << resultVar << " =l loadl $" << sourceVar << "_global\n";
+        state.tempMap[resultVar] = resultVar;
+    } else if (isNumber(sourceVar)) {
+        state.output << "    %t" << state.tempCount << " =l copy 0    # TYPE_NUMBER\n";
+        state.output << "    %t" << (state.tempCount + 1) << " =l copy " << sourceVar << "\n";
+        state.output << "    %" << resultVar << " =l call $allocate(l %t" << state.tempCount
+                     << ", l %t" << (state.tempCount + 1) << ")\n";
+        state.tempCount += 2;
+        state.tempMap[resultVar] = resultVar;
+    } else if (sourceVar == "#t") {
+        state.output << "    %" << resultVar << " =l copy $true_obj\n";
+        state.tempMap[resultVar] = resultVar;
+    } else if (sourceVar == "#f") {
+        state.output << "    %" << resultVar << " =l copy $false_obj\n";
+        state.tempMap[resultVar] = resultVar;
+    } else if (sourceVar == "()") {
+        state.output << "    %" << resultVar << " =l copy $nil_obj\n";
+        state.tempMap[resultVar] = resultVar;
     } else {
-        // For variables, just copy the pointer
-        state.output << "    %" << *instr.result << " =l copy %" << *instr.arg1 << "\n";
+        state.output << "    %" << resultVar << " =l copy %" << sourceVar << "\n";
+        state.tempMap[resultVar] = resultVar;
     }
 }
 
@@ -206,29 +223,29 @@ void handleCall(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
 
     state.output << "    # Calling " << funcName << " with " << paramCount << " params\n";
 
-    // Special case for display with 1 parameter
-    if (*instr.arg1 == "display" && paramCount == 1) {
-        state.output << "    call " << funcName << "(l %_t3)\n";
-        return;
+    for (int i = 0; i < 10; i++) {
+        std::string tempName = "_t" + std::to_string(i);
+        std::cerr << "DEBUG: Temp " << tempName << " is in map: "
+                  << (state.tempMap.find(tempName) != state.tempMap.end() ? "yes" : "no") << "\n";
     }
 
-    // Generate call with parameters
     if (instr.result) {
         state.output << "    %" << *instr.result << " =l call " << funcName << "(";
-        if (*instr.arg1 == "+" && paramCount == 2) {
-            // For addition with two parameters: _t0 and _t1
-            state.output << "l %_t0, l %_t1";
-        } else {
-            // Generic parameter access
-            for (int i = 0; i < paramCount; i++) {
-                if (i > 0)
-                    state.output << ", ";
-                state.output << "l %_t" << i;
+        for (int i = 0; i < paramCount; i++) {
+            if (i > 0)
+                state.output << ", ";
+
+            int paramIndex = 0;
+            if (instr.result && instr.result->substr(0, 2) == "_t") {
+                int resultIndex = std::stoi(instr.result->substr(2));
+                paramIndex = resultIndex - paramCount + i;
+                std::cerr << "DEBUG: For param " << i << ", using _t" << paramIndex << "\n";
             }
+
+            state.output << "l %_t" << paramIndex;
         }
         state.output << ")\n";
     } else {
-        // Call with no result (e.g., some void functions)
         state.output << "    call " << funcName << "(";
         for (int i = 0; i < paramCount; i++) {
             if (i > 0)
@@ -237,16 +254,28 @@ void handleCall(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
         }
         state.output << ")\n";
     }
+
+    if (instr.result) {
+        state.tempMap[*instr.result] = *instr.result;
+    }
 }
 
-void handleJumpIf(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
+void handleJumpIf(const tac::ThreeACInstruction& instr, QBEGeneratorState& state, const std::set<std::string>& globalVars)
 {
     if (!instr.arg1 || !instr.arg2)
         return;
 
-    // Check if the condition is true (not nil and not false)
-    state.output << "    %cond" << state.tempCount << " =l ceql %" << *instr.arg1 << ", $nil_obj\n";
-    state.output << "    %cond" << (state.tempCount + 1) << " =l ceql %" << *instr.arg1 << ", $false_obj\n";
+    std::string condVar = *instr.arg1;
+
+    if (globalVars.find(condVar) != globalVars.end()) {
+        state.output << "    # Load condition from global variable: " << condVar << "\n";
+        state.output << "    %cond_val" << state.tempCount << " =l loadl $" << condVar << "_global\n";
+        condVar = "cond_val" + std::to_string(state.tempCount);
+        state.tempCount++;
+    }
+
+    state.output << "    %cond" << state.tempCount << " =l ceql %" << condVar << ", $nil_obj\n";
+    state.output << "    %cond" << (state.tempCount + 1) << " =l ceql %" << condVar << ", $false_obj\n";
     state.output << "    %cond" << (state.tempCount + 2) << " =l or %cond"
                  << state.tempCount << ", %cond" << (state.tempCount + 1) << "\n";
     state.output << "    jnz %cond" << (state.tempCount + 2) << ", @" << *instr.arg2 << ", @next" << state.labelCount << "\n";
@@ -256,14 +285,22 @@ void handleJumpIf(const tac::ThreeACInstruction& instr, QBEGeneratorState& state
     state.labelCount++;
 }
 
-void handleJumpIfNot(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
+void handleJumpIfNot(const tac::ThreeACInstruction& instr, QBEGeneratorState& state, const std::set<std::string>& globalVars)
 {
     if (!instr.arg1 || !instr.arg2)
         return;
 
-    // Check if the condition is false (nil or false)
-    state.output << "    %cond" << state.tempCount << " =l ceql %" << *instr.arg1 << ", $nil_obj\n";
-    state.output << "    %cond" << (state.tempCount + 1) << " =l ceql %" << *instr.arg1 << ", $false_obj\n";
+    std::string condVar = *instr.arg1;
+
+    if (globalVars.find(condVar) != globalVars.end()) {
+        state.output << "    # Load condition from global variable: " << condVar << "\n";
+        state.output << "    %cond_val" << state.tempCount << " =l loadl $" << condVar << "_global\n";
+        condVar = "cond_val" + std::to_string(state.tempCount);
+        state.tempCount++;
+    }
+
+    state.output << "    %cond" << state.tempCount << " =l ceql %" << condVar << ", $nil_obj\n";
+    state.output << "    %cond" << (state.tempCount + 1) << " =l ceql %" << condVar << ", $false_obj\n";
     state.output << "    %cond" << (state.tempCount + 2) << " =l or %cond"
                  << state.tempCount << ", %cond" << (state.tempCount + 1) << "\n";
     state.output << "    jnz %cond" << (state.tempCount + 2) << ", @next" << state.labelCount << ", @" << *instr.arg2 << "\n";
@@ -278,46 +315,81 @@ void handleAlloc(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
     if (!instr.result || !instr.arg1)
         return;
 
+    std::string resultVar = *instr.result;
+
     if (*instr.arg1 == "closure") {
-        // Handle closure allocation
-        state.output << "    %" << *instr.result << " =l call $make_closure(l $" << *instr.arg2 << ")\n";
+        state.output << "    %" << resultVar << " =l call $make_closure(l $" << *instr.arg2 << ")\n";
     } else if (*instr.arg1 == "literal") {
-        // Handle literal allocation
-        // For simplicity, we're treating literals as numbers for now
-        state.output << "    %t" << state.tempCount++ << " =l copy 0    # TYPE_NUMBER (literal)\n";
-        state.output << "    %t" << state.tempCount++ << " =l copy 0    # Value 0 for now\n";
-        state.output << "    %" << *instr.result << " =l call $allocate(l %t" << (state.tempCount - 2)
-                     << ", l %t" << (state.tempCount - 1) << ")\n";
+        state.output << "    %t" << state.tempCount << " =l copy 0    # TYPE_NUMBER (literal)\n";
+        state.output << "    %t" << (state.tempCount + 1) << " =l copy 0    # Value 0 for now\n";
+        state.output << "    %" << resultVar << " =l call $allocate(l %t" << state.tempCount
+                     << ", l %t" << (state.tempCount + 1) << ")\n";
+        state.tempCount += 2;
     } else {
-        // Generic allocation
-        state.output << "    %t" << state.tempCount++ << " =l copy 0    # TYPE_NUMBER\n";
-        state.output << "    %t" << state.tempCount++ << " =l copy 0    # Value 0\n";
-        state.output << "    %" << *instr.result << " =l call $allocate(l %t" << (state.tempCount - 2)
-                     << ", l %t" << (state.tempCount - 1) << ")\n";
+        state.output << "    %t" << state.tempCount << " =l copy 0    # TYPE_NUMBER\n";
+        state.output << "    %t" << (state.tempCount + 1) << " =l copy 0    # Value 0\n";
+        state.output << "    %" << resultVar << " =l call $allocate(l %t" << state.tempCount
+                     << ", l %t" << (state.tempCount + 1) << ")\n";
+        state.tempCount += 2;
     }
+
+    // Store result in tempMap
+    state.tempMap[resultVar] = resultVar;
 }
 
-void handleLoad(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
+void handleLoad(const tac::ThreeACInstruction& instr, QBEGeneratorState& state, const std::set<std::string>& globalVars)
 {
     if (!instr.result || !instr.arg1)
         return;
 
-    // Simple load for now - we'd need more logic for actual memory access
-    state.output << "    %" << *instr.result << " =l copy %" << *instr.arg1 << "\n";
+    std::string resultVar = *instr.result;
+    std::string srcVar = *instr.arg1;
+
+    if (globalVars.find(srcVar) != globalVars.end()) {
+        state.output << "    # Load from global variable: " << srcVar << "\n";
+        state.output << "    %" << resultVar << " =l loadl $" << srcVar << "_global\n";
+    } else {
+        state.output << "    %" << resultVar << " =l copy %" << srcVar << "\n";
+    }
+
+    // Store result in tempMap
+    state.tempMap[resultVar] = resultVar;
 }
 
-void handleStore(const tac::ThreeACInstruction& instr, QBEGeneratorState& state)
+void handleStore(const tac::ThreeACInstruction& instr, QBEGeneratorState& state, const std::set<std::string>& globalVars)
 {
-    if (!instr.arg2)
+    if (!instr.arg1 || !instr.arg2)
         return;
 
-    if (!instr.arg1 || instr.arg1->empty()) {
-        // Store to global environment
-        state.output << "    # Store to global: " << *instr.arg2 << "\n";
-        state.output << "    call $env_set(l \"" << *instr.arg2 << "\", l %" << *instr.arg2 << ")\n";
+    std::string targetVar = *instr.arg1;
+    std::string valueStr = *instr.arg2;
+
+    if (isNumber(valueStr)) {
+        state.output << "    # Create number object for: " << valueStr << "\n";
+        state.output << "    %t" << state.tempCount << " =l copy 0   # TYPE_NUMBER\n";
+        state.output << "    %t" << (state.tempCount + 1) << " =l copy " << valueStr << "\n";
+        state.output << "    %value_obj" << state.tempCount << " =l call $allocate(l %t"
+                     << state.tempCount << ", l %t" << (state.tempCount + 1) << ")\n";
+
+        if (globalVars.find(targetVar) != globalVars.end()) {
+            state.output << "    # Store to global variable: " << targetVar << "\n";
+            state.output << "    storel %value_obj" << state.tempCount << ", $" << targetVar << "_global\n";
+        } else {
+            state.output << "    # Store to local variable: " << targetVar << "\n";
+            state.output << "    %" << targetVar << " =l copy %value_obj" << state.tempCount << "\n";
+            state.tempMap[targetVar] = targetVar;
+        }
+
+        state.tempCount += 2;
     } else {
-        state.output << "    # Store to object field\n";
-        state.output << "    # %" << *instr.arg1 << "->field = %" << *instr.arg2 << "\n";
+        if (globalVars.find(targetVar) != globalVars.end()) {
+            state.output << "    # Store variable to global: " << targetVar << "\n";
+            state.output << "    storel %" << valueStr << ", $" << targetVar << "_global\n";
+        } else {
+            state.output << "    # Store to local variable: " << targetVar << "\n";
+            state.output << "    %" << targetVar << " =l copy %" << valueStr << "\n";
+            state.tempMap[targetVar] = targetVar;
+        }
     }
 }
 

@@ -69,41 +69,63 @@ static void grow_heap()
 
 SchemeObject* alloc_object()
 {
+    printf("DEBUG: Entering alloc_object()\n");
+    printf("DEBUG: Current heap at %p, size %zu, used %zu\n", heap, heap_size, used);
+
     size_t size = sizeof(SchemeObject);
+    printf("DEBUG: SchemeObject size is %zu bytes\n", size);
+
     if (used + size > heap_size) {
+        printf("DEBUG: Need to collect garbage or grow heap\n");
         gc();
         if (used + size > heap_size) {
+            printf("DEBUG: Need to grow heap after GC\n");
             grow_heap();
         }
     }
 
     SchemeObject* obj = (SchemeObject*)((char*)heap + used);
+    printf("DEBUG: Allocated new object at %p\n", obj);
+
+    // Zero initialize the object to prevent garbage values
+    memset(obj, 0, sizeof(SchemeObject));
+
     used += size;
+    printf("DEBUG: Exiting alloc_object(), new used size: %zu\n", used);
     return obj;
 }
 
+// Modified allocate with debugging
 SchemeObject* allocate(SchemeType type, int64_t immediate)
 {
+    printf("DEBUG: Entering allocate(type=%d, immediate=%lld)\n", type, immediate);
+
     SchemeObject* obj = alloc_object();
+    printf("DEBUG: Got object from alloc_object at %p\n", obj);
+
     obj->type = type;
+    printf("DEBUG: Set type to %d\n", type);
 
     switch (type) {
-    case TYPE_NUMBER:
+    case TYPE_NUMBER: // Make sure this matches your enum definition
         obj->value.number = immediate;
         break;
-    case TYPE_SYMBOL:
+    case TYPE_SYMBOL: // Make sure this matches your enum definition
         obj->value.symbol = (const char*)immediate;
         break;
-    case TYPE_PAIR:
+    case TYPE_PAIR: // Make sure this matches your enum definition
         obj->value.pair.car = (SchemeObject*)immediate;
         obj->value.pair.cdr = NULL;
         break;
     case TYPE_NIL:
+        printf("DEBUG: NIL type, no value to set\n");
         break;
     default:
+        printf("DEBUG: Invalid type %d, returning NULL\n", type);
         return NULL;
     }
 
+    printf("DEBUG: Exiting allocate(), returning object at %p\n", obj);
     return obj;
 }
 
@@ -116,6 +138,18 @@ SchemeObject* allocate_pair(SchemeObject* car, SchemeObject* cdr)
     return obj;
 }
 
+void debug_check_struct_sizes()
+{
+    printf("\nDEBUG: STRUCT SIZE INFORMATION\n");
+    printf("DEBUG: sizeof(SchemeObject) = %zu\n", sizeof(SchemeObject));
+    printf("DEBUG: sizeof(SchemeType) = %zu\n", sizeof(SchemeType));
+    printf("DEBUG: offsetof(SchemeObject, type) = %zu\n", offsetof(SchemeObject, type));
+    printf("DEBUG: offsetof(SchemeObject, value) = %zu\n", offsetof(SchemeObject, value));
+    printf("DEBUG: sizeof(union SchemeValue) = %zu\n", sizeof(((SchemeObject*)0)->value));
+    printf("DEBUG: Heap address: %p\n", heap);
+    printf("DEBUG: STRUCT CHECK COMPLETE\n\n");
+}
+
 void init_runtime()
 {
     heap = malloc(INITIAL_HEAP);
@@ -125,20 +159,15 @@ void init_runtime()
     }
     heap_size = INITIAL_HEAP;
     used = 0;
-    init_global_environment();
 
 #ifdef DEBUG_GC
     printf("Runtime initialized with heap size %zu bytes\n", heap_size);
+    debug_check_struct_sizes();
 #endif
 }
 
 void cleanup_runtime()
 {
-    if (SYMBOL_TABLE) {
-        hashmap_destroy(SYMBOL_TABLE->symbols);
-        free(SYMBOL_TABLE);
-        SYMBOL_TABLE = NULL;
-    }
     free(heap);
     heap = NULL;
     heap_size = 0;
@@ -186,16 +215,6 @@ void mark_roots()
 #ifdef DEBUG_GC
     printf("Mark roots\n");
 #endif
-
-    SchemeEnvironment* env = current_environment;
-    while (env != NULL) {
-        mark_environment(env);
-        env = env->enclosing;
-    }
-
-    if (GLOBAL_ENVIRONMENT) {
-        mark_environment(GLOBAL_ENVIRONMENT);
-    }
     void* stack_top;
     void* stack_bottom;
     asm("mov %0, fp" : "=r"(stack_bottom));
@@ -269,9 +288,6 @@ void gc()
 #ifdef DEBUG_GC
     printf("\nGarbage collector called\n");
 #endif
-
-    mark_environment(current_environment);
-    mark_environment(GLOBAL_ENVIRONMENT);
 
 #ifdef DEBUG_GC
     printf("\nBefore sweep:\n");
