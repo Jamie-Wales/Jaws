@@ -6,7 +6,7 @@ namespace jaws_vec {
 
 std::optional<SchemeValue> makeVector(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("make-vector requires 1 or 2 arguments");
@@ -22,8 +22,8 @@ std::optional<SchemeValue> makeVector(
         throw InterpreterError("make-vector: length must be non-negative");
     }
 
-    SchemeValue fill = (args.size() == 2) 
-        ? args[1].ensureValue() 
+    SchemeValue fill = (args.size() == 2)
+        ? args[1].ensureValue()
         : SchemeValue(Number(0));
 
     return SchemeValue(std::vector<SchemeValue>(k, fill));
@@ -31,21 +31,21 @@ std::optional<SchemeValue> makeVector(
 
 std::optional<SchemeValue> vectorProcedure(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     std::vector<SchemeValue> result;
     result.reserve(args.size());
-    
+
     for (const auto& arg : args) {
         result.push_back(arg.ensureValue());
     }
-    
+
     return SchemeValue(std::move(result));
 }
 
 std::optional<SchemeValue> vectorRef(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("vector-ref requires exactly 2 arguments");
@@ -63,7 +63,7 @@ std::optional<SchemeValue> vectorRef(
 
     int idx = index.asNumber().toInt();
     const auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
-    
+
     if (idx < 0 || static_cast<size_t>(idx) >= vector.size()) {
         throw InterpreterError("vector-ref: index out of bounds");
     }
@@ -73,7 +73,7 @@ std::optional<SchemeValue> vectorRef(
 
 std::optional<SchemeValue> vectorSet(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() != 3) {
         throw InterpreterError("vector-set! requires exactly 3 arguments");
@@ -91,7 +91,7 @@ std::optional<SchemeValue> vectorSet(
 
     int idx = index.asNumber().toInt();
     auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
-    
+
     if (idx < 0 || static_cast<size_t>(idx) >= vector.size()) {
         throw InterpreterError("vector-set!: index out of bounds");
     }
@@ -104,7 +104,7 @@ std::optional<SchemeValue> vectorSet(
 
 std::optional<SchemeValue> vectorLength(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("vector-length requires exactly 1 argument");

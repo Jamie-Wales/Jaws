@@ -53,73 +53,27 @@ std::optional<SchemeValue> cdrProcedure(
     return SchemeValue(tail);
 }
 
-std::optional<SchemeValue> cadrProcedure(
-    interpret::InterpreterState&,
-    const std::vector<SchemeValue>& args)
-{
-    if (args.size() != 1) {
-        throw InterpreterError("cadr: requires exactly 1 argument");
-    }
-
-    auto val = args[0].ensureValue();
-    if (!val.isList()) {
-        throw InterpreterError("cadr: argument must be a list");
-    }
-
-    const auto& list = val.asList();
-    auto it = std::next(list.begin());
-    if (it == list.end()) {
-        throw InterpreterError("cadr: list too short");
-    }
-    return *it;
-}
-
-std::optional<SchemeValue> map(
-    interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args)
-{
-    if (args.size() < 2) {
-        throw InterpreterError("map: requires procedure and at least one list");
-    }
-
-    auto proc = args[0].ensureValue();
-    if (!proc.isProc()) {
-        throw InterpreterError("map: first argument must be a procedure");
-    }
-
-    std::vector<std::list<SchemeValue>> lists;
-    size_t minLength = SIZE_MAX;
-
-    for (size_t i = 1; i < args.size(); i++) {
-        auto val = args[i].ensureValue();
-        if (!val.isList()) {
-            throw InterpreterError("map: all arguments after procedure must be lists");
-        }
-        lists.push_back(val.asList());
-        minLength = std::min(minLength, lists.back().size());
-    }
-
-    std::list<SchemeValue> result;
-    std::vector<std::list<SchemeValue>::const_iterator> iters;
-    for (const auto& list : lists) {
-        iters.push_back(list.begin());
-    }
-
-    for (size_t i = 0; i < minLength; i++) {
-        std::vector<SchemeValue> procArgs;
-        for (auto& it : iters) {
-            procArgs.push_back(*it++);
-        }
-
-        auto procResult = interpret::executeProcedure(state, proc, procArgs);
-        if (procResult) {
-            result.push_back(*procResult);
-        }
-    }
-    std::optional<SchemeValue> item = std::nullopt;
-    return result.empty() ? item : SchemeValue(std::move(result));
-}
-
+// std::optional<SchemeValue> cadrProcedure(
+//     interpret::InterpreterState&,
+//     const std::vector<SchemeValue>& args)
+// {
+//     if (args.size() != 1) {
+//         throw InterpreterError("cadr: requires exactly 1 argument");
+//     }
+//
+//     auto val = args[0].ensureValue();
+//     if (!val.isList()) {
+//         throw InterpreterError("cadr: argument must be a list");
+//     }
+//
+//     const auto& list = val.asList();
+//     auto it = std::next(list.begin());
+//     if (it == list.end()) {
+//         throw InterpreterError("cadr: list too short");
+//     }
+//     return *it;
+// }
+//
 std::optional<SchemeValue> cons(
     interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)

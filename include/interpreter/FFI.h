@@ -1,73 +1,41 @@
-
 #pragma once
 #include "DynamicLibrary.h"
 #include "Error.h"
 #include "Procedure.h"
+#include "Value.h"
 #include <dlfcn.h>
+#include <functional>
+#include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
-using CIntFunc = int (*)(void);
-using CDoubleFunc = double (*)(void);
-using CStringFunc = const char* (*)(void);
-using CVoidFunc = void (*)(void);
+using FFIFunction = std::function<std::optional<SchemeValue>(
+    interpret::InterpreterState&, const std::vector<SchemeValue>&)>;
 
 class FFIManager {
 public:
-    static FFIManager& instance() {
-        static FFIManager inst;
-        return inst;
-    }
-
-    void loadLibrary(const std::string& name, const std::string& path) {
-        libraries[name] = std::make_unique<DynamicLibrary>(path);
-    }
-
-    template<typename T>
-    T getFunction(const std::string& libName, const std::string& funcName) {
-        auto it = libraries.find(libName);
-        if (it == libraries.end()) {
-            throw InterpreterError("Library not found: " + libName);
-        }
-        return it->second->getSymbol<T>(funcName);
-    }
-
-    SchemeValue wrapCFunction(const std::string& libName, const std::string& funcName, const std::string& retType) {
-        if (retType == "int") {
-            auto func = getFunction<CIntFunc>(libName, funcName);
-            return SchemeValue(std::make_shared<BuiltInProcedure>(
-                [func](interpret::InterpreterState&, const std::vector<SchemeValue>&) {
-                    return SchemeValue(Number(func()));
-                }));
-        }
-        else if (retType == "double") {
-            auto func = getFunction<CDoubleFunc>(libName, funcName);
-            return SchemeValue(std::make_shared<BuiltInProcedure>(
-                [func](interpret::InterpreterState&, const std::vector<SchemeValue>&) {
-                    return SchemeValue(Number(func()));
-                }));
-        }
-        else if (retType == "string") {
-            auto func = getFunction<CStringFunc>(libName, funcName);
-            return SchemeValue(std::make_shared<BuiltInProcedure>(
-                [func](interpret::InterpreterState&, const std::vector<SchemeValue>&) {
-                    return SchemeValue(std::string(func()));
-                }));
-        }
-        else if (retType == "void") {
-            auto func = getFunction<CVoidFunc>(libName, funcName);
-            return SchemeValue(std::make_shared<BuiltInProcedure>(
-                [func](interpret::InterpreterState&, const std::vector<SchemeValue>&) {
-                    func();
-                    return std::optional<SchemeValue>(std::nullopt);
-                }));
-        }
-        throw InterpreterError("Unsupported return type: " + retType);
-    }
+    static FFIManager& instance();
+    void loadLibrary(const std::string& name, const std::string& path);
+    void* getSymbol(const std::string& libName, const std::string& funcName);
+    void registerWrapper(const std::string& signature, std::function<FFIFunction(void*)> wrapper);
+    SchemeValue wrapCFunction(
+        const std::string& libName,
+        const std::string& funcName,
+        const std::string& retType,
+        const std::vector<std::string>& argTypes = {});
+    static int schemeToInt(const SchemeValue& value);
+    static double schemeToDouble(const SchemeValue& value);
+    static const char* schemeToString(const SchemeValue& value);
 
 private:
     std::unordered_map<std::string, std::unique_ptr<DynamicLibrary>> libraries;
+    std::unordered_map<std::string, std::function<FFIFunction(void*)>> wrappers;
 
-    FFIManager() = default;
+    FFIManager();
     FFIManager(const FFIManager&) = delete;
     FFIManager& operator=(const FFIManager&) = delete;
+
+    // Register default function wrappers for common signatures
+    void registerDefaultWrappers();
 };

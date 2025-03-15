@@ -6,7 +6,7 @@ namespace jaws_math {
 
 std::optional<SchemeValue> plus(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.empty()) {
         return SchemeValue(Number(0));
@@ -25,7 +25,7 @@ std::optional<SchemeValue> plus(
 
 std::optional<SchemeValue> minus(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.empty()) {
         throw InterpreterError("Cannot call procedure - on empty list");
@@ -44,7 +44,7 @@ std::optional<SchemeValue> minus(
 
 std::optional<SchemeValue> mult(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.empty()) {
         return SchemeValue(Number(1));
@@ -59,7 +59,7 @@ std::optional<SchemeValue> mult(
 
 std::optional<SchemeValue> div(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.empty()) {
         throw InterpreterError("Cannot call procedure / on empty list");
@@ -82,7 +82,7 @@ std::optional<SchemeValue> div(
 
 std::optional<SchemeValue> less(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
         throw InterpreterError("< requires at least two arguments");
@@ -105,7 +105,7 @@ std::optional<SchemeValue> less(
 
 std::optional<SchemeValue> greater(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
         throw InterpreterError("> requires at least two arguments");
@@ -128,7 +128,7 @@ std::optional<SchemeValue> greater(
 
 std::optional<SchemeValue> lessOrEqual(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
         throw InterpreterError("'<=' requires at least 2 arguments");
@@ -155,7 +155,7 @@ std::optional<SchemeValue> lessOrEqual(
 
 std::optional<SchemeValue> greaterOrEqual(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() < 2) {
         throw InterpreterError("'>=' requires at least 2 arguments");
@@ -174,23 +174,6 @@ std::optional<SchemeValue> greaterOrEqual(
             throw InterpreterError("Cannot compare these numeric types with >=");
         }
         if (ordering == std::partial_ordering::less) {
-            return SchemeValue(false);
-        }
-    }
-    return SchemeValue(true);
-}
-
-std::optional<SchemeValue> equal(
-    interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) 
-{
-    if (args.size() < 2) {
-        throw InterpreterError("= requires at least two arguments");
-    }
-
-    auto first = args[0].ensureValue();
-    for (size_t i = 1; i < args.size(); ++i) {
-        if (!(first == args[i].ensureValue())) {
             return SchemeValue(false);
         }
     }

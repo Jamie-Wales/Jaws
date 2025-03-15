@@ -9,6 +9,7 @@
 #include "builtins/JawsMath.h"
 #include "builtins/JawsVector.h"
 #include "builtins/jaws_ffi.h"
+#include "builtins/jaws_string.h"
 
 namespace interpret {
 
@@ -27,17 +28,15 @@ InterpreterState createInterpreter()
     define(">=", jaws_math::greaterOrEqual);
     define("<", jaws_math::less);
     define(">", jaws_math::greater);
-    define("eq", jaws_math::equal);
-    define("=", jaws_math::equal);
-    define("eq?", jaws_math::equal);
-    define("equal?", jaws_math::equal);
+    define("=", jaws_eq::equal);
+    define("eq?", jaws_eq::equal);
+    define("equal?", jaws_eq::equal);
     define("boolean?", jaws_eq::isBooleanProc);
     define("procedure?", jaws_eq::isProcedure);
     define("char?", jaws_eq::isChar);
     define("pair?", jaws_eq::isPair);
     define("null?", jaws_eq::isNull);
     define("port?", jaws_eq::isPort);
-    define("eq?", jaws_eq::isEq);
     define("eqv?", jaws_eq::isEqv);
     define("error", jaws_io::error);
     define("symbol?", jaws_eq::isSymbol);
@@ -48,20 +47,17 @@ InterpreterState createInterpreter()
     define("write", jaws_io::write);
     define("display", jaws_io::display);
     define("newline", jaws_io::newline);
-    define("map", jaws_list::map);
+    define("map", jaws_hof::map);
     define("list?", jaws_eq::isList);
     define("list", jaws_list::listProcedure);
     define("car", jaws_list::carProcudure);
     define("cdr", jaws_list::cdrProcedure);
     define("cons", jaws_list::cons);
-    define("length", jaws_list::length);
     define("append", jaws_list::append);
     define("load-library", jaws_ffi::loadLibrary);
     define("register-function", jaws_ffi::registerFunction);
     define("list-ref", jaws_list::listRef);
     define("list-set!", jaws_list::listSet);
-    define("member", jaws_list::member);
-    define("assq", jaws_list::assq);
     define("make-vector", jaws_vec::makeVector);
     define("vector", jaws_vec::vectorProcedure);
     define("vector-ref", jaws_vec::vectorRef);
@@ -71,6 +67,19 @@ InterpreterState createInterpreter()
     define("apply", jaws_hof::apply);
     define("call/cc", jaws_hof::callCC);
     define("call-with-current-continuation", jaws_hof::callCC);
+    define("string=?", jaws_string::stringEqual);
+    define("string<?", jaws_string::stringLess);
+    define("string>?", jaws_string::stringGreater);
+    define("string-ci=?", jaws_string::stringCiEqual);
+    define("string-length", jaws_string::stringLength);
+    define("string-append", jaws_string::stringAppend);
+    define("substring", jaws_string::substring);
+    define("string-ref", jaws_string::stringRef);
+    define("string->list", jaws_string::stringToList);
+    define("list->string", jaws_string::listToString);
+    define("string-copy", jaws_string::stringCopy);
+    define("string-upcase", jaws_string::stringUpcase);
+    define("string-downcase", jaws_string::stringDowncase);
     return state;
 }
 

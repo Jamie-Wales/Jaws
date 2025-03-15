@@ -132,4 +132,7 @@
 
 
 
+(define (zero? x) (if (eqv? x 0) #t #f))
 
+(define (not x)
+  (if x #f #t))

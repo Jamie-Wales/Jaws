@@ -115,8 +115,54 @@ std::optional<SchemeValue> callCC(
             }
         });
 
-    // Pass continuation to procedure
     std::vector<SchemeValue> contArgs = { SchemeValue(cont) };
     return interpret::executeProcedure(state, proc, contArgs);
 }
+
+std::optional<SchemeValue> map(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 2) {
+        throw InterpreterError("map: requires procedure and at least one list");
+    }
+
+    auto proc = args[0].ensureValue();
+    if (!proc.isProc()) {
+        throw InterpreterError("map: first argument must be a procedure");
+    }
+
+    std::vector<std::list<SchemeValue>> lists;
+    size_t minLength = SIZE_MAX;
+
+    for (size_t i = 1; i < args.size(); i++) {
+        auto val = args[i].ensureValue();
+        if (!val.isList()) {
+            throw InterpreterError("map: all arguments after procedure must be lists");
+        }
+        lists.push_back(val.asList());
+        minLength = std::min(minLength, lists.back().size());
+    }
+
+    std::list<SchemeValue> result;
+    std::vector<std::list<SchemeValue>::const_iterator> iters;
+    for (const auto& list : lists) {
+        iters.push_back(list.begin());
+    }
+
+    for (size_t i = 0; i < minLength; i++) {
+        std::vector<SchemeValue> procArgs;
+        for (auto& it : iters) {
+            procArgs.push_back(*it++);
+        }
+
+        auto procResult = interpret::executeProcedure(state, proc, procArgs);
+        if (procResult) {
+            result.push_back(*procResult);
+        }
+    }
+    std::optional<SchemeValue> item = std::nullopt;
+    return result.empty() ? item : SchemeValue(std::move(result));
+}
+
 } // namespace jaws_hof

@@ -1,3 +1,1 @@
-(define (x y) (* y y))
-
-(x 10)
+(if #t (display 10) (display 20))

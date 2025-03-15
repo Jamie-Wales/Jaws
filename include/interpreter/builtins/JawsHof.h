@@ -14,6 +14,9 @@ std::optional<SchemeValue> printHelp(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
+std::optional<SchemeValue> map(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
 std::optional<SchemeValue> apply(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);

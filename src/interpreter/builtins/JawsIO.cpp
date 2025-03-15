@@ -145,18 +145,18 @@ std::optional<SchemeValue> display(
     auto val = args[0].ensureValue();
     if (args.size() == 1) {
         if (const auto* str = std::get_if<std::string>(&val.value)) {
-            std::cout << *str;
+            std::cout << *str << std::flush; // Added flush here
         } else {
-            std::cout << val.toString();
+            std::cout << val.toString() << std::flush; // Added flush here
         }
         return std::nullopt;
     }
 
     auto* output = getOutputStream(args, 1);
     if (const auto* str = std::get_if<std::string>(&val.value)) {
-        *output << *str;
+        *output << *str << std::flush; // Added flush here
     } else {
-        *output << val.toString();
+        *output << val.toString() << std::flush; // Added flush here
     }
 
     return std::nullopt;

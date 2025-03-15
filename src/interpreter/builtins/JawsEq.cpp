@@ -164,7 +164,9 @@ std::optional<SchemeValue> isEq(
     if (args.size() != 2) {
         throw InterpreterError("eq?: expected 2 arguments");
     }
-    return SchemeValue(&args[0] == &args[1]);
+    auto args0 = args[0].ensureValue();
+    auto args1 = args[1].ensureValue();
+    return SchemeValue(&args0 == &args1);
 }
 
 std::optional<SchemeValue> isEqv(
@@ -174,7 +176,7 @@ std::optional<SchemeValue> isEqv(
     if (args.size() != 2) {
         throw InterpreterError("eqv?: expected 2 arguments");
     }
-    return SchemeValue(args[0] == args[1]);
+    return SchemeValue(args[0].ensureValue() == args[1].ensureValue());
 }
 
 std::optional<SchemeValue> isBooleanProc(

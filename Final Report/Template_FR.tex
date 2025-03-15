@@ -1,13 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  FINAL REPORT - A TEMPLATE
+%  FINAL REPORT - Jaws: Jaws Awesomely Wrangles Scheme 
 % 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \documentclass[final]{cmpreport_02}
 
-
-% Some package I am using. You may not need them
-%
 \usepackage{rotating}
 \usepackage{listings}
 \lstset{
@@ -29,61 +26,11 @@
 \usepackage{algorithmicx}
 \usepackage{algpseudocode}
 
-%\setkeys{Gin}{draft}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%  Fill in the fields with:
-%
-%  your project title
-%  your name
-%  your registration number
-%  your supervisor's name
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \title{Jaws: Jaws Awesomely Wrangles Scheme}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% The author's name is ignored if the following command 
-% is not present in the document
-%
-% Before submitting a PDF of your final report to the 
-% project database you may comment out the command
-% if you are worried about lack of anonimity.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \author{Jamie Michael Wales}
 \registration{100067069}
 \supervisor{Dr. Rudy Lapeer}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Fill in the field with your module code.
-% this should be:
-%
-% for BIS project module   -> CMP-6012Y
-% for CS project module    -> CMP-6013Y
-% for MComp project module -> CMP-7043Y
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \ccode{CMP-6013Y}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Comment out if confidential report.
-% The command should be used if the project is subjected 
-% to a Non Disclosure Agreement.
-%
-% Three examples of the use of the \confidential command. 
-% Please ask your supervisor what confidential statement 
-% should be used, if appropriate.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\confidential{}
-
-%\confidential{The contents of this report remain confidential for two years and should not be discussed or disclosed to any third party without the prior written permission from the School of Computing Sciences, the University of East Anglia}
-
-%\confidential{The information contained in this document is confidential, privileged and only for the information of the intended recipient and may not be used, published or redistributed without the prior written consent of FruitName Ltd}
 
 \summary{
 The abstract of your report summarises your entire work (and as such, your report) in no more than half a page. It should include the context of your work including its main objective, what methods you employed, how you implemented these, what the outcomes were and a final statement as a conclusion. It should not contain acronyms, abbreviations, elements of a literature review (though a statement of related work is permissible if it is crucial to your work) or future work. The abstract should be written when everything else has been written up and the project is finished!
@@ -93,41 +40,91 @@ The abstract of your report summarises your entire work (and as such, your repor
 Thank you to Dr. Rudy Lapeer, who helped channel my enthusiasum into a well rounded academic project. Thank you to Ella my partner who is the glue that holds my life together. To my brother, who will always listen to me go on a tangent about compilers and to my parents for their love and support.
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% If you do want a list of figures and a list of tables
-% to appear after the table of contents then comment this line.
-% THIS IS NOT ADVISED THOUGH AS IT COUNTS FOR YOUR 40 PAGES!
-%
-% Note that the class file contains code to avoid
-% producing an empty list section (e.g list of figures) if the 
-% list is empty (i.e. no figure in document).
-%
-% The command also prevents inserting a list of figures or tables 
-% anywhere else in the document
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\nolist
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Comment out if you want your list of figures and list of
-% tables on one page instead of two or more pages, in particular 
-% if the lists do not fit on a single page.
-%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\onePageLists
-
-
 \begin{document}
 
 \section{Introduction}
 
-This section is a "must have" in the report. It should not be longer than a couple of pages but has to  clearly present the problem statement and main objective or aim of the project, followed by the potential solutions and the specific objectives that are part of them. Use a subsection for your main objective and another subsection to specify your sub-objectives in a bullet-pointed list. You may wish to put a MoSCoW at the end of this section (or in the appendix), if appropriate, but if you do so then make sure it matches your objectives and you do come back to it in the final section that briefly discusses and concludes your work.
+Compiler construction presents a unique challenge in computer science, requiring both theoretical depth and practical engineering skill. As Cooper and Torczon \cite{cooper2011engineering} observe, this blend of theory and practice is unparalleled in the discipline. This project explores this duality through the lens of Scheme, a functional programming language that embodies elegant mathematical principles while demanding robust implementation techniques.
+
+The academic landscape of compiler development is often perceived as forbidding terrain. Ghuloum captures this sentiment perfectly: ``The novice compiler writer stands puzzled facing an impenetrable barrier, 'better write an interpreter instead'.'' Many avoid direct compilation to machine code, instead opting for bytecode virtual machines - an approach popularised by Java and adopted by many Scheme implementations.
+
+This project deliberately challenges that perception by charting a course from abstract mathematics to concrete machine code. Beginning with Church's lambda calculus and McCarthy's foundational work on Lisp, we trace how these mathematical abstractions evolve into practical implementation concerns. How does one represent closures in memory? How can tail recursion execute in constant space? How might functional immutability translate to a CPU architecture designed around mutation?
+
+The dissertation follows this journey through a complete Scheme implementation conforming to the R7RS specification \cite{r7rs}. We start with mathematical foundations - lambda calculus, recursive function theory, and the formal semantics that underpin functional programming. These principles inform the design of an interpreter that captures Scheme's semantics in a straightforward implementation. The interpreter then evolves into a compiler through a series of transformations, each preserving semantic meaning while moving closer to the machine level. Finally, we generate efficient x86-64 machine code that remains faithful to Scheme's functional paradigm despite executing on hardware designed for imperative computation.
+
+This roadmap not only demonstrates how to implement a functional language, but reveals the fascinating interplay between abstract theory and concrete implementation. By following this path from mathematics to machine code, we demystify the compiler construction process and illuminate how theoretical concepts manifest in practical engineering decisions.
+
+Our approach deliberately tackles both paths, challenging this perception by implementing both an interpreter and a native code compiler. The compiler portion draws from multiple theoretical traditions. From the Dragon Book \cite{aho2006compilers}, we adopted fundamental parsing techniques, while adapting them to Scheme's homoiconic structure. For the backend, we selected QBE Intermediate Language \cite{qbe_il} as our compilation target, providing an ideal balance between low-level control and cross-platform compatibility.
+
+For intermediate representations, we employ A-Normal Form \cite{flanagan1993essence} to bridge the gap between Scheme's functional semantics and more machine-oriented representations. This transformation simplifies subsequent optimisation passes by making the evaluation order explicit while preserving the language's pure functional nature.
+
+The remainder of this dissertation is organised as follows: Section 2 provides the theoretical background on functional programming and Scheme. Section 3 details our methodological approach to both interpreter and compiler construction. Section 4 discusses the implementation details and evaluation results. Finally, Section 5 concludes with reflections on the project and directions for future work.
 
 \section{Background}
 
-Another section that is essential and should keep its title as is! Although you could perhaps call it ``Literature Review'' instead, this is not advisable as at this stage of your project we do not expect an extensive literature review since this was already done in the second formative assignment. The rationale is simply because you will lose valuable pages that could be used better in the next two sections that will cover the preparation and implementation of actual work done. So just provide the context in which your project operates here, and then provide a brief overview of similar work that is directly relevant to yours. Try to avoid blatant copying and pasting from the formative literature review as it is bound to read awkwardly.
+As remarked by Cooper and Torczon \cite{cooper2011engineering}, a compiler requires deep theoretical knowledge and practical engineering skills, blended in a way unlike any other subject in Computer Science. This project explores both theoretical foundations and practical implementation strategies for a Scheme language interpreter and compiler, aiming to demystify compiler construction while discussing the advantages of functional programming and its history.
+
+To understand why Scheme is an interesting target for compilation, we need to examine two key areas: functional programming fundamentals and Lisp's historical significance, which form the theoretical and practical foundations that make Scheme both challenging and rewarding as a compilation target.
+
+\subsection{Functional Programming Foundations}
+
+Functional programming is a programming paradigm which models computation on mathematical foundations, specifically lambda calculus as formalized by Church \cite{church1936unsolvable}. It uses lambda calculus as the basis for its computation model, where a program can be considered based on its inputs and outputs. The computation is done through a series of steps, where an input is propagated through a program, contrasting with traditional approaches that rely on mutable state and object-oriented abstraction.
+
+As Hickey, the developer of the popular functional programming language Clojure, argues in \cite{hickey2009there}, object-oriented approaches to separation of concerns is "still a mess, it's just that particular objects mess." This highlights how functional programming provides mathematical foundations and immutability at its core, making it easier to reason about programs.
+
+Modern functional programming is characterized by several key principles:
+\begin{itemize}
+    \item Pure functions that produce the same output for the same input without side effects
+    \item Immutable data structures that cannot be changed after creation
+    \item First-class functions that can be passed as arguments or returned as values
+    \item Higher-order functions that operate on other functions
+\end{itemize}
+
+Languages like Haskell enforce these principles strictly, while others like Scheme and ML provide them as preferred tools while allowing imperative features when needed. These principles enable powerful abstractions for handling complexity. Pattern matching, algebraic data types, and monadic composition allow programmers to express complex operations clearly and compose them reliably. The emphasis on immutability and pure functions makes concurrent programming more manageable, as shared state - a major source of bugs in concurrent systems - is avoided by design.
+
+While these abstractions provide elegant ways to express computation, implementing them efficiently on real hardware presents significant challenges. Modern CPUs are designed around mutable state and sequential operations, making the compilation of functional concepts like immutability and higher-order functions non-trivial. The gap between mathematical elegance and practical implementation has existed since the early days of functional programming, where pioneers had to bridge lambda calculus's abstract notions with the realities of computer architecture. These implementation challenges - from closure representation to efficient recursion - remain relevant for modern compiler writers, making the history of how early languages like Lisp solved them particularly instructive. All this makes it an interesting problem space for this project.
+
+\subsection{Lisp and Scheme}
+
+Church's work certainly helps give the proper context within functional programming, as it forms the DNA of these programming paradigms. However, it does not translate practically; it has no basis in actual computing. So, if lambda calculus is the cement and foundation, Lisp (List Processing) can be thought of as the bricks in the first row of our wall of functional programming.
+
+McCarthy used Church's work to define a language to abstract computation, as detailed within his seminal paper "Recursive Functions of Symbolic Expressions and Their Computation by Machine, Part I" \cite{mccarthy1960recursive}. It successfully translated the mathematical concepts of Church into a concrete implementation, and it can be seen in the DNA of any modern functional programming language.
+
+McCarthy introduced S-expressions as a way to represent both data and programs, demonstrating how complex data can be built from pairs. This approach supports atomic symbols and constructed expressions through list structures. The paper explains the \texttt{eval} function which serves as an interpreter, and along with the homoiconic structure of Lisp, provides the beginnings of Lisp's metacircular evaluation and metaprogramming capabilities.
+
+The paper establishes an approach to defining recursive functions, explaining how the use of control flow and base cases can ensure termination. This approach remains clear today in recursive algorithm design. The paper also outlines approaches to memory management that are still relevant: free storage lists for dynamic memory allocation, as well as garbage collection for automatic memory management. It explains a linked list structure for efficient memory use, an approach many functional languages still use today for list implementation.
+
+Lisp's influence extends far beyond functional programming languages. Its fundamental concepts have become part of modern programming's genetic makeup:
+\begin{itemize}
+    \item Garbage collection, first introduced by McCarthy, is now standard in languages from Java to Python
+    \item Lisp's treatment of functions as first-class values appears in JavaScript's callbacks, Python's decorators, and Rust's closures
+    \item The concept of code as data revolutionized how we think about metaprogramming - modern build tools, domain-specific languages, and code generation all echo Lisp's homoiconic approach where programs can manipulate other programs
+\end{itemize}
+
+However, McCarthy's paper has some limitations. While it establishes fundamental concepts, it is limited in its usefulness when looking for applied approaches. It is steeped in heavy mathematical formalism, which is unsurprising given McCarthy's background as a mathematician. This emphasis on lambda calculus and recursive function theory can obscure practical implementation strategies.
+
+Modern compilers need to address a wide range of problems not defined within this paper, unsurprising given its age. The paper's age also affects its immediate applicability. It explains implementation details for the IBM 704, which has little relevance to modern CPU architectures. McCarthy's memory concerns are a product of his time; we face different performance considerations and memory constraints than those of the 1960s.
+
+Nevertheless, McCarthy's work remains seminal and extremely relevant to this project. It provides the methodologies and formal reasoning for not only language concepts but well-defined procedures such as \texttt{car}, \texttt{cdr}, and others. These operations, while named for IBM 704 assembly instructions (Contents of Address Register and Contents of Decrement Register), established patterns for list manipulation that persist in modern functional languages - Haskell's \texttt{head} and \texttt{tail}, ML's pattern matching, and even Rust's iterators all echo these fundamental list operations.
+
+The Scheme Programming Language itself, born out of MIT \cite{SchemeInterpMIT}, is a dialect of Lisp \cite{structureandinterp} and is considered to be one of the foundational functional programming languages. It defined many of the key paradigms of functional programming still used today. Our implementation follows the R7RS specification \cite{r7rs}, ensuring compatibility with the broader Scheme ecosystem.
+
+McCarthy's work directly shapes our implementation approach. His S-expressions guide our parser design, while his \texttt{eval} function models our interpreter. Like McCarthy, we build complex features from simple primitives, starting with basic arithmetic and gradually adding closures and tail calls. This keeps our implementation both correct and manageable.
+
+\subsection{Compiler Construction Approaches}
+
+A compiler project could be considered a capstone project. Compilers and their construction are often conflated with the mythical \cite{ghuloum2006incremental}. This perception leads many novice language enthusiasts to walk the more traveled path by building an interpreter.
+
+When compilation is chosen, it is often through a combined approach using a bytecode virtual machine, where compilation is done to a self-defined instruction set to simulate CPU-based computation. This approach was made popular by the success of the Java programming language \cite{oracle2024java}. There is basis for this approach in Scheme \cite{SchemeImplementations}, and this is the approach of many popular Scheme implementations.
+
+The construction of compilers for real languages is often seen as too complicated to write as an educational tool, and therefore an interpreter is chosen instead. As Ghuloum notes in "An Incremental Approach to Compiler Construction" \cite{ghuloum2006incremental}:
+'The novice compiler writer stands puzzled facing an impenetrable barrier, 'better write an interpreter instead.'
+
+Our approach deliberately tackles both paths, challenging this perception by implementing both an interpreter and a native code compiler. The compiler portion draws from multiple theoretical traditions. From the Dragon Book \cite{aho2006compilers}, we adopted fundamental parsing techniques, while adapting them to Scheme's homoiconic structure. For the backend, we selected QBE Intermediate Language \cite{qbe_il} as our compilation target, providing an ideal balance between low-level control and cross-platform compatibility.
+
+This background research directly informed our methodology, which divides the project into three components: an interpreter for Scheme that follows the R7RS specification, a compiler that generates efficient machine code via the QBE intermediate representation, and a web-based interface for practical usability.
+
+The implementation sections that follow demonstrate how these theoretical foundations were translated into practical code, showing the bridge between Cooper and Torczon's "deep theoretical knowledge" and "practical engineering skills."
 
 \section{Methodology}
 
@@ -142,13 +139,13 @@ It is important to note that a compiler, would use the same front-end as an inte
 The initial development of any compiler/interpreter project begins with establishing an effective front-end strategy. This critical first phase involves selecting appropriate approaches for lexing and parsing to transform raw text into a structured format.
 For lexical analysis, several methodologies were considered, including, manual character-by-character scanning with explicit state management. Using lexer generator tools like Flex or ANTLR; Or finally, Regular expression-based pattern matching
 The regular expression approach was selected for several key reasons. 
-First, regular expressions naturally map to the deterministic finite automaton (DFA) model described by Cooper and Torczon (ADD REF) for lexical analysis. Second, they offer a more concise and maintainable way to express token patterns compared to manual character processing. Third, they avoid the additional learning curve and external dependencies associated with lexer generators, keeping the project self-contained.
+First, regular expressions naturally map to the deterministic finite automaton (DFA) model described by Cooper and Torczon \cite{cooper2011engineering} for lexical analysis. Second, they offer a more concise and maintainable way to express token patterns compared to manual character processing. Third, they avoid the additional learning curve and external dependencies associated with lexer generators, keeping the project self-contained.
 This methodology involves organising token patterns in a prioritised list, with more specific patterns (like keywords) checked before more general ones (like identifiers). This prioritisation is crucial for correct tokenization since patterns may overlap. For instance, scheme-specific patterns for complex numbers needed to be checked before simpler numeric patterns to ensure proper recognition.
 For keyword handling, a two-stage approach was selected: first identify all text as a general identifier, then check a keyword map to determine if it's actually a reserved word. This approach simplifies the regex patterns while maintaining the language's semantics.
-The complete set of token patterns and their priorities were determined by analysing the R7RS Scheme specification (ADD REF), ensuring comprehensive coverage of the language syntax.
+The complete set of token patterns and their priorities were determined by analysing the R7RS Scheme specification \cite{r7rs}, ensuring comprehensive coverage of the language syntax.
 
 \subsubsection{Parser}
-Parsing naturally follows lexing in the construction of an interpreter. The academic literature on parsing strategies is extensive, (ADD REF "Dragon Book") dedicating significant coverage to the topic. 
+Parsing naturally follows lexing in the construction of an interpreter. The academic literature on parsing strategies is extensive, \cite{aho2006compilers} dedicating significant coverage to the topic. 
 As with lexing, there exist tools that generate parsers automatically, typically producing table-based implementations that would be prohibitively complex to write manually. For this project, a recursive descent parsing (Algorithm) approach was selected, leveraging Scheme's homoiconic nature.
 The extensive amount of parsing strategies in compiler theory largely stems from the complexity of handling operator precedence. Standard programming languages employ various operator types: postfix (after the operands), prefix (before the operands), infix (between operands), and even mixfix (such as the ternary operator, which interleaves with its operands). Different parsing techniques attempt to efficiently distinguish between these forms.
 However, much of the literature on parsing optimisation originates from an era when computational efficiency was more constrained. Modern hardware has somewhat diminished these concerns relative to implementation simplicity and maintainability.
@@ -227,7 +224,7 @@ During interpretiation objects must be created to represent the values that are 
     \item \textbf{Pair}: The fundamental data structure in Scheme, pairs are used to construct lists and other compound data structures. The interpreter must provide operations for creating, accessing, and manipulating pairs.
     \item \textbf{Vector} Vectors are fixed-length sequences of elements that can contain any type of value. The interpreter must provide operations for creating, accessing, and manipulating vectors. This includes bytevectors which are vectors of bytes.
     \item \textbf{Procedure} Procedures in Scheme are first-class values, the interpreter needs to treat these as such. Procedures need to store their own environment of symbboles and values. As well as constructing closures, which are procedures that return procedures, that have access to their parents scope.
-    \item \textbf{Port}: Ports are schemes abstraction around input and output. The interpreter must provide operations for creating, reading, and writing to ports.
+    \item \textbf{Port}: Ports are Scheme's abstraction around input and output. The interpreter must provide operations for creating, reading, and writing to ports.
     \item \textbf{Continuations}: Continuations are a powerful feature of Scheme that allow for the capture and reification of the current state of the program. The interpreter must provide operations for creating, capturing, and invoking continuations.
 \end{itemize}
 
@@ -251,16 +248,25 @@ There are two compelling reasons ANF was selected as the first intermediate repr
 Dead code elimination (DCE) integrates seamlessly with ANF due to the clear execution flow that ANF provides. Each variable binding in ANF creates an explicit dependency relationship, making it straightforward to construct a dependency graph where nodes represent variables and edges represent usage relationships. This directed graph can then be systematically traversed to identify nodes with no dependents, indicating unused computations. By removing these unreachable nodes from the graph and their corresponding code from the program, we eliminate dead code without altering program semantics. This approach is particularly effective because ANF's explicit naming of intermediate values makes dependencies immediately visible, enabling more precise identification of truly dead code than would be possible with nested expressions. 
 (As shown in Appendix \ref{alg:dce})
 
-The other optimisation that has been developed is constant folding. This process becomes easier at the ANF stage as all expressions are assigned to variables. We can guarante that  This allows for the easy identification of constant expressions that can be evaluated at compile time. This optimisation is crucial as it reduces the number of instructions that are ultimately generated.
+\subsubsection{Constant Folding}
+Constant folding represents the second optimisation technique implemented alongside dead code elimination. This transformation becomes particularly elegant within the ANF representation, where all expressions are explicitly bound to variables. The structure of ANF guarantees that every node in the program representation is either a function application or an atomic value.
+By leveraging this, the compiler can systematically traverse the ANF structure to identify expressions whose operands are all compile-time constants. These expressions can then be evaluated during compilation rather than at runtime, replacing the original expression with its computed result. For example, expressions like \texttt{(+ 3 4)} can be reduced to the constant \texttt{7}.
+This optimisation produces benefits such as reducing the instruction count in the generated code, eliminating unnecessary computations. This optimisation was chosen as it can be implemented with basic functionality initially and extended to handle increasingly complex constant expressions as needed.
+Unlike dead code elimination, which removes unused code paths, constant folding transforms the code while preserving its semantic meaning. The combination of these two optimisaitons working on the ANF representation demonstrates the power of well-chosen intermediate representations in enabling effective compiler transformations.
+(As shown in Appendix \ref{alg:const-fold})
 
 
 \subsubsection{Three Address Code}
-[write some shit here jamie]
+Three Address Code (TAC) is a lower-level intermediate representation where each instruction typically involves at most three addresses (two operands and one result), closely mirroring the structure of assembly language instructions. In this representation, complex expressions are decomposed into a sequence of simpler operations, with each operation producing a result that is stored in a temporary variable. This linear format eliminates nested expressions entirely, making the control flow and data dependencies explicit.
+TAC was selected as the second intermediate representation in the compilation pipeline for several strategic reasons. First, it provides a natural progression from ANF, further flattening the program structure while preserving the essential computational logic. Second, TAC's direct correspondence to QBE IR facilitates straightforward code generation, as each TAC instruction can typically be translated into one or a small number of QBE instructions. Finally, TAC enables a range of powerful optimisations that operate effectively on this representation.
+The optimisations implemented at the TAC level include scope hoisting, which elevates variable definitions to their optimal scope level, reducing unnecessary allocations and improving memory access patterns. Additionally, inline definitions allow for replacing variable references with their values directly where beneficial, reducing indirection and potentially enabling further optimisations. These transformations are particularly well-suited to the TAC representation due to its explicit control flow, which makes dependency analysis more straightforward and precise. Unlike ANF optimisations which focus on expression simplification, TAC optimisations leverage the linear instruction sequence to identify broader structural improvements that align well with QBE IR's execution model.
 
-
-
-
-This is my preferred title for the section that follows the background but it may not work for all types of projects, in particular if your methodology is more related to planning and/or design. Either way, this section falls in the scope of \textbf{preparing your project} for action and where you list all the \textbf{methods, algorithms, tools, plans and designs} that you will need later on, as discussed in the next section. As also outlined in the project portfolio brief, one or more of the following is what would be covered in this section:
+\subsubsection{QBE Code Generation}
+After experimentation with direct assembly code generation, QBE Intermediate Language \cite{qbe_il} was selected as the final compilation target for this project. QBE (Quick Backend) provides an ideal balance between low-level control and cross-platform compatibility, significantly accelerating the development process while maintaining fine-grained control over the generated code.
+QBE offers several strategic advantages for this compiler implementation. First, its streamlined instruction set closely resembles assembly while abstracting away architecture-specific details, enabling the generation of efficient code for multiple target platforms without maintaining separate codebases. Second, QBE's simplified type system which comprises the essential types w (word), l (long), s (single), and d (double) this maps to Scheme's runtime representation needs without introducing unnecessary complexity.
+The translation from TAC to QBE is direct, as both share a similar three-address code structure. Most TAC operations map directly to QBE instructions, with minimal adaptation required. Memory operations map cleanly to QBE's load and store instructions, which handle different data widths explicitly.
+Control flow translation is equally straightforward, with QBE's block-based structure accommodating the program's flow graph representation. Conditional branches in TAC translate to QBE's jnz instruction, while function calls align with QBE's call mechanism. This direct correspondence significantly simplified the code generation phase of the compiler, allowing development efforts to focus on optimisation rather than architecture-specific details.
+By leveraging QBE, the compiler achieves a balance of performance, portability, and development efficiency that would be difficult to accomplish with direct assembly generation. The resulting compilation pipeline delivers robust, optimised code while maintaining the flexibility to target multiple architectures with minimal additional effort.
 
 \begin{itemize}
 \item \textbf{Methodology: } Explanation (and justification) of methods, algorithms (typically written in pseudo-code), mathematical or statistical models, technologies etc.\ that you will implement as part of your project. These may come from other sources (e.g.\ the literature, Github, etc.) or be your own creation. Note that it should not cover methods that you will not use! If these are worthwhile mentioning then briefly discuss them in the Background section instead.
@@ -280,7 +286,6 @@ Could be a section each for implementation and evaluation if this suits you bett
 \section{Conclusion and Future Work}
 
 Another essential section that should keep its title as suggested. Briefly discuss your main findings, outcomes, results; what worked and what could have been done differently. Then summarise your work in a concluding statement by comparing your outcomes against the main and sub-objectives and/or MoSCoW requirements (if used) and suggest potential future work that could be done if more time would be available.
-
 
 \clearpage
 
@@ -440,17 +445,64 @@ WHITESPACE & Pattern for whitespace characters \\
     \While{$WorkList \neq \emptyset$}
         \State $node \gets \text{Dequeue}(WorkList)$
         \State $LiveNodes \gets LiveNodes \cup \{node\}$
-        \For{each edge $(node, dependent)$ in $G$}
+        \For{each $dependent$ in $\text{GetDependents}(G, node)$}
             \If{$dependent \notin LiveNodes$}
                 \State $\text{Enqueue}(WorkList, dependent)$
-                \State $LiveNodes \gets LiveNodes \cup \{dependent\}$
             \EndIf
         \EndFor
     \EndWhile
     
-    \State $G' \gets \text{FilterGraph}(G, LiveNodes)$ \Comment{Remove dead nodes and edges}
-    \State $Program' \gets \text{RemoveDeadCode}(Program, LiveNodes)$
+    \State $Program' \gets \text{RemoveDeadBindings}(Program, LiveNodes)$
     \State \Return $Program'$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+\begin{algorithm}
+\caption{Constant Folding for ANF Expressions}
+\label{alg:const-fold}
+\begin{algorithmic}[1]
+\Procedure{ConstantFolding}{$Program$}
+    \State $ConstMap \gets \emptyset$
+    \State $FoldedProgram \gets \emptyset$
+    
+    \For{each binding $(var, expr)$ in $Program$}
+        \State $foldedExpr \gets \text{FoldExpression}(expr, ConstMap)$
+        
+        \If{$\text{IsLiteral}(foldedExpr)$}
+            \State $ConstMap[var] \gets foldedExpr$
+        \EndIf
+        
+        \State Add $(var, foldedExpr)$ to $FoldedProgram$
+    \EndFor
+    
+    \State \Return $FoldedProgram$
+\EndProcedure
+
+\Procedure{FoldExpression}{$expr, ConstMap$}
+    \If{$expr$ is variable and $expr$ in $ConstMap$}
+        \State \Return $ConstMap[expr]$
+        
+    \ElsIf{$expr$ is primitive operation}
+        \State $args \gets$ empty list
+        \State $allConstant \gets \text{true}$
+        
+        \For{each $arg$ in $expr.args$}
+            \State $foldedArg \gets \text{FoldExpression}(arg, ConstMap)$
+            \State Add $foldedArg$ to $args$
+            \If{not $\text{IsLiteral}(foldedArg)$}
+                \State $allConstant \gets \text{false}$
+            \EndIf
+        \EndFor
+        
+        \If{$allConstant$ and $\text{IsPure}(expr.op)$}
+            \State \Return $\text{Evaluate}(expr.op, args)$
+        \Else
+            \State \Return new Operation($expr.op, args$)
+        \EndIf
+        
+    \Else
+        \State \Return $expr$
+    \EndIf
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}

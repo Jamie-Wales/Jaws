@@ -1,4 +1,5 @@
-(import base loops)
+(import base)
+
 (define (cadr x) (car (cdr x)))     ; Second element
 (define (cddr x) (cdr (cdr x)))     ; Rest after the second element
 (define (caddr x) (car (cddr x)))   ; Third element
@@ -52,46 +53,65 @@
         (loop (cdr lst) (cons (car lst) lst-reversed)))))
 
 
-(define (list-tail lst)
+(define (list-tail lst k)
+  (if (zero? k)  
+      lst
+      (list-tail (cdr lst) (- k 1))))
+
+
+(define (last lst)
   (let loop ([lst lst])
     (if (null? (cdr lst))
         (car lst)
         (loop (cdr lst)))))
 
+(define (last-pair lst)
+  (let loop ([lst lst])
+    (if (null? (cdr lst))
+        lst
+        (loop (cdr lst)))))
+
+(define (memq obj lst)
+  (cond ((null? lst) #f)
+        ((eq? obj (car lst)) lst)
+        (else (memq obj (cdr lst)))))
+
+(define (memv obj lst)
+  (cond ((null? lst) #f)
+        ((eqv? obj (car lst)) lst)
+        (else (memv obj (cdr lst)))))
+
+(define (assoc obj alist)
+  (cond ((null? alist) #f)
+        ((not (pair? (car alist)))
+         (error "assoc: elements must be pairs"))
+        ((equal? obj (caar alist)) (car alist))
+        (else (assoc obj (cdr alist)))))
+
+(define (assv obj alist)
+  (cond ((null? alist) #f)
+        ((not (pair? (car alist)))
+         (error "assv: elements must be pairs"))
+        ((eqv? obj (caar alist)) (car alist))
+        (else (assv obj (cdr alist)))))
+
+(define (member obj lst)
+  (cond ((null? lst) #f)
+        ((equal? obj (car lst)) lst)
+        (else (member obj (cdr lst)))))
+
+(define (assq obj alist)
+  (cond ((null? alist) #f)
+        ((not (pair? (car alist)))
+         (error "assq: elements must be pairs"))
+        ((eq? obj (caar alist)) (car alist))
+        (else (assq obj (cdr alist)))))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(define (length lst)
+  (let loop ((lst lst) (count 0))
+    (if (null? lst)
+        count
+        (loop (cdr lst) (+ count 1)))))
 
 

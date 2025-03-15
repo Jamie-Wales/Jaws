@@ -1,61 +1,60 @@
 #pragma once
-#include "Value.h"
 #include "interpret.h"
 #include <optional>
 #include <vector>
 
-namespace jaws_list {
+namespace jaws_string {
 
-std::optional<SchemeValue> listProcedure(
+std::optional<SchemeValue> stringEqual(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> carProcudure(
+std::optional<SchemeValue> stringLess(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> cdrProcedure(
+std::optional<SchemeValue> stringGreater(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> cadrProcedure(
+std::optional<SchemeValue> stringCiEqual(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> cons(
+std::optional<SchemeValue> stringLength(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> length(
+std::optional<SchemeValue> stringAppend(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> append(
+std::optional<SchemeValue> substring(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> reverse(
+std::optional<SchemeValue> stringRef(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> listRef(
+std::optional<SchemeValue> stringToList(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> listTail(
+std::optional<SchemeValue> listToString(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> listSet(
+std::optional<SchemeValue> stringCopy(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> member(
+std::optional<SchemeValue> stringUpcase(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> assq(
+std::optional<SchemeValue> stringDowncase(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-} // namespace jaws_list
+} // namespace jaws_string
