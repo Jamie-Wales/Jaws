@@ -417,4 +417,54 @@ void FFIManager::registerDefaultWrappers()
             return std::nullopt;
         };
     });
+    // Additional wrapper for void(int,int,string)
+    registerWrapper("void(int,int,string)", [](void* ptr) -> FFIFunction {
+        auto func = reinterpret_cast<void (*)(int, int, const char*)>(ptr);
+        return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
+            checkArgCount(args, 3, "FFI function");
+            func(schemeToInt(args[0]), schemeToInt(args[1]), schemeToString(args[2]));
+            return std::nullopt;
+        };
+    });
+
+    // Additional wrapper for void(int,int,int,int,int)
+    registerWrapper("void(int,int,int,int,int)", [](void* ptr) -> FFIFunction {
+        auto func = reinterpret_cast<void (*)(int, int, int, int, int)>(ptr);
+        return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
+            checkArgCount(args, 5, "FFI function");
+            func(schemeToInt(args[0]), schemeToInt(args[1]), schemeToInt(args[2]),
+                schemeToInt(args[3]), schemeToInt(args[4]));
+            return std::nullopt;
+        };
+    });
+
+    // int(int,int,int,int)
+    registerWrapper("int(int,int,int,int)", [](void* ptr) -> FFIFunction {
+        auto func = reinterpret_cast<int (*)(int, int, int, int)>(ptr);
+        return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
+            checkArgCount(args, 4, "FFI function");
+            int result = func(schemeToInt(args[0]), schemeToInt(args[1]),
+                schemeToInt(args[2]), schemeToInt(args[3]));
+            return SchemeValue(Number(result));
+        };
+    });
+    registerWrapper("void(int,int,int,int,int,int)", [](void* ptr) -> FFIFunction {
+        auto func = reinterpret_cast<void (*)(int, int, int, int, int, int)>(ptr);
+        return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
+            checkArgCount(args, 6, "FFI function");
+            func(schemeToInt(args[0]), schemeToInt(args[1]),
+                schemeToInt(args[2]), schemeToInt(args[3]),
+                schemeToInt(args[4]), schemeToInt(args[5]));
+            return std::nullopt;
+        };
+    });
+    // int(int,int,string)
+    registerWrapper("int(int,int,string)", [](void* ptr) -> FFIFunction {
+        auto func = reinterpret_cast<int (*)(int, int, const char*)>(ptr);
+        return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
+            checkArgCount(args, 3, "FFI function");
+            int result = func(schemeToInt(args[0]), schemeToInt(args[1]), schemeToString(args[2]));
+            return SchemeValue(Number(result));
+        };
+    });
 }

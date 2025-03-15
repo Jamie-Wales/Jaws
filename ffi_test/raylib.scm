@@ -1,0 +1,65 @@
+(import base)
+(load-library "snake_bridge" "../ffi_test/libraylib_bridge.so")
+
+(register-function "snake_bridge" "bridge_init_game" "init-game" "int" "int" "int" "string")
+(register-function "snake_bridge" "bridge_generate_food" "generate-food" "void")
+(register-function "snake_bridge" "bridge_move_snake" "move-snake" "int")
+(register-function "snake_bridge" "bridge_check_wall_collision" "check-wall-collision" "int")
+(register-function "snake_bridge" "bridge_check_self_collision" "check-self-collision" "int")
+(register-function "snake_bridge" "bridge_check_food_collision" "check-food-collision" "int")
+(register-function "snake_bridge" "bridge_grow_snake" "grow-snake" "void")
+(register-function "snake_bridge" "bridge_set_direction" "set-direction" "void" "int")
+(register-function "snake_bridge" "bridge_get_input" "get-input" "int")
+(register-function "snake_bridge" "bridge_should_close" "should-close" "int")
+(register-function "snake_bridge" "bridge_set_game_over" "set-game-over" "void")
+(register-function "snake_bridge" "bridge_render_frame" "render-frame" "void")
+(register-function "snake_bridge" "bridge_render_game_over" "render-game-over" "void")
+(register-function "snake_bridge" "bridge_close_game" "close-game" "void")
+
+;; Main snake game logic - controlled from Scheme
+(define (run-snake-game)
+  (display "Starting Snake Game\n")
+  (if (= (init-game 800 600 "Snake Game - Scheme & Raylib") 0)
+      (begin
+        (display "Game initialized successfully\n")
+        (generate-food)
+        (define game-over #f)
+        (define show-game-over #f)
+        (define game-over-frames 0)
+        (let loop ()
+          (cond
+            ((= (should-close) 1)
+             (display "Window closed\n"))
+            
+            (show-game-over
+             (render-game-over)
+             (set! game-over-frames (+ game-over-frames 1))
+             (if (< game-over-frames 180) 
+                 (loop)
+                 (display "Game over screen finished\n")))
+            
+            (else
+              (let ((input (get-input)))
+                (if (>= input 0) 
+                    (set-direction input)))
+              (move-snake)
+              (cond
+                ((= (check-wall-collision) 1)
+                 (set-game-over)
+                 (set! game-over #t)
+                 (set! show-game-over #t))
+                ((= (check-self-collision) 1)
+                 (set-game-over)
+                 (set! game-over #t)
+                 (set! show-game-over #t))
+                ((= (check-food-collision) 1)
+                 (grow-snake)
+                 (generate-food)))
+              (render-frame)
+              (loop))))
+        (close-game)
+        (display "Game closed successfully\n"))
+      
+      (display "Failed to initialize game\n")))
+
+(run-snake-game)
