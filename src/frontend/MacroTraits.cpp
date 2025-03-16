@@ -95,17 +95,14 @@ std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& exp
                                       continue;
 
                                   if (auto* atom = std::get_if<MacroAtom>(&elem->value)) {
-                                      // Handle ellipsis case
                                       if (atom->token.type == Tokentype::ELLIPSIS && !processed.empty()) {
                                           processed.back()->isVariadic = true;
                                           continue;
                                       }
-                                      // Handle dot case
                                       if (atom->token.type == Tokentype::DOT) {
                                           if (i + 1 >= list.elements.size()) {
                                               throw std::runtime_error("Invalid dot syntax in pattern");
                                           }
-                                          // Just process the element after the dot as part of the list
                                           elem = fromExpr(list.elements[++i]);
                                       }
                                   }
@@ -498,15 +495,18 @@ std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_pt
                        } },
             expr->as);
     }
-    for (const auto& expr : toExpand) {
-        auto userExpr = fromExpr(expr);
-        auto expandedMacro = transformMacroRecursive(userExpr, env);
+    for (const auto& expr : exprs) {
+        if (auto* defineSyntax = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+        } else if (std::holds_alternative<VectorExpression>(expr->as)) {
+            expanded.push_back(expr);
+        } else {
+            auto userExpr = fromExpr(expr);
+            auto expandedMacro = transformMacroRecursive(userExpr, env);
+            auto tokens = scanner::tokenize(expandedMacro->toString());
+            auto expandedExpr = (*parse::parse(std::move(tokens)))[0];
 
-        // Reparse the expanded expression
-        auto tokens = scanner::tokenize(expandedMacro->toString());
-        auto expandedExpr = (*parse::parse(std::move(tokens)))[0];
-
-        expanded.push_back(expandedExpr);
+            expanded.push_back(expandedExpr);
+        }
     }
 
     return expanded;

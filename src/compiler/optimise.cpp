@@ -4,18 +4,14 @@
 #include <iostream>
 
 namespace optimise {
-
 void printAnf(std::string message, std::vector<std::shared_ptr<ir::TopLevel>>& anfs, bool print)
 {
     if (print) {
         std::cout << message << std::endl;
         for (const auto& tl : anfs)
-            std::cout << tl->toString() << "\n";
+            std::cout << tl->toString() << std::endl;
     }
-    std::cout << "\n"
-              << std::endl;
 }
-
 std::vector<std::shared_ptr<ir::TopLevel>> optimise(std::vector<std::shared_ptr<ir::TopLevel>>& anfs, bool print)
 {
 

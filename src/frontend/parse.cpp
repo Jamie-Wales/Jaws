@@ -118,7 +118,6 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
     if (match(state, Tokentype::HASH))
         if (match(state, Tokentype::LEFT_PAREN))
             return parseVector(state);
-
     return parseAtom(state);
 }
 
@@ -306,16 +305,13 @@ std::shared_ptr<Expression> parseTailExpression(ParserState& state)
 
 std::shared_ptr<Expression> parseVector(ParserState& state)
 {
-    if (match(state, Tokentype::LEFT_PAREN)) {
-        std::vector<std::shared_ptr<Expression>> elements;
-        while (!match(state, Tokentype::RIGHT_PAREN)) {
-            elements.push_back(parseExpression(state));
-        }
-        return std::make_shared<Expression>(Expression {
-            VectorExpression { std::move(elements) },
-            previousToken(state).line });
+    std::vector<std::shared_ptr<Expression>> elements;
+    while (!match(state, Tokentype::RIGHT_PAREN)) {
+        elements.push_back(parseExpression(state));
     }
-    throw ParseError("Expected list when defining vector", previousToken(state), "");
+    return std::make_shared<Expression>(Expression {
+        VectorExpression { std::move(elements) },
+        previousToken(state).line });
 }
 
 std::shared_ptr<Expression> parseList(ParserState& state)

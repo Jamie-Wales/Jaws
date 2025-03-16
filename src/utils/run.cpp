@@ -127,6 +127,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             << "<| Original File |>\n"
             << output
             << std::endl;
+        ss.str("");
         ss.clear();
     }
 
@@ -138,6 +139,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         std::cout << "\n"
                   << std::endl;
 
+        ss.str("");
         ss.clear();
     }
 
@@ -150,6 +152,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         std::cout << "\n<| File After Import |>\n"
                   << output
                   << std::endl;
+        ss.str("");
         ss.clear();
     }
 
@@ -163,6 +166,8 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
     const auto expanded = macroexp::expandMacros(withImports);
 
     if (opts.printMacro) {
+
+        ss.str("");
         ss.clear();
         for (const auto& expression : expanded) {
             ss << expression->toString() << "\n";
@@ -173,6 +178,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                   << output
                   << std::endl;
 
+        ss.str("");
         ss.clear();
 
         if (opts.printAST) {
@@ -192,7 +198,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             const auto _3ac = tac::anfToTac(anf);
 
             if (opts.print3AC) {
-                std::cout << "\n<| Three Address Code |>\n"
+                std::cout << "<| Three Address Code |>" << std::endl
                           << _3ac.toString() << std::endl;
             }
 

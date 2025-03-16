@@ -79,7 +79,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                                   elements.push_back(exprToList(elem));
                               }
                               return std::make_shared<Expression>(
-                                  Expression { VectorExpression { elements }, expr->line });
+                                  Expression { ListExpression { elements }, expr->line });
                           },
                           [&](const IfExpression& i) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;

@@ -63,6 +63,9 @@ InterpreterState createInterpreter()
     define("vector-ref", jaws_vec::vectorRef);
     define("vector-set!", jaws_vec::vectorSet);
     define("vector-length", jaws_vec::vectorLength);
+    define("vector-copy", jaws_vec::vectorCopy);
+    define("vector-copy!", jaws_vec::vectorCopyTo);
+    define("vector-fill!", jaws_vec::vectorFill);
     define("eval", jaws_hof::eval);
     define("apply", jaws_hof::apply);
     define("call/cc", jaws_hof::callCC);
@@ -80,6 +83,7 @@ InterpreterState createInterpreter()
     define("string-copy", jaws_string::stringCopy);
     define("string-upcase", jaws_string::stringUpcase);
     define("string-downcase", jaws_string::stringDowncase);
+
     return state;
 }
 
@@ -380,6 +384,16 @@ std::optional<ProcedureCall> evaluateProcedureCall(
         auto arg = interpret(state, sexpr.elements[i]);
         if (!arg)
             return std::nullopt;
+
+        if (arg->isProc() && arg->asProc()->isTailCall()) {
+            auto tailProc = arg->asProc();
+            auto tailCall = std::dynamic_pointer_cast<TailCall>(tailProc);
+            auto result = executeProcedure(state, SchemeValue(tailCall->proc), tailCall->args);
+            if (result) {
+                arg = result;
+            }
+        }
+
         args.push_back(*arg);
     }
 

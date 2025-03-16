@@ -115,3 +115,25 @@
         (loop (cdr lst) (+ count 1)))))
 
 
+
+(define-syntax case
+  (syntax-rules (else =>)
+    [(case key)
+     (let ((tmp key))
+       (void))]
+    [(case key (else => proc))
+     (let ((tmp key))
+       ((proc) tmp))]
+    [(case key (else expr1 expr2 ...))
+     (begin expr1 expr2 ...)]
+    [(case key ((datum ...) => proc) clause ...)
+     (let ((tmp key))
+       (if (memv tmp '(datum ...))
+           ((proc) tmp)
+           (case tmp clause ...)))]
+    [(case key ((datum ...) expr1 expr2 ...) clause ...)
+     (let ((tmp key))
+       (if (memv tmp '(datum ...))
+           (begin expr1 expr2 ...)
+           (case tmp clause ...)))]))
+
