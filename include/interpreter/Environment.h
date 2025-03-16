@@ -21,4 +21,5 @@ public:
     void define(const std::string& name, const SchemeValue& value);
     void set(const std::string& name, const SchemeValue& value);
     std::optional<SchemeValue> get(const std::string& name) const;
+    std::shared_ptr<Environment> copy() const;
 };

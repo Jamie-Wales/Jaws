@@ -36,7 +36,6 @@ std::optional<SchemeValue> UserProcedure::operator()(
 
     auto oldEnv = state.env;
     state.env = newEnv;
-
     std::optional<SchemeValue> result;
     for (const auto& expr : body) {
         result = interpret::interpret(state, expr);
@@ -46,7 +45,6 @@ std::optional<SchemeValue> UserProcedure::operator()(
             return result;
         }
     }
-
     newEnv->popFrame();
     state.env = oldEnv;
     return result;

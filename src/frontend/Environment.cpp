@@ -47,6 +47,17 @@ void Environment::set(const std::string& name, const SchemeValue& value)
     frames.front()->bound[name] = value;
 }
 
+std::shared_ptr<Environment> Environment::copy() const
+{
+    auto newEnv = std::make_shared<Environment>(enclosing);
+    for (auto it = frames.rbegin(); it != frames.rend(); ++it) {
+        auto newFrame = std::make_shared<Frame>();
+        newFrame->bound = (*it)->bound; // Copy all bindings
+        newEnv->frames.push_front(newFrame);
+    }
+    return newEnv;
+}
+
 std::optional<SchemeValue> Environment::get(const std::string& name) const
 {
     for (const auto& frame : frames) {

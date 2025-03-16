@@ -260,12 +260,15 @@ std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, con
 
 std::optional<SchemeValue> interpretLambda(InterpreterState& state, const LambdaExpression& lambda)
 {
+    auto closureEnv = state.env->copy();
+
     auto proc = std::make_shared<UserProcedure>(
         lambda.parameters,
-        lambda.body, state.env, lambda.isVariadic);
+        lambda.body,
+        closureEnv, // Use the copied environment
+        lambda.isVariadic);
     return SchemeValue(std::move(proc));
 }
-
 std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpression& ifexpr)
 {
     auto condition = interpret(state, ifexpr.condition);
@@ -336,11 +339,10 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
             return interpret(state, tail.expression);
         }
         auto tailCall = std::make_shared<TailCall>(call->procedure.asProc(), call->arguments);
-        return executeProcedure(state, SchemeValue(tailCall), tailCall->args);
+        return SchemeValue(tailCall);
     }
     return interpret(state, tail.expression);
 }
-
 bool fileExists(const std::string& path)
 {
     std::ifstream f(path.c_str());
@@ -389,9 +391,9 @@ std::optional<SchemeValue> executeProcedure(
     const SchemeValue& proc,
     const std::vector<SchemeValue>& args)
 {
+
     if (!proc.isProc()) {
-        throw InterpreterError(
-            "Cannot execute non-procedure: " + proc.toString());
+        throw InterpreterError("Cannot execute non-procedure: " + proc.toString());
     }
 
     auto procedure = proc.asProc();
@@ -405,13 +407,13 @@ std::optional<SchemeValue> executeProcedure(
         }
 
         auto result = (*procedure)(state, currentArgs);
-        if (!result)
+        if (!result) {
             return std::nullopt;
+        }
 
         if (!result->isProc() || !result->asProc()->isTailCall()) {
             return result;
         }
-
         procedure = result->asProc();
     }
 }
