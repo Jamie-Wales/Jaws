@@ -333,6 +333,7 @@ std::optional<SchemeValue> interpretVector(InterpreterState& state, const Vector
     return SchemeValue(std::move(elements));
 }
 
+// #TODO: Refactor this so tail calls are less hacky
 std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const TailExpression& tail)
 {
     if (auto sexpr = std::get_if<sExpression>(&tail.expression->as)) {
@@ -343,10 +344,14 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
             return interpret(state, tail.expression);
         }
         auto tailCall = std::make_shared<TailCall>(call->procedure.asProc(), call->arguments);
-        return SchemeValue(tailCall);
+
+        if (sexpr->elements.size() == 1) {
+            return executeProcedure(state, SchemeValue(tailCall), tailCall->args);
+        }
     }
     return interpret(state, tail.expression);
 }
+
 bool fileExists(const std::string& path)
 {
     std::ifstream f(path.c_str());

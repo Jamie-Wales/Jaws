@@ -13,6 +13,7 @@ namespace interpret {
 struct InterpreterState {
     std::shared_ptr<Environment> env;
     std::shared_ptr<Environment> rootEnv;
+    bool tailPosition = false;
 
     InterpreterState()
     {
