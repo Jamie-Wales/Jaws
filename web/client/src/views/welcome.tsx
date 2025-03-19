@@ -55,7 +55,7 @@ export function WelcomePage() {
             `}>
                 <div className="p-4 space-y-4">
                     <div className="flex justify-between items-center">
-                        <span className="font-semibold text-lg text-white">Menu</span>
+                        <span className="text-lg font-semibold text-white">Menu</span>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -68,7 +68,7 @@ export function WelcomePage() {
                     <div className="space-y-2">
                         <Button
                             variant="ghost"
-                            className="w-full justify-start text-white hover:bg-slate-800/60"
+                            className="w-full justify-start text-white hover:bg-slate-800/60 text-base"
                             onClick={() => {
                                 navigate('/Jaws/docs');
                                 setMobileMenuOpen(false);
@@ -78,7 +78,7 @@ export function WelcomePage() {
                         </Button>
                         <Button
                             variant="ghost"
-                            className="w-full justify-start text-white hover:bg-slate-800/60"
+                            className="w-full justify-start text-white hover:bg-slate-800/60 text-base"
                             onClick={() => {
                                 navigate('/Jaws/examples');
                                 setMobileMenuOpen(false);
@@ -88,7 +88,7 @@ export function WelcomePage() {
                         </Button>
                         <Button
                             style={buttonStyles}
-                            className="w-full justify-start hover:opacity-90"
+                            className="w-full justify-start hover:opacity-90 text-base"
                             onClick={() => {
                                 navigate('/Jaws/get-started');
                                 setMobileMenuOpen(false);
@@ -109,7 +109,7 @@ export function WelcomePage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <div className="text-2xl md:text-3xl font-bold animate-slideInRight">JAWS</div>
+                                <div className="text-2xl md:text-4xl font-semibold animate-slideInRight">JAWS</div>
                                 <ParenthesesIcon className="animate-slideInRight" />
                             </div>
                             <Button
@@ -124,21 +124,21 @@ export function WelcomePage() {
                         <div className="hidden md:flex md:flex-row space-y-2 md:space-y-0 md:space-x-4">
                             <Button
                                 variant="ghost"
-                                className="text-white hover:bg-slate-800/60 w-full md:w-auto"
+                                className="text-white hover:bg-slate-800/60 w-full md:w-auto text-base"
                                 onClick={() => navigate('/Jaws/docs')}
                             >
                                 Documentation
                             </Button>
                             <Button
                                 variant="ghost"
-                                className="text-white hover:bg-slate-800/60 w-full md:w-auto"
+                                className="text-white hover:bg-slate-800/60 w-full md:w-auto text-base"
                                 onClick={() => navigate('/Jaws/examples')}
                             >
                                 Examples
                             </Button>
                             <Button
                                 style={buttonStyles}
-                                className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full md:w-auto"
+                                className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full md:w-auto text-base"
                                 onClick={() => navigate('/Jaws/get-started')}
                             >
                                 Get Started
@@ -153,10 +153,10 @@ export function WelcomePage() {
                     <div className="grid md:grid-cols-2 gap-8 md:gap-12">
                         <div className="space-y-6 animate-floatIn">
                             <div className="space-y-2">
-                                <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+                                <h1 className="text-4xl md:text-6xl font-semibold leading-tight">
                                     JAWS
                                 </h1>
-                                <p className="text-lg md:text-xl text-cyan-400 font-medium tracking-wide animate-shimmer">
+                                <p className="text-lg md:text-xl font-medium tracking-wide animate-shimmer text-cyan-400">
                                     Jaws Awesomely Wrangles Scheme
                                 </p>
                             </div>
@@ -168,7 +168,7 @@ export function WelcomePage() {
                                 <Button
                                     size="lg"
                                     style={buttonStyles}
-                                    className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
+                                    className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-base"
                                     onClick={() => navigate('/Jaws/editor')}
                                 >
                                     Try Online Editor <ArrowRight className="ml-2 h-4 w-4" />
@@ -176,7 +176,7 @@ export function WelcomePage() {
                                 <Button
                                     variant="outline"
                                     size="lg"
-                                    className="bg-transparent text-white hover:bg-slate-800/60 border-white hover:border-white w-full sm:w-auto"
+                                    className="bg-transparent text-white hover:bg-slate-800/60 border-white hover:border-white w-full sm:w-auto text-base"
                                     onClick={() => navigate('/Jaws/examples')}
                                 >
                                     View Examples
@@ -192,7 +192,7 @@ export function WelcomePage() {
 
             <section className="py-12 md:py-20 bg-slate-50">
                 <div className="container mx-auto px-4">
-                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 text-center mb-8 md:mb-12">
+                    <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 text-center mb-8 md:mb-12">
                         Deep dive into powerful features
                     </h2>
 
@@ -229,7 +229,7 @@ export function WelcomePage() {
                                     <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
                                         {feature.title}
                                     </h3>
-                                    <p className="text-slate-600">
+                                    <p className="text-base text-slate-600">
                                         {feature.description}
                                     </p>
                                 </CardContent>
@@ -241,14 +241,14 @@ export function WelcomePage() {
 
             <section className="py-12 md:py-20">
                 <div className="container mx-auto px-4 text-center">
-                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-8 md:mb-12">
+                    <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-8 md:mb-12">
                         Ready to take the plunge?
                     </h2>
                     <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-4">
                         <Button
                             size="lg"
                             style={buttonStyles}
-                            className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
+                            className="hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-base"
                             onClick={() => navigate('/Jaws/editor')}
                         >
                             Start Coding Now
@@ -256,7 +256,7 @@ export function WelcomePage() {
                         <Button
                             variant="outline"
                             size="lg"
-                            className="border-slate-800 text-slate-800 hover:bg-slate-100/60 hover:text-slate-900 w-full sm:w-auto"
+                            className="border-slate-800 text-slate-800 hover:bg-slate-100/60 hover:text-slate-900 w-full sm:w-auto text-base"
                             onClick={() => navigate('/Jaws/docs')}
                         >
                             Browse Documentation
@@ -269,8 +269,8 @@ export function WelcomePage() {
                 <div className="container mx-auto px-4 py-8">
                     <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                         <div className="flex items-center gap-4">
-                            <div className="font-bold text-xl">JAWS</div>
-                            <span className="text-slate-400 hidden sm:inline">Jaws Awesomely Wrangles Scheme</span>
+                            <div className="text-xl font-semibold">JAWS</div>
+                            <span className="text-base text-slate-400 hidden sm:inline">Jaws Awesomely Wrangles Scheme</span>
                         </div>
                         <div className="flex items-center space-x-4">
                             <Button
@@ -284,14 +284,14 @@ export function WelcomePage() {
                             </Button>
                             <Button
                                 variant="ghost"
-                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300"
+                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300 text-base"
                                 onClick={() => navigate('/Jaws/docs')}
                             >
                                 Docs
                             </Button>
                             <Button
                                 variant="ghost"
-                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300"
+                                className="text-slate-300 hover:text-white hover:bg-slate-800/60 transition-transform hover:-translate-y-1 duration-300 text-base"
                                 onClick={() => navigate('/Jaws/examples')}
                             >
                                 Examples

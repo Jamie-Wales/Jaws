@@ -348,6 +348,8 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
         if (sexpr->elements.size() == 1) {
             return executeProcedure(state, SchemeValue(tailCall), tailCall->args);
         }
+
+        return SchemeValue(tailCall);
     }
     return interpret(state, tail.expression);
 }

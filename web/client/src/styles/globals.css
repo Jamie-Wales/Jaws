@@ -3,8 +3,9 @@
 @tailwind components;
 @tailwind utilities;
  
-/* Import font */
+/* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* Base styles */
 @layer base {
@@ -14,44 +15,58 @@
     @apply h-full w-full;
   }
   
-  /* Root CSS variables for colors */
+  /* Root CSS variables */
   :root {
-    font-family: 'Poppins', system-ui, sans-serif;
+    /* Font families */
+    --font-sans: 'Poppins', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    /* Font sizes */
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-base: 1rem;     /* 16px */
+    --font-size-lg: 1.125rem;   /* 18px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+    --font-size-3xl: 1.875rem;  /* 30px */
+    --font-size-4xl: 2.25rem;   /* 36px */
+
+    /* Font weights */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+
+    /* Colors */
     --background: 200 20% 98%;
     --foreground: 200 50% 10%;
-    
     --card: 0 0% 100%;
     --card-foreground: 200 50% 10%;
-    
     --popover: 0 0% 100%;
     --popover-foreground: 200 50% 10%;
-    
     --primary: 200 65% 15%;
     --primary-foreground: 200 20% 98%;
-    
     --secondary: 200 30% 95%;
     --secondary-foreground: 200 50% 15%;
-    
     --muted: 200 20% 95%;
     --muted-foreground: 200 30% 40%;
-    
     --accent: 200 85% 40%;
     --accent-foreground: 0 0% 100%;
-    
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
     --border: 200 20% 90%;
     --input: 200 20% 90%;
     --ring: 200 85% 40%;
-    
     --radius: 0.5rem;
-    
+
     /* Text defaults */
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
     line-height: 1.5;
-    font-weight: 400;
-    color-scheme: light dark;
+    font-weight: var(--font-weight-light);
     
+    /* Rendering */
+    color-scheme: light dark;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -62,28 +77,20 @@
   .dark {
     --background: 200 50% 5%;
     --foreground: 200 20% 98%;
-    
     --card: 200 45% 8%;
     --card-foreground: 200 20% 98%;
-    
     --popover: 200 45% 8%;
     --popover-foreground: 200 20% 98%;
-    
     --primary: 200 20% 98%;
     --primary-foreground: 200 50% 10%;
-    
     --secondary: 200 40% 15%;
     --secondary-foreground: 200 20% 98%;
-    
     --muted: 200 40% 15%;
     --muted-foreground: 200 30% 70%;
-    
     --accent: 200 85% 45%;
     --accent-foreground: 0 0% 100%;
-    
     --destructive: 0 60% 30%;
     --destructive-foreground: 0 0% 100%;
-    
     --border: 200 40% 15%;
     --input: 200 40% 15%;
     --ring: 200 85% 40%;
@@ -94,45 +101,103 @@
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-slate-900;
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    font-weight: var(--font-weight-light);
+  }
+  
+  /* Typography */
+  h1 {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-4xl);
+    line-height: 1.1;
+    font-weight: var(--font-weight-semibold);
+    @apply text-slate-900;
+  }
+
+  h2 {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-3xl);
+    line-height: 1.2;
+    font-weight: var(--font-weight-medium);
+    @apply text-slate-900;
+  }
+
+  h3 {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-2xl);
+    line-height: 1.3;
+    font-weight: var(--font-weight-medium);
+    @apply text-slate-900;
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    font-weight: var(--font-weight-light);
+    @apply text-slate-600;
   }
   
   a {
-    font-weight: 500;
+    font-weight: var(--font-weight-normal);
     text-decoration: inherit;
+    @apply text-slate-700;
   }
-  
-  h1 {
-    font-size: 2.5em;
-    line-height: 1.1;
+css
+  code, pre, .code-font {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-normal);
   }
+}
+.text-slate-600 {
+  font-weight: var(--font-weight-normal);  /* Increased from light to normal */
+}
+.code-font,
+.code-font * {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);  /* Increased from sm to base (16px) */
+  font-weight: var(--font-weight-medium);  /* Increased from normal to medium (500) */
+}
+
+/* Ensure highlight.js doesn't override our font */
+.hljs,
+.hljs * {
+  font-family: var(--font-mono) !important;
+  font-weight: var(--font-weight-medium) !important;
+  font-size: var(--font-size-base) !important;
 }
 
 /* Component styles */
 @layer components {
   /* Card styles */
   .gradient-card {
-    @apply bg-white text-gray-800 border border-gray-200 shadow-lg;
+    @apply bg-white text-slate-800 border border-slate-200 shadow-lg;
   }
   
   .gradient-card-header {
-    @apply border-b border-gray-300;
+    @apply border-b border-slate-200;
   }
   
   .gradient-title {
-    @apply text-gray-900;
+    @apply text-slate-900;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-medium);
   }
   
   .gradient-description {
-    @apply text-gray-600;
+    @apply text-slate-600;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-light);
   }
   
   /* Code block styles */
   .code-block {
-    @apply bg-gray-900 text-white rounded-lg p-4 shadow-inner overflow-x-auto;
+    @apply bg-slate-900 text-white rounded-lg p-4 shadow-inner overflow-x-auto;
+    font-family: var(--font-mono);
   }
   
   /* Button styles */
@@ -140,11 +205,15 @@
     @apply bg-[#dd3f0c] text-white hover:opacity-90
          flex items-center gap-2 px-4 py-2 rounded-md
          transition-all duration-200 ease-out;
+    font-family: var(--font-sans);
+    font-weight: var(--font-weight-normal);
   }
   
   /* Difficulty badges */
   .difficulty-badge {
-    @apply px-3 py-1 rounded-full text-sm font-medium;
+    @apply px-3 py-1 rounded-full text-sm;
+    font-family: var(--font-sans);
+    font-weight: var(--font-weight-normal);
   }
   
   .difficulty-beginner {
@@ -172,11 +241,7 @@
   .terminal-line pre {
     margin: 0;
     padding: 0;
-  }
-  
-  /* Code font */
-  .code-font {
-    @apply font-mono text-sm;
+    font-family: var(--font-mono);
   }
 }
 
@@ -209,7 +274,7 @@
   }
 }
 
-/* Animation keyframes - consolidated and organized */
+/* Animation keyframes */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -334,7 +399,7 @@
 .animation-delay-400 { animation-delay: 0.4s; }
 .animation-delay-500 { animation-delay: 0.5s; }
 
-/* Dynamic animation classes for the welcome page */
+/* Dynamic animation classes */
 .bg-gradient-to-r {
   @apply animate-gradientFlow;
 }

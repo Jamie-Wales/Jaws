@@ -207,7 +207,7 @@ Once an AST has been developed and processed through macro expansion, the evalua
 
 Scheme's evaluation model requires lexical scoping, where variables are resolved in the environment where they were defined, not where they are used. This contrasts with dynamic scoping found in some other languages and necessitates a hierarchical environment structure. Additionally, Scheme treats procedures as first-class values that can be passed as arguments, returned from functions, and stored in data structures, requiring the evaluation system to handle functions as ordinary values.
 
-The language specification also defines special forms such as \texttt{if}, \texttt{lambda}, and \texttt{define} that follow unique evaluation rules different from regular function calls.To clarify why define must be a special form in Scheme: If define were implemented as a regular procedure call, the interpreter would evaluate its arguments before applying the procedure, following standard applicative-order evaluation. This would cause the interpreter to evaluate the variable name before it's defined, leading to errors or incorrect bindings. Additionally, the environment in which definitions occur is crucial - define must create bindings in the current lexical environment rather than in the evaluation environment of a procedure call. These requirements necessitate that define be implemented as a special form with its own unique evaluation rules that differ from regular procedure calls, allowing it to properly manipulate the environment structure according to Scheme's lexical scoping rules. For instance, conditional expressions only evaluate the necessary branches, and lambda expressions create closures without evaluating their bodies. Perhaps most importantly, the R7RS specification mandates tail call optimisation, requiring implementations to optimise tail calls to prevent stack overflow in recursive procedures. This optimization allows recursive procedures to execute in constant space when the recursion occurs in tail position.
+The language specification also defines special forms such as \texttt{if}, \texttt{lambda}, and \texttt{define} that follow unique evaluation rules different from regular function calls.To clarify why define must be a special form in Scheme: If define were implemented as a regular procedure call, the interpreter would evaluate its arguments before applying the procedure, following standard applicative-order evaluation. This would cause the interpreter to evaluate the variable name before it's defined, leading to errors or incorrect bindings. Additionally, the environment in which definitions occur is crucial - define must create bindings in the current lexical environment rather than in the evaluation environment of a procedure call. These requirements necessitate that define be implemented as a special form with its own unique evaluation rules that differ from regular procedure calls, allowing it to properly manipulate the environment structure according to Scheme's lexical scoping rules. For instance, conditional expressions only evaluate the necessary branches, and lambda expressions create closures without evaluating their bodies. Perhaps most importantly, the R7RS specification mandates tail call optimisation, requiring implementations to optimise tail calls to prevent stack overflow in recursive procedures. This optimisation allows recursive procedures to execute in constant space when the recursion occurs in tail position.
 
 The evaluation process uses a dispatch mechanism that selects the appropriate evaluation strategy based on the node type. Self-evaluating forms like numbers and strings simply return their value. Variable references are resolved by searching the environment chain. Special forms are handled by dedicated evaluation functions that implement their specific rules. For example, the \texttt{lambda} evaluator creates a closure object containing both the function definition and a reference to the current environment, capturing the lexical context.
 
@@ -241,7 +241,7 @@ The intermediate representation (IR) is the core data structure in a compiler, s
 The intermediate representations chosen for the project we're A Normal Form (ANF) and Three Address Code (TAC). For ANF the optimisation chosen is dead code elimination and constant folding. For TAC the optimisation chosen was scope hoisting and inline definition.
 
 \subsubsection{A Normal Form}
-Administrative Normal Form \cite{flanagan1993essence} is a compiler intermediate representation where every non-trivial expression is assigned to a variable, ensuring that function arguments are always simple atomic values (like variables or constants) rather than complex expressions. This transformation makes the evaluation order explicit and simplifies subsequent compiler optimizations by breaking complex nested expressions into a sequence of simpler statements, similar to how statements work in imperative languages but preserving functional semantics.
+Administrative Normal Form \cite{flanagan1993essence} is a compiler intermediate representation where every non-trivial expression is assigned to a variable, ensuring that function arguments are always simple atomic values (like variables or constants) rather than complex expressions. This transformation makes the evaluation order explicit and simplifies subsequent compiler optimisations by breaking complex nested expressions into a sequence of simpler statements, similar to how statements work in imperative languages but preserving functional semantics.
 There are two compelling reasons ANF was selected as the first intermediate representation in many functional language compilers. First, ANF naturally corresponds to Scheme's fundamental structure, as Scheme programs can be expressed as nested let-bindings, making ANF transformations particularly elegant. Second, ANF serves as an ideal bridge between high-level functional code and lower-level representations, facilitating subsequent optimisation passes by exposing the program's evaluation order while maintaining its pure functional semantics.
 
 \subsubsection{Dead Code Elimination}
@@ -274,7 +274,55 @@ By leveraging QBE, the compiler achieves a balance of performance, portability, 
 \item \textbf{Plan(ning): } Gathering of data, description of experiments (experimental plan), testing and evaluation planning. Experiments could be in the fields of data science, machine learning, signal processing, graphics, etc. Evaluation metrics could include performance speed, accuracy, relevance, etc. Although evaluation is part of the next section, evaluation \textbf{metrics} should be explained here.
 \end{itemize}
 
-\section{Implementation and Evaluation}
+\section{Implementation}
+This section details the pratical development of Jaws. It outlines the actual development based on the above methodology. The implementation has the same three part structure as the methodology. A RSR7 specifciation compliant Scheme interpreter, a compiler that generates efficient machine code via the QBE intermediate representation, and a web-based interface for practical usability.
+
+\subsection{Architecture Overview}
+The implementation follows a functional pipeline architecture, where each component operates independently and transforms its input into a representation suitable for the next stage:
+
+\texttt{Input Source -> Lexer -> Parser -> Macro Expander ->
+    -> Interpreter
+    -> Compiler [ANF -> TAC -> QBE] -> Machine Code + Runtime } 
+
+This pipeline design offers several key advantages:
+\begin{itemize}
+\item \textbf{Component Independence}: Each stage operates as a pure function, transforming data without shared state. This isolation simplifies testing and modification of individual components.
+\item \textbf{Extensibility}: New transformations or optimisations can be inserted at any pipeline stage without affecting other components.
+\item \textbf{Functional Purity}: The stateless design aligns naturally with Scheme's functional paradigm, particularly beneficial for implementing features like the reader and evaluator procedures.
+\end{itemize}
+The implementation is structured into three main subsystems:
+\subsubsection{Core Language Implementation}
+The interpreter's foundation consists of built-in procedures implemented in the host language, organized into specialized namespaces:
+\begin{itemize}
+\item \texttt{jaws\_math}: Mathematical operations and numeric type handling
+\item \texttt{jaws\_eq}: Equality and type predicates
+\item \texttt{jaws\_io}: Input/output operations
+\item \texttt{TODO}
+\end{itemize}
+These core procedures provide the essential functionality required by the R7RS specification, serving as building blocks for more complex features.
+\subsubsection{Standard Library}
+Following R7RS conventions, much of the language's functionality is implemented in Scheme itself, located in the \texttt{lib/} directory. This approach:
+\begin{itemize}
+\item Demonstrates the language's expressiveness
+\item Provides a clear separation between core and derived features
+\item Enables easy modification and extension of standard procedures
+\end{itemize}
+The import system allows these library procedures to be dynamically loaded, supporting modular program construction and code reuse.
+\subsubsection{Runtime System}
+The compiler's output interfaces with a runtime system implemented in C, located in the \texttt{runtime/} directory. This runtime:
+\begin{itemize}
+\item Provides low-level memory management and garbage collection
+\item Implements primitive operations required by compiled code
+\item Bridges between compiled Scheme code and the operating system
+\end{itemize}
+The runtime is compiled as a dynamic library and linked with the generated machine code, providing essential services while maintaining flexibility in implementation and optimisation.
+This architectural approach, combining functional purity with clear component boundaries, proved particularly effective for implementing Scheme's dynamic features while maintaining code quality and testability. The following sections detail the implementation of each major component, beginning with the lexical analyzer.
+
+
+\subsection{Lexing}
+
+
+
 
 Could be a section each for implementation and evaluation if this suits you better or you could use subsections instead. The difference between this section and the previous "Methodology" section is that this one covers "action" or in other words your active contributions to the project. These may include:
 \begin{itemize}
@@ -357,7 +405,7 @@ WHITESPACE & Pattern for whitespace characters \\
 \subsection{Trampolining Algorithm} \label{app:trampoline}
 
 \begin{algorithm}
-\caption{Trampolining Algorithm for Tail Call Optimization}
+\caption{Trampolining Algorithm for Tail Call Optimisation}
 \label{alg:trampoline}
 \begin{algorithmic}[1]
 \Procedure{ExecuteProcedure}{state, procedure, arguments}

@@ -42,16 +42,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
      ██║███████║██║ █╗ ██║███████╗
 ██   ██║██╔══██║██║███╗██║╚════██║
 ╚█████╔╝██║  ██║╚███╔███╔╝███████║
- ╚════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝
-                                  
-        ⠀ ⢯⠙⠲⢤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-        ⠀⠀⠸⡆⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀
-        ⠀⠀⠀⡇⠀⠀⠀⠀⠈⢳⡀⠀⠀⠀⠀⠀
-        ⠀⠀⢰⠇⠀⠀⠀⠀⠀⠈⢷⠀⠀⠀⠀⠀
-        ⣀⡴⠒⢾⡀⣀⡴⠒⢦⣀⢀⡼⠓⢦⣀
-        ⣩⠴⠒⢶⣉⣉⡴⠒⢦⣉⣉⡴⠒⠶⣌
-        ⠁⠀⠀⠀⠈⠁⠀⠀⠀⠈⠁⠀⠀⠀⠈`;
-
+ ╚════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝`;
         useEffect(() => {
             // Initialize with JAWS logo and welcome message
             setLines([
@@ -95,7 +86,6 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                 const result = await onCommand(trimmedInput);
 
                 if (lastCommandId.current === commandId) {
-                    // Add input line immediately
                     setLines(prevLines => [
                         ...prevLines,
                         {
@@ -106,7 +96,6 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                         }
                     ]);
 
-                    // Add output line if there's a meaningful result
                     if (result && result !== 'undefined') {
                         setLines(prevLines => [
                             ...prevLines,
@@ -256,7 +245,7 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
             <div className={`min-h-[500px] flex flex-col bg-zinc-900 transition-all duration-300 ${className}`}>
                 <div
                     ref={terminalRef}
-                    className="flex-1 min-h-[400px] p-4 overflow-y-auto font-mono text-sm scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent"
+                    className="flex-1 min-h-[400px] p-4 overflow-y-auto code-font scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent"
                 >
                     {lines.map((line) => (
                         <div
@@ -270,17 +259,17 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                         >
                             <div className={`flex items-start gap-2 rounded-lg ${line.type !== 'system' ? 'p-2' : 'p-0'} transition-all duration-300 ${line.type !== 'system' ? 'hover:bg-zinc-800/30' : ''}`}>
                                 {line.type === 'input' && (
-                                    <span className="text-blue-400 shrink-0" style={{
+                                    <span className="text-blue-400 shrink-0 code-font" style={{
                                         opacity: 0,
                                         animation: 'slideFromLeft 0.3s ease-out forwards',
                                         animationDelay: `0.2s`
                                     }}>jaws: {"|>"}</span>
                                 )}
-                                <div className="flex-1 terminal-content">
+                                <div className="flex-1 terminal-content code-font">
                                     <HighlightedText text={line.content} type={line.type} />
                                 </div>
                                 {line.type !== 'system' && (
-                                    <span className="text-zinc-500 text-xs shrink-0 ml-2 opacity-40">
+                                    <span className="text-zinc-500 shrink-0 ml-2 opacity-40 code-font">
                                         {line.timestamp}
                                     </span>
                                 )}

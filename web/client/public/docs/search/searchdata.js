@@ -4,8 +4,8 @@ var indexSectionsWithContent =
   1: "adeilqt",
   2: "aiot",
   3: "acdoqt",
-  4: "acdefghinoprt",
-  5: "_abcdefinoprtuv",
+  4: "acdefghioprt",
+  5: "_abcdefilnoprtuv",
   6: "acden",
   7: "or",
   8: "acgjlrs"

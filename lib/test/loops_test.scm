@@ -1,4 +1,4 @@
-
+(import loops)
 (display "=== while test ===")
 (newline)
 (let ((i 0))

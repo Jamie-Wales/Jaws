@@ -29,7 +29,6 @@ export const HighlightedText = ({ text, type }: HighlightedTextProps) => {
     useEffect(() => {
         hasHighlighted.current = false;
         highlight();
-
         return () => {
             hasHighlighted.current = false;
         };
@@ -37,7 +36,7 @@ export const HighlightedText = ({ text, type }: HighlightedTextProps) => {
 
     if (type === 'system') {
         return (
-            <pre className="text-teal-400 font-mono opacity-80 code-font">
+            <pre className="text-teal-400 font-mono text-sm">
                 {text}
             </pre>
         );
@@ -48,7 +47,7 @@ export const HighlightedText = ({ text, type }: HighlightedTextProps) => {
     return (
         <pre
             ref={ref}
-            className={`hljs language-scheme font-mono whitespace-pre-wrap code-font ${baseClass}`}
+            className={`hljs language-scheme font-mono text-sm whitespace-pre-wrap ${baseClass}`}
             style={{ background: 'transparent' }}
         >
             {text}

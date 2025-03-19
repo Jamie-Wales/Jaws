@@ -11,14 +11,14 @@ export function ExamplesView() {
     };
 
     return (
-        <div className="min-h-screen bg-white text-gray-800">
+        <div className="min-h-screen bg-white">
             <div className="container mx-auto px-4 py-12">
                 <div className="space-y-6">
                     <div className="flex flex-col gap-2 animate-fadeSlideIn">
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                        <h1 className="text-2xl md:text-3xl font-semibold text-slate-900">
                             Example Programs
                         </h1>
-                        <p className="text-gray-600">
+                        <p className="text-base text-slate-600">
                             Learn Scheme through practical examples. Click "Try It" to load any example into the editor.
                         </p>
                     </div>
@@ -26,7 +26,7 @@ export function ExamplesView() {
                         {SCHEME_EXAMPLES.map((example, index) => (
                             <div
                                 key={index}
-                                className={`animate-fadeScale`}
+                                className="animate-fadeScale"
                                 style={{ animationDelay: `${index * 0.1}s` }}
                             >
                                 <ExampleCard
