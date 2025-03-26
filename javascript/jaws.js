@@ -45,7 +45,7 @@ var ENVIRONMENT_IS_SHELL = false;
 // we collect those properties and reapply _after_ we configure
 // the current environment's defaults to avoid having to be so
 // defensive during initialization.
-var moduleOverrides = Object.assign({}, Module);
+var moduleOverrides = {...Module};
 
 var arguments_ = [];
 var thisProgram = './this.program';
@@ -94,7 +94,7 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
   if (scriptDirectory.startsWith('blob:')) {
     scriptDirectory = '';
   } else {
-    scriptDirectory = scriptDirectory.substr(0, scriptDirectory.replace(/[?#].*/, '').lastIndexOf('/')+1);
+    scriptDirectory = scriptDirectory.slice(0, scriptDirectory.replace(/[?#].*/, '').lastIndexOf('/')+1);
   }
 
   if (!(typeof window == 'object' || typeof WorkerGlobalScope != 'undefined')) throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
@@ -244,22 +244,12 @@ var HEAP,
 
 var runtimeInitialized = false;
 
-// include: URIUtils.js
-// Prefix of data URIs emitted by SINGLE_FILE and related options.
-var dataURIPrefix = 'data:application/octet-stream;base64,';
-
-/**
- * Indicates whether filename is a base64 data URI.
- * @noinline
- */
-var isDataURI = (filename) => filename.startsWith(dataURIPrefix);
-
 /**
  * Indicates whether filename is delivered via file protocol (as opposed to http/https)
  * @noinline
  */
 var isFileURI = (filename) => filename.startsWith('file://');
-// end include: URIUtils.js
+
 // include: runtime_shared.js
 // include: runtime_stack_check.js
 // Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
@@ -335,6 +325,18 @@ function legacyModuleProp(prop, newName, incoming=true) {
       get() {
         let extra = incoming ? ' (the initial value can be provided on Module, but after startup the value is only looked for on a local variable of that name)' : '';
         abort(`\`Module.${prop}\` has been replaced by \`${newName}\`` + extra);
+
+      }
+    });
+  }
+}
+
+function consumedModuleProp(prop) {
+  if (!Object.getOwnPropertyDescriptor(Module, prop)) {
+    Object.defineProperty(Module, prop, {
+      configurable: true,
+      set() {
+        abort(`Attempt to set \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`);
 
       }
     });
@@ -423,8 +425,11 @@ function unexportedRuntimeSymbol(sym) {
   }
 }
 
+var runtimeDebug = true; // Switch to false at runtime to disable logging at the right times
+
 // Used by XXXXX_DEBUG settings to output debug messages.
 function dbg(...args) {
+  if (!runtimeDebug && typeof runtimeDebug != 'undefined') return;
   // TODO(sbc): Make this configurable somehow.  Its not always convenient for
   // logging to show up as warnings.
   console.warn(...args);
@@ -458,11 +463,6 @@ assert(typeof Int32Array != 'undefined' && typeof Float64Array !== 'undefined' &
 assert(!Module['wasmMemory'], 'Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally');
 assert(!Module['INITIAL_MEMORY'], 'Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically');
 
-var __ATPRERUN__  = []; // functions called before the runtime is initialized
-var __ATINIT__    = []; // functions called during startup
-var __ATEXIT__    = []; // functions called during shutdown
-var __ATPOSTRUN__ = []; // functions called after the main() is called
-
 function preRun() {
   if (Module['preRun']) {
     if (typeof Module['preRun'] == 'function') Module['preRun'] = [Module['preRun']];
@@ -470,7 +470,8 @@ function preRun() {
       addOnPreRun(Module['preRun'].shift());
     }
   }
-  callRuntimeCallbacks(__ATPRERUN__);
+  consumedModuleProp('preRun');
+  callRuntimeCallbacks(onPreRuns);
 }
 
 function initRuntime() {
@@ -479,13 +480,12 @@ function initRuntime() {
 
   checkStackCookie();
 
-  
-if (!Module['noFSInit'] && !FS.initialized)
-  FS.init();
-FS.ignorePermissions = false;
-
+  if (!Module['noFSInit'] && !FS.initialized) FS.init();
 TTY.init();
-  callRuntimeCallbacks(__ATINIT__);
+
+  wasmExports['__wasm_call_ctors']();
+
+  FS.ignorePermissions = false;
 }
 
 function postRun() {
@@ -497,23 +497,9 @@ function postRun() {
       addOnPostRun(Module['postRun'].shift());
     }
   }
+  consumedModuleProp('postRun');
 
-  callRuntimeCallbacks(__ATPOSTRUN__);
-}
-
-function addOnPreRun(cb) {
-  __ATPRERUN__.unshift(cb);
-}
-
-function addOnInit(cb) {
-  __ATINIT__.unshift(cb);
-}
-
-function addOnExit(cb) {
-}
-
-function addOnPostRun(cb) {
-  __ATPOSTRUN__.unshift(cb);
+  callRuntimeCallbacks(onPostRuns);
 }
 
 // A counter of dependencies for calling run(). If we need to
@@ -640,12 +626,9 @@ function createExportWrapper(name, nargs) {
 }
 
 var wasmBinaryFile;
+
 function findWasmBinary() {
-    var f = 'jaws.wasm';
-    if (!isDataURI(f)) {
-      return locateFile(f);
-    }
-    return f;
+    return locateFile('jaws.wasm');
 }
 
 function getBinarySync(file) {
@@ -660,8 +643,7 @@ function getBinarySync(file) {
 
 async function getWasmBinary(binaryFile) {
   // If we don't have the binary yet, load it asynchronously using readAsync.
-  if (!wasmBinary
-      ) {
+  if (!wasmBinary) {
     // Fetch the binary using readAsync
     try {
       var response = await readAsync(binaryFile);
@@ -692,9 +674,7 @@ async function instantiateArrayBuffer(binaryFile, imports) {
 }
 
 async function instantiateAsync(binary, binaryFile, imports) {
-  if (!binary &&
-      typeof WebAssembly.instantiateStreaming == 'function' &&
-      !isDataURI(binaryFile)
+  if (!binary && typeof WebAssembly.instantiateStreaming == 'function'
      ) {
     try {
       var response = fetch(binaryFile, { credentials: 'same-origin' });
@@ -740,8 +720,6 @@ async function createWasm() {
     
     assert(wasmTable, 'table not found in wasm exports');
 
-    addOnInit(wasmExports['__wasm_call_ctors']);
-
     removeRunDependency('wasm-instantiate');
     return wasmExports;
   }
@@ -772,17 +750,20 @@ async function createWasm() {
   // Also pthreads and wasm workers initialize the wasm instance through this
   // path.
   if (Module['instantiateWasm']) {
-    try {
-      return Module['instantiateWasm'](info, receiveInstance);
-    } catch(e) {
-      err(`Module.instantiateWasm callback failed with error: ${e}`);
-        // If instantiation fails, reject the module ready promise.
-        readyPromiseReject(e);
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        Module['instantiateWasm'](info, (mod, inst) => {
+          receiveInstance(mod, inst);
+          resolve(mod.exports);
+        });
+      } catch(e) {
+        err(`Module.instantiateWasm callback failed with error: ${e}`);
+        reject(e);
+      }
+    });
   }
 
   wasmBinaryFile ??= findWasmBinary();
-
   try {
     var result = await instantiateAsync(wasmBinary, wasmBinaryFile, info);
     var exports = receiveInstantiationResult(result);
@@ -794,8 +775,9 @@ async function createWasm() {
   }
 }
 
-// === Body ===
 // end include: preamble.js
+
+// Begin JS library code
 
 
   class ExitStatus {
@@ -812,6 +794,12 @@ async function createWasm() {
         callbacks.shift()(Module);
       }
     };
+  var onPostRuns = [];
+  var addOnPostRun = (cb) => onPostRuns.unshift(cb);
+
+  var onPreRuns = [];
+  var addOnPreRun = (cb) => onPreRuns.unshift(cb);
+
 
   
     /**
@@ -1165,7 +1153,7 @@ async function createWasm() {
       },
   normalize:(path) => {
         var isAbsolute = PATH.isAbs(path),
-            trailingSlash = path.substr(-1) === '/';
+            trailingSlash = path.slice(-1) === '/';
         // Normalize the path
         path = PATH.normalizeArray(path.split('/').filter((p) => !!p), !isAbsolute).join('/');
         if (!path && !isAbsolute) {
@@ -1186,7 +1174,7 @@ async function createWasm() {
         }
         if (dir) {
           // It has a dirname, strip trailing slash
-          dir = dir.substr(0, dir.length - 1);
+          dir = dir.slice(0, -1);
         }
         return root + dir;
       },
@@ -1227,8 +1215,8 @@ async function createWasm() {
         return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
       },
   relative:(from, to) => {
-        from = PATH_FS.resolve(from).substr(1);
-        to = PATH_FS.resolve(to).substr(1);
+        from = PATH_FS.resolve(from).slice(1);
+        to = PATH_FS.resolve(to).slice(1);
         function trim(arr) {
           var start = 0;
           for (; start < arr.length; start++) {
@@ -1333,13 +1321,13 @@ async function createWasm() {
       return outIdx - startIdx;
     };
   /** @type {function(string, boolean=, number=)} */
-  function intArrayFromString(stringy, dontAddNull, length) {
-    var len = length > 0 ? length : lengthBytesUTF8(stringy)+1;
-    var u8array = new Array(len);
-    var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
-    if (dontAddNull) u8array.length = numBytesWritten;
-    return u8array;
-  }
+  var intArrayFromString = (stringy, dontAddNull, length) => {
+      var len = length > 0 ? length : lengthBytesUTF8(stringy)+1;
+      var u8array = new Array(len);
+      var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
+      if (dontAddNull) u8array.length = numBytesWritten;
+      return u8array;
+    };
   var FS_stdin_getChar = () => {
       if (!FS_stdin_getChar_buffer.length) {
         var result = null;
@@ -1456,7 +1444,7 @@ async function createWasm() {
           }
         },
   fsync(tty) {
-          if (tty.output && tty.output.length > 0) {
+          if (tty.output?.length > 0) {
             out(UTF8ArrayToString(tty.output));
             tty.output = [];
           }
@@ -1493,7 +1481,7 @@ async function createWasm() {
           }
         },
   fsync(tty) {
-          if (tty.output && tty.output.length > 0) {
+          if (tty.output?.length > 0) {
             err(UTF8ArrayToString(tty.output));
             tty.output = [];
           }
@@ -1502,9 +1490,7 @@ async function createWasm() {
   };
   
   
-  var zeroMemory = (address, size) => {
-      HEAPU8.fill(0, address, address + size);
-    };
+  var zeroMemory = (ptr, size) => HEAPU8.fill(0, ptr, ptr + size);
   
   var alignMemory = (size, alignment) => {
       assert(alignment, "alignment argument is required");
@@ -1549,7 +1535,6 @@ async function createWasm() {
               llseek: MEMFS.stream_ops.llseek,
               read: MEMFS.stream_ops.read,
               write: MEMFS.stream_ops.write,
-              allocate: MEMFS.stream_ops.allocate,
               mmap: MEMFS.stream_ops.mmap,
               msync: MEMFS.stream_ops.msync
             }
@@ -1792,10 +1777,6 @@ async function createWasm() {
             throw new FS.ErrnoError(28);
           }
           return position;
-        },
-  allocate(stream, offset, length) {
-          MEMFS.expandFileStorage(stream.node, offset + length);
-          stream.node.usedBytes = Math.max(stream.node.usedBytes, offset + length);
         },
   mmap(stream, length, position, prot, flags) {
           if (!FS.isFile(stream.node.mode)) {
@@ -2058,6 +2039,10 @@ async function createWasm() {
   currentPath:"/",
   initialized:false,
   ignorePermissions:true,
+  filesystems:null,
+  syncFSRequests:0,
+  readFiles:{
+  },
   ErrnoError:class extends Error {
         name = 'ErrnoError';
         // We set the `name` property to be able to identify `FS.ErrnoError`
@@ -2077,10 +2062,6 @@ async function createWasm() {
           }
         }
       },
-  filesystems:null,
-  syncFSRequests:0,
-  readFiles:{
-  },
   FSStream:class {
         shared = {};
         get object() {
@@ -2434,6 +2415,13 @@ async function createWasm() {
         stream.stream_ops?.dup?.(stream);
         return stream;
       },
+  doSetAttr(stream, node, attr) {
+        var setattr = stream?.stream_ops.setattr;
+        var arg = setattr ? stream : node;
+        setattr ??= node.node_ops.setattr;
+        FS.checkOpExists(setattr, 63)
+        setattr(arg, attr);
+      },
   chrdev_stream_ops:{
   open(stream) {
           var device = FS.getDevice(stream.node.rdev);
@@ -2662,9 +2650,9 @@ async function createWasm() {
   mkdirTree(path, mode) {
         var dirs = path.split('/');
         var d = '';
-        for (var i = 0; i < dirs.length; ++i) {
-          if (!dirs[i]) continue;
-          d += '/' + dirs[i];
+        for (var dir of dirs) {
+          if (!dir) continue;
+          d += '/' + dir;
           try {
             FS.mkdir(d, mode);
           } catch(e) {
@@ -2849,8 +2837,24 @@ async function createWasm() {
         var getattr = FS.checkOpExists(node.node_ops.getattr, 63);
         return getattr(node);
       },
+  fstat(fd) {
+        var stream = FS.getStreamChecked(fd);
+        var node = stream.node;
+        var getattr = stream.stream_ops.getattr;
+        var arg = getattr ? stream : node;
+        getattr ??= node.node_ops.getattr;
+        FS.checkOpExists(getattr, 63)
+        return getattr(arg);
+      },
   lstat(path) {
         return FS.stat(path, true);
+      },
+  doChmod(stream, node, mode, dontFollow) {
+        FS.doSetAttr(stream, node, {
+          mode: (mode & 4095) | (node.mode & ~4095),
+          ctime: Date.now(),
+          dontFollow
+        });
       },
   chmod(path, mode, dontFollow) {
         var node;
@@ -2860,19 +2864,21 @@ async function createWasm() {
         } else {
           node = path;
         }
-        var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
-        setattr(node, {
-          mode: (mode & 4095) | (node.mode & ~4095),
-          ctime: Date.now(),
-          dontFollow
-        });
+        FS.doChmod(null, node, mode, dontFollow);
       },
   lchmod(path, mode) {
         FS.chmod(path, mode, true);
       },
   fchmod(fd, mode) {
         var stream = FS.getStreamChecked(fd);
-        FS.chmod(stream.node, mode);
+        FS.doChmod(stream, stream.node, mode, false);
+      },
+  doChown(stream, node, dontFollow) {
+        FS.doSetAttr(stream, node, {
+          timestamp: Date.now(),
+          dontFollow
+          // we ignore the uid / gid for now
+        });
       },
   chown(path, uid, gid, dontFollow) {
         var node;
@@ -2882,19 +2888,30 @@ async function createWasm() {
         } else {
           node = path;
         }
-        var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
-        setattr(node, {
-          timestamp: Date.now(),
-          dontFollow
-          // we ignore the uid / gid for now
-        });
+        FS.doChown(null, node, dontFollow);
       },
   lchown(path, uid, gid) {
         FS.chown(path, uid, gid, true);
       },
   fchown(fd, uid, gid) {
         var stream = FS.getStreamChecked(fd);
-        FS.chown(stream.node, uid, gid);
+        FS.doChown(stream, stream.node, false);
+      },
+  doTruncate(stream, node, len) {
+        if (FS.isDir(node.mode)) {
+          throw new FS.ErrnoError(31);
+        }
+        if (!FS.isFile(node.mode)) {
+          throw new FS.ErrnoError(28);
+        }
+        var errCode = FS.nodePermissions(node, 'w');
+        if (errCode) {
+          throw new FS.ErrnoError(errCode);
+        }
+        FS.doSetAttr(stream, node, {
+          size: len,
+          timestamp: Date.now()
+        });
       },
   truncate(path, len) {
         if (len < 0) {
@@ -2907,28 +2924,14 @@ async function createWasm() {
         } else {
           node = path;
         }
-        if (FS.isDir(node.mode)) {
-          throw new FS.ErrnoError(31);
-        }
-        if (!FS.isFile(node.mode)) {
-          throw new FS.ErrnoError(28);
-        }
-        var errCode = FS.nodePermissions(node, 'w');
-        if (errCode) {
-          throw new FS.ErrnoError(errCode);
-        }
-        var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
-        setattr(node, {
-          size: len,
-          timestamp: Date.now()
-        });
+        FS.doTruncate(null, node, len);
       },
   ftruncate(fd, len) {
         var stream = FS.getStreamChecked(fd);
-        if ((stream.flags & 2097155) === 0) {
+        if (len < 0 || (stream.flags & 2097155) === 0) {
           throw new FS.ErrnoError(28);
         }
-        FS.truncate(stream.node, len);
+        FS.doTruncate(stream, stream.node, len);
       },
   utime(path, atime, mtime) {
         var lookup = FS.lookupPath(path, { follow: true });
@@ -3127,24 +3130,6 @@ async function createWasm() {
         var bytesWritten = stream.stream_ops.write(stream, buffer, offset, length, position, canOwn);
         if (!seeking) stream.position += bytesWritten;
         return bytesWritten;
-      },
-  allocate(stream, offset, length) {
-        if (FS.isClosed(stream)) {
-          throw new FS.ErrnoError(8);
-        }
-        if (offset < 0 || length <= 0) {
-          throw new FS.ErrnoError(28);
-        }
-        if ((stream.flags & 2097155) === 0) {
-          throw new FS.ErrnoError(8);
-        }
-        if (!FS.isFile(stream.node.mode) && !FS.isDir(stream.node.mode)) {
-          throw new FS.ErrnoError(43);
-        }
-        if (!stream.stream_ops.allocate) {
-          throw new FS.ErrnoError(138);
-        }
-        stream.stream_ops.allocate(stream, offset, length);
       },
   mmap(stream, length, position, prot, flags) {
         // User requests writing to file (prot & PROT_WRITE != 0).
@@ -3367,12 +3352,10 @@ async function createWasm() {
         // force-flush all streams, so we get musl std streams printed out
         _fflush(0);
         // close all of our streams
-        for (var i = 0; i < FS.streams.length; i++) {
-          var stream = FS.streams[i];
-          if (!stream) {
-            continue;
+        for (var stream of FS.streams) {
+          if (stream) {
+            FS.close(stream);
           }
-          FS.close(stream);
         }
       },
   findObject(path, dontResolveLastLink) {
@@ -3420,7 +3403,7 @@ async function createWasm() {
           try {
             FS.mkdir(current);
           } catch (e) {
-            // ignore EEXIST
+            if (e.errno != 20) throw e;
           }
           parent = current;
         }
@@ -3816,7 +3799,11 @@ async function createWasm() {
         }
         case 13:
         case 14:
-          return 0; // Pretend that the locking is successful.
+          // Pretend that the locking is successful. These are process-level locks,
+          // and Emscripten programs are a single process. If we supported linking a
+          // filesystem between programs, we'd need to do more here.
+          // See https://github.com/emscripten-core/emscripten/issues/23697
+          return 0;
       }
       return -28;
     } catch (e) {
@@ -3977,13 +3964,13 @@ async function createWasm() {
   var typeDependencies = {
   };
   
-  var BindingError;
+  var BindingError = Module['BindingError'] = class BindingError extends Error { constructor(message) { super(message); this.name = 'BindingError'; }};
   var throwBindingError = (message) => { throw new BindingError(message); };
   
   
   
   
-  var InternalError;
+  var InternalError = Module['InternalError'] = class InternalError extends Error { constructor(message) { super(message); this.name = 'InternalError'; }};
   var throwInternalError = (message) => { throw new InternalError(message); };
   var whenDependentTypesAreResolved = (myTypes, dependentTypes, getTypeConverters) => {
       myTypes.forEach((type) => typeDependencies[type] = dependentTypes);
@@ -4352,7 +4339,9 @@ async function createWasm() {
   
   var delayFunction;
   var init_ClassHandle = () => {
-      Object.assign(ClassHandle.prototype, {
+      let proto = ClassHandle.prototype;
+  
+      Object.assign(proto, {
         "isAliasOf"(other) {
           if (!(this instanceof ClassHandle)) {
             return false;
@@ -4438,14 +4427,18 @@ async function createWasm() {
           return this;
         },
       });
+  
+      // Support `using ...` from https://github.com/tc39/proposal-explicit-resource-management.
+      const symbolDispose = Symbol.dispose;
+      if (symbolDispose) {
+        proto[symbolDispose] = proto["delete"];
+      }
     };
   /** @constructor */
   function ClassHandle() {
     }
   
-  var createNamedFunction = (name, body) => Object.defineProperty(body, 'name', {
-      value: name
-    });
+  var createNamedFunction = (name, func) => Object.defineProperty(func, 'name', { value: name });
   
   
   var ensureOverloadTable = (proto, methodName, humanName) => {
@@ -4751,7 +4744,6 @@ async function createWasm() {
   var getWasmTableEntry = (funcPtr) => {
       var func = wasmTableMirror[funcPtr];
       if (!func) {
-        if (funcPtr >= wasmTableMirror.length) wasmTableMirror.length = funcPtr + 1;
         /** @suppress {checkTypes} */
         wasmTableMirror[funcPtr] = func = wasmTable.get(funcPtr);
       }
@@ -4798,7 +4790,7 @@ async function createWasm() {
   
       return errorClass;
     };
-  var UnboundTypeError;
+  var UnboundTypeError = Module['UnboundTypeError'] = extendError(Error, 'UnboundTypeError');
   
   
   
@@ -5177,12 +5169,9 @@ async function createWasm() {
   var getFunctionName = (signature) => {
       signature = signature.trim();
       const argsIndex = signature.indexOf("(");
-      if (argsIndex !== -1) {
-        assert(signature[signature.length - 1] == ")", "Parentheses for argument names should match.");
-        return signature.substr(0, argsIndex);
-      } else {
-        return signature;
-      }
+      if (argsIndex === -1) return signature;
+      assert(signature.endsWith(")"), "Parentheses for argument names should match.");
+      return signature.slice(0, argsIndex);
     };
   var __embind_register_class_function = (rawClassType,
                                       methodName,
@@ -5509,7 +5498,8 @@ async function createWasm() {
           var length;
           var valueIsOfTypeString = (typeof value == 'string');
   
-          if (!(valueIsOfTypeString || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Int8Array)) {
+          // We accept `string` or array views with single byte elements
+          if (!(valueIsOfTypeString || (ArrayBuffer.isView(value) && value.BYTES_PER_ELEMENT == 1))) {
             throwBindingError('Cannot pass non-string to std::string');
           }
           if (stdStringIsUTF8 && valueIsOfTypeString) {
@@ -5522,10 +5512,10 @@ async function createWasm() {
           var base = _malloc(4 + length + 1);
           var ptr = base + 4;
           HEAPU32[((base)>>2)] = length;
-          if (stdStringIsUTF8 && valueIsOfTypeString) {
-            stringToUTF8(value, ptr, length + 1);
-          } else {
-            if (valueIsOfTypeString) {
+          if (valueIsOfTypeString) {
+            if (stdStringIsUTF8) {
+              stringToUTF8(value, ptr, length + 1);
+            } else {
               for (var i = 0; i < length; ++i) {
                 var charCode = value.charCodeAt(i);
                 if (charCode > 255) {
@@ -5534,11 +5524,9 @@ async function createWasm() {
                 }
                 HEAPU8[ptr + i] = charCode;
               }
-            } else {
-              for (var i = 0; i < length; ++i) {
-                HEAPU8[ptr + i] = value[i];
-              }
             }
+          } else {
+            HEAPU8.set(value, ptr);
           }
   
           if (destructors !== null) {
@@ -5752,6 +5740,45 @@ async function createWasm() {
         // TODO: assert if anything else is given?
         'toWireType': (destructors, o) => undefined,
       });
+    };
+
+
+  var emval_symbols = {
+  };
+  
+  var getStringOrSymbol = (address) => {
+      var symbol = emval_symbols[address];
+      if (symbol === undefined) {
+        return readLatin1String(address);
+      }
+      return symbol;
+    };
+  
+  var __emval_new_cstring = (v) => Emval.toHandle(getStringOrSymbol(v));
+
+  var __emval_new_object = () => Emval.toHandle({});
+
+  var __emval_set_property = (handle, key, value) => {
+      handle = Emval.toValue(handle);
+      key = Emval.toValue(key);
+      value = Emval.toValue(value);
+      handle[key] = value;
+    };
+
+  
+  
+  
+  var requireRegisteredType = (rawType, humanName) => {
+      var impl = registeredTypes[rawType];
+      if (undefined === impl) {
+        throwBindingError(`${humanName} has unknown type ${getTypeName(rawType)}`);
+      }
+      return impl;
+    };
+  var __emval_take_value = (type, arg) => {
+      type = requireRegisteredType(type, '_emval_take_value');
+      var v = type['readValueFromPointer'](arg);
+      return Emval.toHandle(v);
     };
 
   
@@ -5997,7 +6024,7 @@ async function createWasm() {
   function _fd_seek(fd, offset, whence, newOffset) {
     offset = bigintToI53Checked(offset);
   
-    
+  
   try {
   
       if (isNaN(offset)) return 61;
@@ -6176,12 +6203,11 @@ async function createWasm() {
   // Set module methods based on EXPORTED_RUNTIME_METHODS
   ;
 embind_init_charCodes();
-BindingError = Module['BindingError'] = class BindingError extends Error { constructor(message) { super(message); this.name = 'BindingError'; }};
-InternalError = Module['InternalError'] = class InternalError extends Error { constructor(message) { super(message); this.name = 'InternalError'; }};
 init_ClassHandle();
 init_RegisteredPointer();
-UnboundTypeError = Module['UnboundTypeError'] = extendError(Error, 'UnboundTypeError');;
 init_emval();;
+// End JS library code
+
 function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
@@ -6237,6 +6263,16 @@ var wasmImports = {
   /** @export */
   _embind_register_void: __embind_register_void,
   /** @export */
+  _emval_decref: __emval_decref,
+  /** @export */
+  _emval_new_cstring: __emval_new_cstring,
+  /** @export */
+  _emval_new_object: __emval_new_object,
+  /** @export */
+  _emval_set_property: __emval_set_property,
+  /** @export */
+  _emval_take_value: __emval_take_value,
+  /** @export */
   _tzset_js: __tzset_js,
   /** @export */
   emscripten_resize_heap: _emscripten_resize_heap,
@@ -6287,8 +6323,6 @@ var wasmImports = {
   /** @export */
   invoke_vii,
   /** @export */
-  invoke_viid,
-  /** @export */
   invoke_viii,
   /** @export */
   invoke_viiidi,
@@ -6306,9 +6340,11 @@ var wasmImports = {
 var wasmExports = await createWasm();
 var ___wasm_call_ctors = createExportWrapper('__wasm_call_ctors', 0);
 var ___getTypeName = createExportWrapper('__getTypeName', 1);
+var _strerror = createExportWrapper('strerror', 1);
+var _htons = createExportWrapper('htons', 1);
 var _malloc = Module['_malloc'] = createExportWrapper('malloc', 1);
 var _fflush = createExportWrapper('fflush', 1);
-var _strerror = createExportWrapper('strerror', 1);
+var _ntohs = createExportWrapper('ntohs', 1);
 var _free = Module['_free'] = createExportWrapper('free', 1);
 var _setThrew = createExportWrapper('setThrew', 2);
 var __emscripten_tempret_set = createExportWrapper('_emscripten_tempret_set', 1);
@@ -6591,17 +6627,6 @@ function invoke_viiiiiiiiiiiiiii(index,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a1
   }
 }
 
-function invoke_viid(index,a1,a2,a3) {
-  var sp = stackSave();
-  try {
-    getWasmTableEntry(index)(a1,a2,a3);
-  } catch(e) {
-    stackRestore(sp);
-    if (!(e instanceof EmscriptenEH)) throw e;
-    _setThrew(1, 0);
-  }
-}
-
 
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
@@ -6643,6 +6668,10 @@ var missingLibrarySymbols = [
   'asmjsMangle',
   'HandleAllocator',
   'getNativeTypeSize',
+  'addOnInit',
+  'addOnPostCtor',
+  'addOnPreMain',
+  'addOnExit',
   'STACK_SIZE',
   'STACK_ALIGN',
   'POINTER_SIZE',
@@ -6762,7 +6791,6 @@ var missingLibrarySymbols = [
   'demangle',
   'stackTrace',
   'getFunctionArgsName',
-  'requireRegisteredType',
   'createJsInvokerSignature',
   'registerInheritedInstance',
   'unregisterInheritedInstance',
@@ -6771,7 +6799,6 @@ var missingLibrarySymbols = [
   'enumReadValueFromPointer',
   'setDelayFunction',
   'validateThis',
-  'getStringOrSymbol',
   'emval_get_global',
   'emval_returnValue',
   'emval_lookupTypes',
@@ -6781,11 +6808,6 @@ missingLibrarySymbols.forEach(missingLibrarySymbol)
 
 var unexportedSymbols = [
   'run',
-  'addOnPreRun',
-  'addOnInit',
-  'addOnPreMain',
-  'addOnExit',
-  'addOnPostRun',
   'addRunDependency',
   'removeRunDependency',
   'out',
@@ -6823,6 +6845,8 @@ var unexportedSymbols = [
   'mmapAlloc',
   'wasmTable',
   'noExitRuntime',
+  'addOnPreRun',
+  'addOnPostRun',
   'getCFunc',
   'freeTableIndexes',
   'functionsInTableMap',
@@ -6928,6 +6952,7 @@ var unexportedSymbols = [
   'getTypeName',
   'getFunctionName',
   'heap32VectorToArray',
+  'requireRegisteredType',
   'usesDestructorStack',
   'checkArgCount',
   'getRequiredArgCount',
@@ -6987,6 +7012,7 @@ var unexportedSymbols = [
   'emval_symbols',
   'init_emval',
   'count_emval_handles',
+  'getStringOrSymbol',
   'Emval',
   'emval_methodCallers',
   'reflectConstruct',
@@ -7036,6 +7062,7 @@ function run() {
 
     readyPromiseResolve(Module);
     Module['onRuntimeInitialized']?.();
+    consumedModuleProp('onRuntimeInitialized');
 
     assert(!Module['_main'], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
 
@@ -7100,6 +7127,7 @@ if (Module['preInit']) {
     Module['preInit'].pop()();
   }
 }
+consumedModuleProp('preInit');
 
 run();
 
