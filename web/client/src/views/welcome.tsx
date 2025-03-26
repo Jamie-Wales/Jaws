@@ -45,7 +45,7 @@ export function WelcomePage() {
                 <div className="container mx-auto px-4 py-3">
                     <div className="flex justify-between items-center">
                         <Link
-                            to="/Jaws"
+                            to="/"
                             className="flex items-center gap-2 text-xl font-bold text-slate-900"
                         >
                             JAWS
@@ -55,7 +55,7 @@ export function WelcomePage() {
                         {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center gap-4">
                             <NavLink
-                                to="/Jaws/editor"
+                                to="/editor"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
                                 }
@@ -63,7 +63,7 @@ export function WelcomePage() {
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/Jaws/examples"
+                                to="/examples"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
                                 }
@@ -71,7 +71,7 @@ export function WelcomePage() {
                                 Examples
                             </NavLink>
                             <NavLink
-                                to="/Jaws/compiler-explorer"
+                                to="/compiler-explorer"
                                 className={({ isActive }) =>
                                     `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
                                 }
@@ -80,9 +80,9 @@ export function WelcomePage() {
                             </NavLink>
                             <Button
                                 className="bg-[#dd3f0c] text-white hover:opacity-90"
-                                onClick={() => navigate('/Jaws/get-started')}
+                                onClick={() => navigate('/learn')}
                             >
-                                Get Started
+                                Learn Scheme
                             </Button>
                             <Button
                                 variant="ghost"
@@ -114,7 +114,7 @@ export function WelcomePage() {
                     <div className="fixed inset-y-0 right-0 w-64 bg-white p-6 shadow-xl">
                         <div className="flex justify-between items-center mb-8">
                             <Link
-                                to="/Jaws"
+                                to="/"
                                 className="flex items-center gap-2 text-xl font-bold text-slate-900"
                                 onClick={() => setMobileMenuOpen(false)}
                             >
@@ -131,7 +131,7 @@ export function WelcomePage() {
                         </div>
                         <div className="space-y-4">
                             <NavLink
-                                to="/Jaws/editor"
+                                to="/editor"
                                 className={({ isActive }) =>
                                     `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
                                 }
@@ -140,7 +140,7 @@ export function WelcomePage() {
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/Jaws/examples"
+                                to="/examples"
                                 className={({ isActive }) =>
                                     `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
                                 }
@@ -149,7 +149,7 @@ export function WelcomePage() {
                                 Examples
                             </NavLink>
                             <NavLink
-                                to="/Jaws/compiler-explorer"
+                                to="/compiler-explorer"
                                 className={({ isActive }) =>
                                     `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
                                 }
@@ -160,11 +160,11 @@ export function WelcomePage() {
                             <Button
                                 className="w-full bg-[#dd3f0c] text-white hover:opacity-90"
                                 onClick={() => {
-                                    navigate('/Jaws/get-started');
+                                    navigate('/get-started');
                                     setMobileMenuOpen(false);
                                 }}
                             >
-                                Get Started
+                                Learn Scheme
                             </Button>
                         </div>
                     </div>
@@ -194,7 +194,7 @@ export function WelcomePage() {
                                 <Button
                                     size="lg"
                                     className="bg-[#dd3f0c] text-white hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-base"
-                                    onClick={() => navigate('/Jaws/get-started')}
+                                    onClick={() => navigate('/get-started')}
                                 >
                                     Get Started <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
@@ -202,7 +202,7 @@ export function WelcomePage() {
                                     variant="outline"
                                     size="lg"
                                     className="bg-transparent text-white hover:bg-slate-800/60 border-white hover:border-white w-full sm:w-auto text-base"
-                                    onClick={() => navigate('/Jaws/examples')}
+                                    onClick={() => navigate('/examples')}
                                 >
                                     View Examples
                                 </Button>
@@ -274,7 +274,7 @@ export function WelcomePage() {
                             <Button
                                 size="lg"
                                 className="bg-[#dd3f0c] text-white hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-base"
-                                onClick={() => navigate('/Jaws/get-started')}
+                                onClick={() => navigate('/learn')}
                             >
                                 Get Started
                             </Button>
@@ -282,7 +282,7 @@ export function WelcomePage() {
                                 variant="outline"
                                 size="lg"
                                 className="border-slate-800 text-slate-800 hover:bg-slate-100/60 hover:text-slate-900 w-full sm:w-auto text-base"
-                                onClick={() => navigate('/Jaws/examples')}
+                                onClick={() => navigate('/examples')}
                             >
                                 Browse Examples
                             </Button>

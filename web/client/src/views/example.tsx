@@ -7,7 +7,7 @@ export function ExamplesView() {
 
     const handleTryExample = (code: string) => {
         localStorage.setItem('editorCode', code);
-        navigate('/Jaws/editor');
+        navigate('/editor');
     };
 
     return (

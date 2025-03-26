@@ -180,7 +180,7 @@ export function LearnScheme() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => navigate('/Jaws')}
+                    onClick={() => navigate('/')}
                     className="text-white hover:bg-zinc-800/90"
                 >
                     <ChevronLeft className="h-5 w-5" />

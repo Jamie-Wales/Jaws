@@ -10,7 +10,7 @@ export function GetStartedView() {
 
     const handleTryExample = (code: string) => {
         localStorage.setItem('editorCode', code);
-        navigate('/Jaws/editor');
+        navigate('/editor');
     };
 
     const buttonStyles = {

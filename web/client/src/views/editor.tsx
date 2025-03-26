@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Terminal, TerminalRef } from '@/components/terminal';
 import { CodeEditor } from '@/components/codeEditor';
 import { Button } from '@/components/ui/button';
-import { Maximize2, Minimize2, Expand, Shrink } from 'lucide-react';
+import { Maximize2, Minimize2, Expand, Shrink, Play } from 'lucide-react';
 import useJawsInterpreter from '@/hooks/useJawsInterpreter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 
@@ -30,6 +30,21 @@ export function EditorView() {
             return result;
         } catch (error) {
             throw new Error(error instanceof Error ? error.message : 'An error occurred');
+        }
+    };
+
+    const runEditorCode = () => {
+        try {
+            if (!code.trim()) {
+                terminalRef.current?.writeSystem("No code to run. Please write some code in the editor first.");
+                return;
+            }
+
+            terminalRef.current?.writeSystem("Running code from editor...");
+            const result = interpreter.evaluate(code);
+            terminalRef.current?.writeOutput(result);
+        } catch (error) {
+            terminalRef.current?.writeOutput(`Error: ${error instanceof Error ? error.message : 'An error occurred while running editor code'}`);
         }
     };
 
@@ -69,6 +84,16 @@ export function EditorView() {
                         ) : (
                             <Expand className="h-4 w-4" />
                         )}
+                    </Button>
+                    <div className="flex-1"></div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={runEditorCode}
+                        className="h-7 w-7 p-0 flex items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                        title="Run editor code"
+                    >
+                        <Play className="h-4 w-4" />
                     </Button>
                 </div>
 
