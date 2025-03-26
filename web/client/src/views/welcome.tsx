@@ -160,7 +160,7 @@ export function WelcomePage() {
                             <Button
                                 className="w-full bg-[#dd3f0c] text-white hover:opacity-90"
                                 onClick={() => {
-                                    navigate('/get-started');
+                                    navigate('learn');
                                     setMobileMenuOpen(false);
                                 }}
                             >
@@ -194,9 +194,9 @@ export function WelcomePage() {
                                 <Button
                                     size="lg"
                                     className="bg-[#dd3f0c] text-white hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-base"
-                                    onClick={() => navigate('/get-started')}
+                                    onClick={() => navigate('/learn')}
                                 >
-                                    Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                                    Learn Scheme <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -276,7 +276,7 @@ export function WelcomePage() {
                                 className="bg-[#dd3f0c] text-white hover:opacity-90 hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-base"
                                 onClick={() => navigate('/learn')}
                             >
-                                Get Started
+                                Learn Scheme <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                             <Button
                                 variant="outline"
