@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { ParenthesesIcon, Github, Menu, X } from 'lucide-react';
+import { Parentheses, Github, Menu, X } from 'lucide-react';
 
 export function Layout() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -16,25 +16,15 @@ export function Layout() {
                             className="flex items-center gap-2 text-xl font-bold text-slate-900"
                         >
                             JAWS
-                            <ParenthesesIcon className="text-cyan-600" />
+                            <Parentheses className="text-cyan-600" />
                         </Link>
 
                         {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center gap-4">
                             <NavLink
-                                to="/Jaws/repl"
-                                className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
-                                    }`
-                                }
-                            >
-                                REPL
-                            </NavLink>
-                            <NavLink
                                 to="/Jaws/editor"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
-                                    }`
+                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
                                 }
                             >
                                 Editor
@@ -42,20 +32,18 @@ export function Layout() {
                             <NavLink
                                 to="/Jaws/examples"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
-                                    }`
+                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
                                 }
                             >
                                 Examples
                             </NavLink>
                             <NavLink
-                                to="/Jaws/docs"
+                                to="/Jaws/compiler-explorer"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'
-                                    }`
+                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
                                 }
                             >
-                                Docs
+                                Compiler Explorer
                             </NavLink>
                             <Button
                                 variant="ghost"
@@ -89,9 +77,10 @@ export function Layout() {
                             <Link
                                 to="/Jaws"
                                 className="flex items-center gap-2 text-xl font-bold text-slate-900"
+                                onClick={() => setMobileMenuOpen(false)}
                             >
                                 JAWS
-                                <ParenthesesIcon className="text-cyan-600" />
+                                <Parentheses className="text-cyan-600" />
                             </Link>
                             <Button
                                 variant="ghost"
@@ -103,20 +92,9 @@ export function Layout() {
                         </div>
                         <div className="space-y-4">
                             <NavLink
-                                to="/Jaws/repl"
-                                className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
-                                    }`
-                                }
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                REPL
-                            </NavLink>
-                            <NavLink
                                 to="/Jaws/editor"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
-                                    }`
+                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
@@ -125,23 +103,20 @@ export function Layout() {
                             <NavLink
                                 to="/Jaws/examples"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
-                                    }`
+                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
                                 Examples
                             </NavLink>
-
                             <NavLink
-                                to="/Jaws/docs"
+                                to="/Jaws/compiler-explorer"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'
-                                    }`
+                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
-                                Docs
+                                Compiler Explorer
                             </NavLink>
                         </div>
                     </div>
@@ -149,7 +124,7 @@ export function Layout() {
             )}
 
             {/* Main Content */}
-            <main className="container mx-auto px-4 py-8">
+            <main className="h-[calc(100vh-57px)]">
                 <Outlet />
             </main>
         </div>

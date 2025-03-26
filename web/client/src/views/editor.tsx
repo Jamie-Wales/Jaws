@@ -8,7 +8,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 
 export function EditorView() {
     const [code, setCode] = useState('');
-    const [isLoadedFromExample, setIsLoadedFromExample] = useState(false);
+    const [_, setIsLoadedFromExample] = useState(false);
     const [isEditorExpanded, setIsEditorExpanded] = useState(true);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const terminalRef = useRef<TerminalRef>(null);

@@ -251,6 +251,12 @@ std::optional<SchemeValue> interpretDefine(InterpreterState& state, const Define
     auto value = interpret(state, def.value);
     if (!value)
         return std::nullopt;
+    if (value->isProc() && !value->asProc()->isBuiltin()) {
+        auto proc = value->asProc();
+        if (auto userProc = std::dynamic_pointer_cast<UserProcedure>(proc)) {
+            userProc->closure->define(def.name.lexeme, *value);
+        }
+    }
     state.env->define(def.name.lexeme, *value);
     return std::nullopt;
 }

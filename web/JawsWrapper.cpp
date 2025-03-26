@@ -1,3 +1,11 @@
+#include <emscripten/bind.h>
+#include <emscripten/val.h>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+
 #include "ANFTransformer.h"
 #include "Error.h"
 #include "Import.h"
@@ -8,154 +16,183 @@
 #include "parse.h"
 #include "run.h"
 #include "scan.h"
-#include <emscripten/bind.h>
-#include <emscripten/val.h>
-#include <iostream>
-#include <sstream>
-#include <string>
 
 using namespace emscripten;
 
-class OutputCapture {
-private:
-    std::stringstream buffer;
-    std::streambuf* oldCoutBuffer;
-    bool capturing;
-
-public:
-    OutputCapture()
-        : oldCoutBuffer(nullptr)
-        , capturing(false)
-    {
-    }
-
-    void start()
-    {
-        if (!capturing) {
-            oldCoutBuffer = std::cout.rdbuf();
-            std::cout.rdbuf(buffer.rdbuf());
-            capturing = true;
-        }
-    }
-
-    void stop()
-    {
-        if (capturing) {
-            std::cout.rdbuf(oldCoutBuffer);
-            capturing = false;
-        }
-    }
-
-    std::string getOutput()
-    {
-        return buffer.str();
-    }
-
-    void clear()
-    {
-        buffer.str("");
-        buffer.clear();
-    }
-
-    ~OutputCapture()
-    {
-        stop();
-    }
-};
-
 class JawsWrapper {
 private:
-    interpret::InterpreterState interpreterState;
-    OutputCapture outputCapture;
-    Options opts;
+    interpret::InterpreterState state;
+    std::stringstream ss;
+    std::stringstream outputCapture;
+
+    void resetStream()
+    {
+        ss.str("");
+        ss.clear();
+    }
+
+    void resetOutputCapture()
+    {
+        outputCapture.str("");
+        outputCapture.clear();
+    }
+
+    std::vector<std::shared_ptr<Expression>> parseInput(const std::string& input)
+    {
+        auto tokens = scanner::tokenize(input);
+        auto expressions = parse::parse(std::move(tokens));
+        if (!expressions) {
+            throw std::runtime_error("Parsing failed");
+        }
+        return *expressions;
+    }
+
+    // New method to capture stdout during evaluation
+    std::streambuf* redirectStdout()
+    {
+        resetOutputCapture();
+        return std::cout.rdbuf(outputCapture.rdbuf());
+    }
+
+    void restoreStdout(std::streambuf* oldBuf)
+    {
+        std::cout.rdbuf(oldBuf);
+    }
 
 public:
     JawsWrapper()
-        : interpreterState(interpret::createInterpreter())
+        : state(interpret::createInterpreter())
     {
-        // Default options
-        opts.printCode = false;
-        opts.printMacro = false;
-        opts.printANF = false;
-        opts.print3AC = false;
-        opts.printAST = false;
-        opts.optimise = true;
-        opts.compile = false;
-        opts.file = false;
     }
 
-    std::string evaluate(const std::string& input)
+    // Updated to return a JavaScript object with both result and stdout
+    emscripten::val evaluate(const std::string& input)
     {
         try {
-            outputCapture.clear();
-            outputCapture.start();
-            opts.input = input;
-            auto tokens = scanner::tokenize(input);
-            auto expressions = parse::parse(std::move(tokens));
-            if (!expressions) {
-                outputCapture.stop();
-                return "Parsing failed";
-            }
-            auto withImports = import::processImports(*expressions);
+            // Redirect stdout to capture display output
+            auto oldBuf = redirectStdout();
+            
+            auto expressions = parseInput(input);
+            const auto withImports = import::processImports(expressions);
             const auto expanded = macroexp::expandMacros(withImports);
-            if (opts.optimise) {
-                auto anf = ir::ANFtransform(expanded);
-                if (!anf.empty()) {
-                    anf = optimise::optimise(anf, opts.printANF);
-
-                    if (opts.print3AC) {
-                        const auto _3ac = tac::anfToTac(anf);
-                        std::cout << "\n<| Three Address Code |>\n"
-                                  << _3ac.toString() << std::endl;
-                    }
+            std::string result;
+            for (const auto& expr : expanded) {
+                std::vector<std::shared_ptr<Expression>> single_expr = { expr };
+                auto val = interpret::interpret(state, single_expr);
+                if (val) {
+                    result = val->toString();
                 }
             }
-            auto val = interpret::interpret(interpreterState, expanded);
-            if (val) {
-                std::cout << val->toString() << std::endl;
-            }
-            outputCapture.stop();
-            return outputCapture.getOutput();
-        } catch (const ParseError& e) {
-            outputCapture.stop();
-            return std::string("Parse Error: ") + e.what();
-        } catch (const InterpreterError& e) {
-            outputCapture.stop();
-            return std::string("Interpreter Error: ") + e.what();
+            
+            // Get the captured stdout and restore cout
+            std::string stdoutCapture = outputCapture.str();
+            restoreStdout(oldBuf);
+            
+            // Create and return a JavaScript object with both result and stdout
+            emscripten::val retVal = emscripten::val::object();
+            retVal.set("result", result);
+            retVal.set("stdout", stdoutCapture);
+            return retVal;
         } catch (const std::exception& e) {
-            outputCapture.stop();
+            // For errors, return an object with error message
+            emscripten::val retVal = emscripten::val::object();
+            retVal.set("error", std::string("Error: ") + e.what());
+            return retVal;
+        }
+    }
+
+    std::string getMacroExpanded(const std::string& input)
+    {
+        try {
+            auto expressions = parseInput(input);
+            const auto withImports = import::processImports(expressions);
+            const auto expanded = macroexp::expandMacros(withImports);
+
+            resetStream();
+            for (const auto& expr : expanded) {
+                ss << expr->toString() << "\n";
+            }
+            return ss.str();
+        } catch (const std::exception& e) {
             return std::string("Error: ") + e.what();
         }
     }
 
-    void setOption(const std::string& option, bool value)
+    std::string getANF(const std::string& input)
     {
-        if (option == "printCode")
-            opts.printCode = value;
-        else if (option == "printMacro")
-            opts.printMacro = value;
-        else if (option == "printANF")
-            opts.printANF = value;
-        else if (option == "print3AC")
-            opts.print3AC = value;
-        else if (option == "printAST")
-            opts.printAST = value;
-        else if (option == "optimise")
-            opts.optimise = value;
+        try {
+            auto expressions = parseInput(input);
+            const auto withImports = import::processImports(expressions);
+            const auto expanded = macroexp::expandMacros(withImports);
+            auto anf = ir::ANFtransform(expanded);
+
+            resetStream();
+            for (const auto& tl : anf) {
+                ss << tl->toString() << "\n";
+            }
+            return ss.str();
+        } catch (const std::exception& e) {
+            return std::string("Error: ") + e.what();
+        }
     }
 
-    std::string getEnvironment() const
+    std::string getOptimizedANF(const std::string& input)
     {
-        return "Jaws Scheme WebAssembly Environment";
+        try {
+            auto expressions = parseInput(input);
+            const auto withImports = import::processImports(expressions);
+            const auto expanded = macroexp::expandMacros(withImports);
+            auto anf = ir::ANFtransform(expanded);
+            anf = optimise::optimise(anf, true);
+
+            resetStream();
+            for (const auto& tl : anf) {
+                ss << tl->toString() << "\n";
+            }
+            return ss.str();
+        } catch (const std::exception& e) {
+            return std::string("Error: ") + e.what();
+        }
+    }
+
+    std::string getThreeAC(const std::string& input)
+    {
+        try {
+            auto expressions = parseInput(input);
+            const auto withImports = import::processImports(expressions);
+            const auto expanded = macroexp::expandMacros(withImports);
+            auto anf = ir::ANFtransform(expanded);
+            anf = optimise::optimise(anf, false);
+            const auto _3ac = tac::anfToTac(anf);
+            return _3ac.toString();
+        } catch (const std::exception& e) {
+            return std::string("Error: ") + e.what();
+        }
+    }
+
+    std::string getAST(const std::string& input)
+    {
+        try {
+            auto expressions = parseInput(input);
+            resetStream();
+            for (const auto& expr : expressions) {
+                ss << expr->ASTToString() << "\n";
+            }
+            return ss.str();
+        } catch (const std::exception& e) {
+            return std::string("Error: ") + e.what();
+        }
     }
 };
 
-// Emscripten bindings
 EMSCRIPTEN_BINDINGS(jaws_module)
 {
     class_<JawsWrapper>("JawsWrapper")
         .constructor<>()
         .function("evaluate", &JawsWrapper::evaluate)
-        .function("setOption", &JawsWrapper::setOption)
-        .function("getEnvironment", &JawsWrapper::getEnvironment);
+        .function("getMacroExpanded", &JawsWrapper::getMacroExpanded)
+        .function("getANF", &JawsWrapper::getANF)
+        .function("getOptimizedANF", &JawsWrapper::getOptimizedANF)
+        .function("getThreeAC", &JawsWrapper::getThreeAC)
+        .function("getAST", &JawsWrapper::getAST);
 }

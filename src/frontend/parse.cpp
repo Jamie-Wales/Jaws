@@ -423,25 +423,41 @@ std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state)
     return parts;
 }
 
+void synchronize(ParserState& state)
+{
+    advance(state);
+
+    while (!isAtEnd(state)) {
+        if (previousToken(state).type == Tokentype::LEFT_PAREN && (check(state, Tokentype::DEFINE) || check(state, Tokentype::LET) || check(state, Tokentype::LAMBDA) || check(state, Tokentype::IF) || check(state, Tokentype::QUOTE))) {
+            return;
+        }
+        advance(state);
+    }
+}
+
 std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token> tokens)
 {
     ParserState state { std::move(tokens), 0, false };
-
     auto output = std::vector<std::shared_ptr<Expression>> {};
-    try {
-        while (!isAtEnd(state)) {
+    bool hadError = false;
+
+    while (!isAtEnd(state)) {
+        try {
             auto expr = parseExpression(state);
             if (expr) {
                 output.push_back(expr);
             }
+            state.panicMode = false;
+        } catch (const ParseError& e) {
+            e.printFormattedError();
+            hadError = true;
+            synchronize(state);
+            state.panicMode = false;
         }
-        return output;
-    } catch (const ParseError& e) {
-        e.printFormattedError();
-        return std::nullopt;
     }
-}
 
+    return hadError ? std::nullopt : std::make_optional(output);
+}
 std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
 {
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' before literals in 'syntax-rules'");

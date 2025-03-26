@@ -3,72 +3,44 @@
 #include <fstream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <variant>
+#include <vector>
+
+class SocketStream;
 
 enum class PortType {
     Input,
-    Output
+    Output,
+    ServerSocket,
+    ClientSocket
 };
 
 class Port {
 public:
-    std::variant<std::shared_ptr<std::fstream>, std::shared_ptr<std::stringstream>> stream;
+    std::variant<
+        std::shared_ptr<std::fstream>,
+        std::shared_ptr<std::stringstream>,
+        std::shared_ptr<SocketStream>>
+        stream;
     PortType type;
 
-    // Constructor for file streams
-    Port(std::shared_ptr<std::fstream> f, PortType t)
-        : stream(std::move(f))
-        , type(t)
-    {
-    }
+    Port(std::shared_ptr<std::fstream> f, PortType t);
+    explicit Port(const std::string& s);
+    explicit Port(std::stringstream&& ss);
+    Port(std::shared_ptr<SocketStream> sock, PortType t);
 
-    // Constructor for string streams
-    explicit Port(const std::string& s)
-        : stream(std::make_shared<std::stringstream>(s))
-        , type(PortType::Input)
-    {
-    }
+    static Port createServerSocket(int port, int backlog = 5);
+    static Port connectToServer(const std::string& host, int port);
 
-    explicit Port(std::stringstream&& ss)
-        : stream(std::make_shared<std::stringstream>(std::move(ss)))
-        , type(PortType::Input)
-    {
-    }
+    Port acceptConnection() const;
+    std::string socketRead(size_t maxBytes = 1024) const;
+    int socketWrite(const std::string& data) const;
+    bool setNonBlocking(bool nonBlocking) const;
 
-    bool isOpen() const
-    {
-        return std::visit(overloaded {
-                              [](const std::shared_ptr<std::fstream>& f) { return f && f->is_open(); },
-                              [](const std::shared_ptr<std::stringstream>&) { return true; } },
-            stream);
-    }
-
-    void close() const
-    {
-        std::visit(overloaded {
-                       [](const std::shared_ptr<std::fstream>& f) {
-                           if (f && f->is_open())
-                               f->close();
-                       },
-                       [](const std::shared_ptr<std::stringstream>&) { /* Nothing to close */ } },
-            stream);
-    }
-
-    std::istream* get() const
-    {
-        return std::visit(overloaded {
-                              [](const std::shared_ptr<std::fstream>& f) -> std::istream* { return f.get(); },
-                              [](const std::shared_ptr<std::stringstream>& s) -> std::istream* { return s.get(); } },
-            stream);
-    }
-
-    std::ostream* getOutput() const
-    {
-        return std::visit(overloaded {
-                              [](const std::shared_ptr<std::fstream>& f) -> std::ostream* { return f.get(); },
-                              [](const std::shared_ptr<std::stringstream>& s) -> std::ostream* { return s.get(); } },
-            stream);
-    }
-
-    PortType getType() const { return type; }
+    bool isOpen() const;
+    void close() const;
+    std::istream* get() const;
+    std::ostream* getOutput() const;
+    PortType getType() const;
 };
