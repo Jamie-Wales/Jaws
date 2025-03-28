@@ -1,5 +1,6 @@
 #include "builtins/JawsIO.h"
 #include "Error.h"
+#include "Port.h"
 #include "parse.h"
 #include "scan.h"
 #include <fstream>
@@ -216,6 +217,57 @@ std::optional<SchemeValue> closePort(
     }
 
     return std::nullopt;
+}
+
+std::optional<SchemeValue> socketServer(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 1 || args.size() > 2) {
+        throw InterpreterError("socket-server requires 1 or 2 arguments");
+    }
+
+    if (!args[0].ensureValue().isNumber()) {
+        throw InterpreterError("socket-server: port argument must be a number");
+    }
+    int port = args[0].ensureValue().asNumber().toInt();
+
+    int backlog = 5;
+    if (args.size() == 2) {
+        if (!args[1].ensureValue().isNumber()) {
+            throw InterpreterError("socket-server: backlog argument must be a number");
+        }
+        backlog = args[1].ensureValue().asNumber().toInt();
+    }
+    try {
+        auto p = Port::createServerSocket(port, backlog);
+        return SchemeValue(p);
+    } catch (const std::exception& e) {
+        throw InterpreterError("socket-server: " + std::string(e.what()));
+    }
+}
+
+std::optional<SchemeValue> socketConnect(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("socket-connect requires exactly 2 arguments");
+    }
+
+    if (!args[0].ensureValue().isValue<std::string>()) {
+        throw InterpreterError("socket-connect: host argument must be a string");
+    }
+
+    if (!args[1].ensureValue().isValue<Number>()) {
+        throw InterpreterError("socket-connect: port argument must be a number");
+    }
+
+    const auto host = args[0].ensureValue().getValue<std::string>();
+    const auto port = args[1].ensureValue().getValue<Number>().toInt();
+    try {
+        return SchemeValue(Port::connectToServer(host, port));
+    } catch (InterpreterError& e) {
+        throw e;
+    } catch (const std::exception& e) {
+        throw InterpreterError("socket-connect: " + std::string(e.what()));
+    }
 }
 
 } // namespace jaws_io
