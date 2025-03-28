@@ -87,16 +87,31 @@ $(function(){initNavTree('optimise_8h_source.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">optimise.h</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="optimise_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#include &quot;<a class="code" href="_a_n_f_8h.html">ANF.h</a>&quot;</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceoptimise.html">optimise</a> {</div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span> </div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span>std::vector&lt;std::shared_ptr&lt;ir::TopLevel&gt;&gt; <a class="code hl_function" href="namespaceoptimise.html#ac9ae27c5800a673bd111051502a39144">optimise</a>(std::vector&lt;std::shared_ptr&lt;ir::TopLevel&gt;&gt;&amp; anfs, <span class="keywordtype">bool</span> print);</div>
+<a href="optimise_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#pragma once</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include &quot;<a class="code" href="_a_n_f_8h.html">ANF.h</a>&quot;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span>}</div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceoptimise.html">optimise</a> {</div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
+<div class="foldopen" id="foldopen00009" data-start="{" data-end="};">
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno"><a class="line" href="structoptimise_1_1_optimization_result.html">    9</a></span><span class="keyword">struct </span><a class="code hl_struct" href="structoptimise_1_1_optimization_result.html">OptimizationResult</a> {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno"><a class="line" href="structoptimise_1_1_optimization_result.html#ad84ae73d2f1c1d6cf589dfbdf21dc6bd">   10</a></span>    std::vector&lt;std::shared_ptr&lt;ir::TopLevel&gt;&gt; <a class="code hl_variable" href="structoptimise_1_1_optimization_result.html#ad84ae73d2f1c1d6cf589dfbdf21dc6bd">optimizedAnf</a>;</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno"><a class="line" href="structoptimise_1_1_optimization_result.html#aa7c48fd7ae0442320ba8458754873a70">   11</a></span>    std::string <a class="code hl_variable" href="structoptimise_1_1_optimization_result.html#aa7c48fd7ae0442320ba8458754873a70">preDependencyGraph</a>;</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno"><a class="line" href="structoptimise_1_1_optimization_result.html#aaf5e215570603b47505d22688dbdf026">   12</a></span>    std::string <a class="code hl_variable" href="structoptimise_1_1_optimization_result.html#aaf5e215570603b47505d22688dbdf026">postDependencyGraph</a>;</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>};</div>
+</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><a class="code hl_struct" href="structoptimise_1_1_optimization_result.html">OptimizationResult</a> <a class="code hl_namespace" href="namespaceoptimise.html">optimise</a>(std::vector&lt;std::shared_ptr&lt;ir::TopLevel&gt;&gt;&amp; anfs);</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>}</div>
 <div class="ttc" id="a_a_n_f_8h_html"><div class="ttname"><a href="_a_n_f_8h.html">ANF.h</a></div></div>
 <div class="ttc" id="anamespaceoptimise_html"><div class="ttname"><a href="namespaceoptimise.html">optimise</a></div><div class="ttdef"><b>Definition</b> ConstantFold.h:6</div></div>
-<div class="ttc" id="anamespaceoptimise_html_ac9ae27c5800a673bd111051502a39144"><div class="ttname"><a href="namespaceoptimise.html#ac9ae27c5800a673bd111051502a39144">optimise::optimise</a></div><div class="ttdeci">std::vector&lt; std::shared_ptr&lt; ir::TopLevel &gt; &gt; optimise(std::vector&lt; std::shared_ptr&lt; ir::TopLevel &gt; &gt; &amp;anfs, bool print)</div><div class="ttdef"><b>Definition</b> optimise.cpp:15</div></div>
+<div class="ttc" id="astructoptimise_1_1_optimization_result_html"><div class="ttname"><a href="structoptimise_1_1_optimization_result.html">optimise::OptimizationResult</a></div><div class="ttdef"><b>Definition</b> optimise.h:9</div></div>
+<div class="ttc" id="astructoptimise_1_1_optimization_result_html_aa7c48fd7ae0442320ba8458754873a70"><div class="ttname"><a href="structoptimise_1_1_optimization_result.html#aa7c48fd7ae0442320ba8458754873a70">optimise::OptimizationResult::preDependencyGraph</a></div><div class="ttdeci">std::string preDependencyGraph</div><div class="ttdef"><b>Definition</b> optimise.h:11</div></div>
+<div class="ttc" id="astructoptimise_1_1_optimization_result_html_aaf5e215570603b47505d22688dbdf026"><div class="ttname"><a href="structoptimise_1_1_optimization_result.html#aaf5e215570603b47505d22688dbdf026">optimise::OptimizationResult::postDependencyGraph</a></div><div class="ttdeci">std::string postDependencyGraph</div><div class="ttdef"><b>Definition</b> optimise.h:12</div></div>
+<div class="ttc" id="astructoptimise_1_1_optimization_result_html_ad84ae73d2f1c1d6cf589dfbdf21dc6bd"><div class="ttname"><a href="structoptimise_1_1_optimization_result.html#ad84ae73d2f1c1d6cf589dfbdf21dc6bd">optimise::OptimizationResult::optimizedAnf</a></div><div class="ttdeci">std::vector&lt; std::shared_ptr&lt; ir::TopLevel &gt; &gt; optimizedAnf</div><div class="ttdef"><b>Definition</b> optimise.h:10</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

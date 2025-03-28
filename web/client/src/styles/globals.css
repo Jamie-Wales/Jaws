@@ -408,6 +408,22 @@ css
   animation: shimmer 3s linear infinite;
 }
 
+
+.cm-tooltip * {
+    font-family: var(--font-mono) !important;
+}
+
+.cm-tooltip-autocomplete {
+    & ul {
+        font-family: var(--font-mono);
+        padding: 0.25rem;
+    }
+    
+    & li {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+}
 /* Animation delay utilities */
 .animation-delay-100 { animation-delay: 0.1s; }
 .animation-delay-200 { animation-delay: 0.2s; }

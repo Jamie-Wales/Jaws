@@ -59,13 +59,14 @@ export function EditorView() {
     return (
         <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-white' : 'h-[calc(100vh-8rem)]'}`}>
             <div className="flex flex-col gap-4 h-full p-4">
-                <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 border rounded-lg">
+                <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 border rounded-lg shadow-sm">
                     <span className="text-sm font-medium text-slate-700">Editor</span>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={toggleEditor}
-                        className="h-7 px-2 hover:bg-slate-200"
+                        className="h-7 px-2 hover:bg-slate-200/80"
+                        title={isEditorExpanded ? "Minimize editor" : "Maximize editor"}
                     >
                         {isEditorExpanded ? (
                             <Minimize2 className="h-4 w-4" />
@@ -77,7 +78,8 @@ export function EditorView() {
                         variant="ghost"
                         size="sm"
                         onClick={toggleFullscreen}
-                        className="h-7 px-2 hover:bg-slate-200"
+                        className="h-7 px-2 hover:bg-slate-200/80"
+                        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
                     >
                         {isFullscreen ? (
                             <Shrink className="h-4 w-4" />
@@ -86,15 +88,19 @@ export function EditorView() {
                         )}
                     </Button>
                     <div className="flex-1"></div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={runEditorCode}
-                        className="h-7 w-7 p-0 flex items-center justify-center bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                        title="Run editor code"
-                    >
-                        <Play className="h-4 w-4" />
-                    </Button>
+                    {isEditorExpanded && (
+                        <Button
+                            variant="default"
+                            size="sm"
+                            onClick={runEditorCode}
+                            className="h-8 px-4 flex items-center gap-2 bg-[#dd3f0c] hover:bg-[#dd3f0c]/90 text-white 
+                                shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                            title="Load editor code"
+                        >
+                            <Play className="h-4 w-4" />
+                            Load editor code
+                        </Button>
+                    )}
                 </div>
 
                 <div className="flex-1 min-h-0 border rounded-lg bg-zinc-900 overflow-hidden">
@@ -105,6 +111,7 @@ export function EditorView() {
                                 onChange={setCode}
                                 height="100%"
                                 fullEditor={true}
+                                onRun={runEditorCode}  // Pass the run function
                             />
                         </ResizablePanel>
                         <ResizableHandle className={!isEditorExpanded ? 'hidden' : 'h-2 bg-zinc-800 hover:bg-zinc-700'} />

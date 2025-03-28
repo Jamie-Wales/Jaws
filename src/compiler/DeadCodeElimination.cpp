@@ -1,7 +1,7 @@
 #include "DeadCodeElimination.h"
 #include "ANF.h"
 #include "Visit.h"
-#include <iostream>
+#include <sstream>
 
 namespace optimise {
 
@@ -12,6 +12,34 @@ static const std::unordered_set<std::string> sideEffects = {
     "register-function", "eval", "apply", "call/cc",
     "call-with-current-continuation"
 };
+
+std::string DependancyGraph::toString() const {
+    std::stringstream ss;
+    for (const auto& [node, edges] : outgoing) {
+        ss << node << " -> ";
+        bool first = true;
+        for (const auto& edge : edges) {
+            if (!first)
+                ss << ", ";
+            ss << edge.to;
+            first = false;
+        }
+        ss << "\n";
+    }
+    return ss.str();
+}
+
+void DependancyGraph::addEdge(const std::string& from, const std::string& to) {
+    Edge edge = { from, to };
+    auto& edges = outgoing[from];
+    if (std::find_if(edges.begin(), edges.end(),
+            [&to](const Edge& e) { return e.to == to; })
+        == edges.end()) {
+        edges.push_back(edge);
+        incoming[to].push_back(edge);
+    }
+}
+
 std::unordered_set<std::string> getLiveNodes(
     const DependancyGraph& graph,
     const std::unordered_set<std::string>& initialRoots)
@@ -36,18 +64,6 @@ std::unordered_set<std::string> getLiveNodes(
     return live;
 }
 
-void DependancyGraph::addEdge(const std::string& from, const std::string& to)
-{
-    Edge edge = { from, to };
-    auto& edges = outgoing[from];
-    if (std::find_if(edges.begin(), edges.end(),
-            [&to](const Edge& e) { return e.to == to; })
-        == edges.end()) {
-        edges.push_back(edge);
-        incoming[to].push_back(edge);
-    }
-}
-
 std::unordered_set<std::string> getSideEffectNodes(const DependancyGraph& graph)
 {
     std::unordered_set<std::string> roots;
@@ -62,20 +78,6 @@ std::unordered_set<std::string> getSideEffectNodes(const DependancyGraph& graph)
     }
 
     return roots;
-}
-void DependancyGraph::print()
-{
-    for (const auto& [node, edges] : outgoing) {
-        std::cout << node << " -> ";
-        bool first = true;
-        for (const auto& edge : edges) {
-            if (!first)
-                std::cout << ", ";
-            std::cout << edge.to;
-            first = false;
-        }
-        std::cout << "\n";
-    }
 }
 
 std::vector<std::shared_ptr<ir::TopLevel>> filterTops(
@@ -169,31 +171,116 @@ void collectTopLevelDependencies(const ir::TopLevel& top, DependancyGraph& graph
         top.decl);
 }
 
-void dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops, bool print)
+DCEResult dce(std::vector<std::shared_ptr<ir::TopLevel>>& tops)
 {
     DependancyGraph dp;
     for (const auto& top : tops) {
         collectTopLevelDependencies(*top, dp);
     }
-    if (print) {
-        std::cout << "<| DependancyGraph Pre DeadCodeElimination |>\n";
-        dp.print();
-        std::cout << "\n"
-                  << std::endl;
-    }
+    
+    std::string preGraph = dp.toString();
+    
     std::unordered_set<std::string> initialRoots = getSideEffectNodes(dp);
     initialRoots.insert("root");
 
     auto liveNodes = getLiveNodes(dp, initialRoots);
-    dp = filterGraph(dp, liveNodes);
-    tops = filterTops(tops, liveNodes);
+    auto filteredGraph = filterGraph(dp, liveNodes);
+    auto filteredTops = filterTops(tops, liveNodes);
+    
+    std::string postGraph = filteredGraph.toString();
+    
+    return {
+        filteredTops,
+        {preGraph, postGraph}
+    };
+}
 
-    if (print) {
-        std::cout << "<| DependancyGraph Post DeadCodeElimination |>\n";
-        dp.print();
-        std::cout << "\n"
-                  << std::endl;
+void collectUsedVariables(const std::shared_ptr<ir::ANF>& anf, std::unordered_set<std::string>& usedList)
+{
+    if (!anf)
+        return;
+
+    std::visit(overloaded {
+                   [&](const ir::Let& let) {
+                       if (let.binding) {
+                           collectUsedVariables(let.binding, usedList);
+                       }
+                       if (let.body) {
+                           collectUsedVariables(let.body, usedList);
+                       }
+                   },
+                   [&](const ir::App& app) {
+                       usedList.insert(app.name.lexeme);
+                       for (const auto& param : app.params) {
+                           usedList.insert(param.lexeme);
+                       }
+                   },
+                   [&](const ir::Lambda& lambda) {
+                       if (lambda.body) {
+                           collectUsedVariables(lambda.body, usedList);
+                       }
+                   },
+                   [&](const ir::If& if_) {
+                       usedList.insert(if_.cond.lexeme);
+                       collectUsedVariables(if_.then, usedList);
+                       if (if_._else) {
+                           collectUsedVariables(*if_._else, usedList);
+                       }
+                   },
+                   [&](const ir::Atom& atom) {
+                       usedList.insert(atom.atom.lexeme);
+                   },
+                   [&](const ir::Quote&) {} },
+        anf->term);
+}
+
+void elimatedDeadCode(std::vector<std::shared_ptr<ir::ANF>>& anfs)
+{
+    std::unordered_set<std::string> used;
+    for (auto& anf : anfs) {
+        collectUsedVariables(anf, used);
     }
+    for (auto& anf : anfs) {
+        anf = eliminateUnused(anf, used);
+    }
+}
+
+std::shared_ptr<ir::ANF> eliminateUnused(const std::shared_ptr<ir::ANF>& anf, const std::unordered_set<std::string>& used)
+{
+    if (!anf)
+        return nullptr;
+
+    return std::visit(overloaded {
+                         [&](const ir::Let& let) -> std::shared_ptr<ir::ANF> {
+                             if (!let.name || used.count(let.name->lexeme) > 0) {
+                                 return std::make_shared<ir::ANF>(ir::Let {
+                                     let.name,
+                                     let.binding ? eliminateUnused(let.binding, used) : nullptr,
+                                     let.body ? eliminateUnused(let.body, used) : nullptr });
+                             }
+                             return let.body ? eliminateUnused(let.body, used) : nullptr;
+                         },
+                         [&](const ir::App& app) -> std::shared_ptr<ir::ANF> {
+                             return std::make_shared<ir::ANF>(app);
+                         },
+                         [&](const ir::Lambda& lambda) -> std::shared_ptr<ir::ANF> {
+                             return std::make_shared<ir::ANF>(ir::Lambda {
+                                 lambda.params,
+                                 lambda.body ? eliminateUnused(lambda.body, used) : nullptr });
+                         },
+                         [&](const ir::If& if_) -> std::shared_ptr<ir::ANF> {
+                             return std::make_shared<ir::ANF>(ir::If {
+                                 if_.cond,
+                                 eliminateUnused(if_.then, used),
+                                 if_._else ? eliminateUnused(*if_._else, used) : nullptr });
+                         },
+                         [&](const ir::Atom& atom) -> std::shared_ptr<ir::ANF> {
+                             return std::make_shared<ir::ANF>(atom);
+                         },
+                         [&](const ir::Quote& quote) -> std::shared_ptr<ir::ANF> {
+                             return std::make_shared<ir::ANF>(quote);
+                         } },
+        anf->term);
 }
 
 }

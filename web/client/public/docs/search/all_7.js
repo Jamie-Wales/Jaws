@@ -9,5 +9,6 @@ var searchData=
   ['getlivenodes_6',['getLiveNodes',['../namespaceoptimise.html#a2bf40f3d0dc337c3404b7bd44738f798',1,'optimise']]],
   ['getnumericvalue_7',['getNumericValue',['../namespaceoptimise.html#a1fd2d9ef4a373ebed166d778a6493e18',1,'optimise']]],
   ['getsideeffectnodes_8',['getSideEffectNodes',['../namespaceoptimise.html#ac3e896ae0e40da6712c4f9eb4cd418bc',1,'optimise']]],
-  ['getvaroffset_9',['getVarOffset',['../structassembly_1_1_assembly_generator_state.html#a31dca0da7c0feee0e82d5e4b4d1f9302',1,'assembly::AssemblyGeneratorState']]]
+  ['getvaroffset_9',['getVarOffset',['../structassembly_1_1_assembly_generator_state.html#a31dca0da7c0feee0e82d5e4b4d1f9302',1,'assembly::AssemblyGeneratorState']]],
+  ['graphs_10',['graphs',['../structoptimise_1_1_d_c_e_result.html#a691f53d623367f9bd8f337d4c922da55',1,'optimise::DCEResult']]]
 ];

@@ -40,6 +40,8 @@ InterpreterState createInterpreter()
     define("eqv?", jaws_eq::isEqv);
     define("error", jaws_io::error);
     define("symbol?", jaws_eq::isSymbol);
+    define("number?", jaws_eq::isNumber);
+    define("string?", jaws_eq::isString);
     define("open-input-file", jaws_io::openInputFile);
     define("open-output-file", jaws_io::openOutputFile);
     define("close-port", jaws_io::closePort);

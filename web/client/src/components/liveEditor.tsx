@@ -1,5 +1,4 @@
 import { CodeEditor } from "./codeEditor";
-
 import { KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 interface LiveEditorProps {
@@ -15,7 +14,7 @@ export const LiveEditor = ({ value, onChange, onKeyDown }: LiveEditorProps) => {
             onKeyDown={onKeyDown}
         >
             <span className="text-blue-400 shrink-0 mt-[3px]">λ</span>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 max-h-[150px] overflow-y-auto">
                 <CodeEditor
                     value={value}
                     onChange={onChange}
@@ -25,5 +24,6 @@ export const LiveEditor = ({ value, onChange, onKeyDown }: LiveEditorProps) => {
                     maxHeight="150px"
                 />
             </div>
-        </div>)
-}
+        </div>
+    );
+};

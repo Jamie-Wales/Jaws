@@ -25,6 +25,16 @@ private:
     std::stringstream ss;
     std::stringstream outputCapture;
 
+    struct CompilationStages {
+        std::vector<std::shared_ptr<Expression>> parsed;
+        std::vector<std::shared_ptr<Expression>> withImports;
+        std::vector<std::shared_ptr<Expression>> expanded;
+        std::vector<std::shared_ptr<ir::TopLevel>> anf;
+        std::vector<std::shared_ptr<ir::TopLevel>> optimizedAnf;
+        std::string preDependencyGraph;
+        std::string postDependencyGraph;
+    };
+
     void resetStream()
     {
         ss.str("");
@@ -37,17 +47,36 @@ private:
         outputCapture.clear();
     }
 
-    std::vector<std::shared_ptr<Expression>> parseInput(const std::string& input)
+    CompilationStages compileStages(const std::string& input)
     {
+        CompilationStages stages;
+
+        // Initial parsing
         auto tokens = scanner::tokenize(input);
         auto expressions = parse::parse(std::move(tokens));
         if (!expressions) {
             throw std::runtime_error("Parsing failed");
         }
-        return *expressions;
+        stages.parsed = *expressions;
+
+        // Process imports
+        stages.withImports = import::processImports(stages.parsed);
+
+        // Expand macros
+        stages.expanded = macroexp::expandMacros(stages.withImports);
+
+        // Generate ANF - store the result directly
+        stages.anf = ir::ANFtransform(stages.expanded);
+
+        // Optimize and get dependency graphs
+        auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(stages.anf);
+        stages.optimizedAnf = optimizedAnf;
+        stages.preDependencyGraph = preGraph;
+        stages.postDependencyGraph = postGraph;
+
+        return stages;
     }
 
-    // New method to capture stdout during evaluation
     std::streambuf* redirectStdout()
     {
         resetOutputCapture();
@@ -65,134 +94,97 @@ public:
     {
     }
 
-    // Updated to return a JavaScript object with both result and stdout
     emscripten::val evaluate(const std::string& input)
     {
         try {
-            // Redirect stdout to capture display output
             auto oldBuf = redirectStdout();
-            
-            auto expressions = parseInput(input);
-            const auto withImports = import::processImports(expressions);
-            const auto expanded = macroexp::expandMacros(withImports);
+
+            auto stages = compileStages(input);
             std::string result;
-            for (const auto& expr : expanded) {
+
+            // Evaluate using expanded form
+            for (const auto& expr : stages.expanded) {
                 std::vector<std::shared_ptr<Expression>> single_expr = { expr };
                 auto val = interpret::interpret(state, single_expr);
                 if (val) {
                     result = val->toString();
                 }
             }
-            
-            // Get the captured stdout and restore cout
+
             std::string stdoutCapture = outputCapture.str();
             restoreStdout(oldBuf);
-            
-            // Create and return a JavaScript object with both result and stdout
+
             emscripten::val retVal = emscripten::val::object();
             retVal.set("result", result);
             retVal.set("stdout", stdoutCapture);
             return retVal;
         } catch (const std::exception& e) {
-            // For errors, return an object with error message
             emscripten::val retVal = emscripten::val::object();
             retVal.set("error", std::string("Error: ") + e.what());
             return retVal;
         }
     }
 
-    std::string getMacroExpanded(const std::string& input)
+    emscripten::val getAllStages(const std::string& input)
     {
         try {
-            auto expressions = parseInput(input);
-            const auto withImports = import::processImports(expressions);
-            const auto expanded = macroexp::expandMacros(withImports);
+            auto stages = compileStages(input);
 
+            // Convert each stage to string representation
             resetStream();
-            for (const auto& expr : expanded) {
-                ss << expr->toString() << "\n";
-            }
-            return ss.str();
-        } catch (const std::exception& e) {
-            return std::string("Error: ") + e.what();
-        }
-    }
-
-    std::string getANF(const std::string& input)
-    {
-        try {
-            auto expressions = parseInput(input);
-            const auto withImports = import::processImports(expressions);
-            const auto expanded = macroexp::expandMacros(withImports);
-            auto anf = ir::ANFtransform(expanded);
-
-            resetStream();
-            for (const auto& tl : anf) {
-                ss << tl->toString() << "\n";
-            }
-            return ss.str();
-        } catch (const std::exception& e) {
-            return std::string("Error: ") + e.what();
-        }
-    }
-
-    std::string getOptimizedANF(const std::string& input)
-    {
-        try {
-            auto expressions = parseInput(input);
-            const auto withImports = import::processImports(expressions);
-            const auto expanded = macroexp::expandMacros(withImports);
-            auto anf = ir::ANFtransform(expanded);
-            anf = optimise::optimise(anf, true);
-
-            resetStream();
-            for (const auto& tl : anf) {
-                ss << tl->toString() << "\n";
-            }
-            return ss.str();
-        } catch (const std::exception& e) {
-            return std::string("Error: ") + e.what();
-        }
-    }
-
-    std::string getThreeAC(const std::string& input)
-    {
-        try {
-            auto expressions = parseInput(input);
-            const auto withImports = import::processImports(expressions);
-            const auto expanded = macroexp::expandMacros(withImports);
-            auto anf = ir::ANFtransform(expanded);
-            anf = optimise::optimise(anf, false);
-            const auto _3ac = tac::anfToTac(anf);
-            return _3ac.toString();
-        } catch (const std::exception& e) {
-            return std::string("Error: ") + e.what();
-        }
-    }
-
-    std::string getAST(const std::string& input)
-    {
-        try {
-            auto expressions = parseInput(input);
-            resetStream();
-            for (const auto& expr : expressions) {
+            std::string astStr;
+            for (const auto& expr : stages.parsed) {
                 ss << expr->ASTToString() << "\n";
             }
-            return ss.str();
+            astStr = ss.str();
+
+            resetStream();
+            std::string macroStr;
+            for (const auto& expr : stages.expanded) {
+                ss << expr->toString() << "\n";
+            }
+            macroStr = ss.str();
+
+            resetStream();
+            std::string anfStr;
+            for (const auto& expr : stages.anf) {
+                ss << expr->toString() << "\n";
+            }
+            anfStr = ss.str();
+
+            resetStream();
+            std::string optAnfStr;
+            for (const auto& expr : stages.optimizedAnf) {
+                ss << expr->toString() << "\n";
+            }
+            optAnfStr = ss.str();
+
+            // Generate Three-AC from optimized ANF
+            auto threeAC = tac::anfToTac(stages.optimizedAnf);
+            std::string threeACStr = threeAC.toString();
+
+            // Return all stages at once
+            emscripten::val retVal = emscripten::val::object();
+            retVal.set("ast", astStr);
+            retVal.set("macroExpanded", macroStr);
+            retVal.set("anf", anfStr);
+            retVal.set("optimizedANF", optAnfStr);
+            retVal.set("threeAC", threeACStr);
+            retVal.set("preDependencyGraph", stages.preDependencyGraph);
+            retVal.set("postDependencyGraph", stages.postDependencyGraph);
+            return retVal;
         } catch (const std::exception& e) {
-            return std::string("Error: ") + e.what();
+            emscripten::val retVal = emscripten::val::object();
+            retVal.set("error", std::string("Error: ") + e.what());
+            return retVal;
         }
     }
 };
 
 EMSCRIPTEN_BINDINGS(jaws_module)
 {
-    class_<JawsWrapper>("JawsWrapper")
+    emscripten::class_<JawsWrapper>("JawsWrapper")
         .constructor<>()
         .function("evaluate", &JawsWrapper::evaluate)
-        .function("getMacroExpanded", &JawsWrapper::getMacroExpanded)
-        .function("getANF", &JawsWrapper::getANF)
-        .function("getOptimizedANF", &JawsWrapper::getOptimizedANF)
-        .function("getThreeAC", &JawsWrapper::getThreeAC)
-        .function("getAST", &JawsWrapper::getAST);
+        .function("getAllStages", &JawsWrapper::getAllStages);
 }

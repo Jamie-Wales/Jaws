@@ -43,8 +43,8 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
 ██   ██║██╔══██║██║███╗██║╚════██║
 ╚█████╔╝██║  ██║╚███╔███╔╝███████║
  ╚════╝ ╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝`;
+
         useEffect(() => {
-            // Initialize with JAWS logo and welcome message
             setLines([
                 {
                     type: 'system',
@@ -242,10 +242,11 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
         };
 
         return (
-            <div className={`min-h-[500px] flex flex-col bg-zinc-900 transition-all duration-300 ${className}`}>
+            <div className={`flex flex-col min-h-0 h-full ${className}`}>
+                {/* Terminal output area */}
                 <div
                     ref={terminalRef}
-                    className="flex-1 min-h-[400px] p-4 overflow-y-auto code-font scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent"
+                    className="flex-1 p-4 overflow-y-auto code-font scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-transparent"
                 >
                     {lines.map((line) => (
                         <div
@@ -277,25 +278,29 @@ export const Terminal = forwardRef<TerminalRef, TerminalProps>(
                         </div>
                     ))}
                 </div>
-                <div className="border-t border-zinc-700/50">
-                    <div className="px-4 py-3 w-full">
-                        <LiveEditor
-                            onChange={handleInputChange}
-                            value={inputValue}
-                            onKeyDown={handleKeyDown}
-                        />
-                        <div className="mt-2 flex justify-end">
+
+                {/* Input area - fixed at bottom */}
+                <div className="flex-shrink-0 border-t border-zinc-700/50">
+                    <div className="px-4 py-3 w-full bg-zinc-900/80">
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                                <LiveEditor
+                                    onChange={handleInputChange}
+                                    value={inputValue}
+                                    onKeyDown={handleKeyDown}
+                                />
+                            </div>
                             <Button
                                 variant="default"
-                                size="sm"
                                 onClick={() => handleCommand(inputValue)}
-                                className="flex items-center gap-2 transition-all duration-200 
-                                 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100
-                                 bg-accent hover:bg-accent/90"
+                                className="flex items-center justify-center h-10 w-10 min-w-10
+                    bg-[#dd3f0c] hover:bg-[#dd3f0c]/90 text-white font-medium
+                    transition-all duration-200 hover:-translate-y-1
+                    disabled:opacity-50 disabled:hover:translate-y-0
+                    shadow-lg"
                                 disabled={isProcessing}
                             >
-                                <Play className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
-                                {isProcessing ? 'Running...' : 'Run'}
+                                <Play className={`h-5 w-5 ${isProcessing ? 'animate-spin' : ''}`} />
                             </Button>
                         </div>
                     </div>

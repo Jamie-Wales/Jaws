@@ -6,13 +6,20 @@ interface JawsEvaluationResult {
     error?: string;
 }
 
+interface CompilationStages {
+    ast: string;
+    macroExpanded: string;
+    anf: string;
+    optimizedANF: string;
+    threeAC: string;
+    preDependencyGraph: string;
+    postDependencyGraph: string;
+    error?: string;
+}
+
 interface JawsInstance {
     evaluate: (input: string) => JawsEvaluationResult;
-    getMacroExpanded: (input: string) => string;
-    getANF: (input: string) => string;
-    getOptimizedANF: (input: string) => string;
-    getThreeAC: (input: string) => string;
-    getAST: (input: string) => string;
+    getAllStages: (input: string) => CompilationStages;
 }
 
 interface JawsModule {
@@ -27,24 +34,11 @@ declare global {
 
 interface JawsInterpreter {
     evaluate: (input: string) => string;
-    evaluateWithOutput: (input: string) => JawsEvaluationResult;
-    getMacroExpanded: (input: string) => string;
-    getANF: (input: string) => string;
-    getOptimizedANF: (input: string) => string;
-    getThreeAC: (input: string) => string;
-    getAST: (input: string) => string;
+    getCompilationStages: (input: string) => CompilationStages;
     loading: boolean;
     error: string | null;
     instance: JawsInstance | null;
 }
-
-type JawsStringFunctionName = keyof Pick<JawsInstance,
-    'getMacroExpanded' |
-    'getANF' |
-    'getOptimizedANF' |
-    'getThreeAC' |
-    'getAST'
->;
 
 const useJawsInterpreter = (): JawsInterpreter => {
     const [interpreter, setInterpreter] = useState<JawsInstance | null>(null);
@@ -82,13 +76,33 @@ const useJawsInterpreter = (): JawsInterpreter => {
         initializeInterpreter();
     }, []);
 
-    const wrapStringFunction = (fn: JawsStringFunctionName) => (input: string): string => {
-        if (!interpreter) return 'Interpreter not initialized';
+    const getCompilationStages = (input: string): CompilationStages => {
+        if (!interpreter) {
+            return {
+                ast: 'Interpreter not initialized',
+                macroExpanded: 'Interpreter not initialized',
+                anf: 'Interpreter not initialized',
+                optimizedANF: 'Interpreter not initialized',
+                threeAC: 'Interpreter not initialized',
+                preDependencyGraph: 'Interpreter not initialized',
+                postDependencyGraph: 'Interpreter not initialized'
+            };
+        }
+
         try {
-            return interpreter[fn](input);
+            return interpreter.getAllStages(input);
         } catch (err) {
-            console.error(`${fn} error:`, err);
-            return `Error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+            const errorMsg = `Error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+            return {
+                ast: errorMsg,
+                macroExpanded: errorMsg,
+                anf: errorMsg,
+                optimizedANF: errorMsg,
+                threeAC: errorMsg,
+                preDependencyGraph: errorMsg,
+                postDependencyGraph: errorMsg,
+                error: errorMsg
+            };
         }
     };
 
@@ -96,18 +110,12 @@ const useJawsInterpreter = (): JawsInterpreter => {
         if (!interpreter) return 'Interpreter not initialized';
         try {
             const result = interpreter.evaluate(input);
-
-            // Handle error returned from C++
             if (result.error) {
                 return result.error;
             }
-
-            // If there's stdout output, prioritize it over the result
             if (result.stdout && result.stdout.trim() !== '') {
                 return result.stdout.trim();
             }
-
-            // Otherwise return the result
             return result.result || '';
         } catch (err) {
             console.error(`evaluate error:`, err);
@@ -115,24 +123,9 @@ const useJawsInterpreter = (): JawsInterpreter => {
         }
     };
 
-    const evaluateWithOutput = (input: string): JawsEvaluationResult => {
-        if (!interpreter) return { error: 'Interpreter not initialized' };
-        try {
-            return interpreter.evaluate(input);
-        } catch (err) {
-            console.error(`evaluate error:`, err);
-            return { error: `Error: ${err instanceof Error ? err.message : 'Unknown error'}` };
-        }
-    };
-
     return {
         evaluate,
-        evaluateWithOutput,
-        getMacroExpanded: wrapStringFunction('getMacroExpanded'),
-        getANF: wrapStringFunction('getANF'),
-        getOptimizedANF: wrapStringFunction('getOptimizedANF'),
-        getThreeAC: wrapStringFunction('getThreeAC'),
-        getAST: wrapStringFunction('getAST'),
+        getCompilationStages,
         loading,
         error,
         instance: interpreter

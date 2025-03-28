@@ -6,6 +6,11 @@
 #include <fstream>
 #include <set>
 
+#ifdef WASM_BUILD
+#include <emscripten/fetch.h>
+#include <emscripten/val.h>
+#endif
+
 namespace import {
 
 std::shared_ptr<Expression> renameDefinition(
@@ -30,11 +35,49 @@ std::shared_ptr<Expression> renameDefinition(
     return expr;
 }
 
+#ifdef WASM_BUILD
+// For WebAssembly, use emscripten's synchronous XHR to check if a file exists
+bool fileExists(const std::string& path)
+{
+    emscripten::val xhr = emscripten::val::global("XMLHttpRequest").new_();
+    xhr.call<void>("open", std::string("HEAD"), path, false);
+    xhr.call<void>("send");
+    
+    return xhr["status"].as<int>() == 200;
+}
+
+// Read file content for WebAssembly using synchronous XHR
+std::string readFile(const std::string& path)
+{
+    emscripten::val xhr = emscripten::val::global("XMLHttpRequest").new_();
+    xhr.call<void>("open", std::string("GET"), path, false);
+    xhr.call<void>("send");
+    
+    if (xhr["status"].as<int>() != 200) {
+        throw ParseError("Failed to load file: " + path, Token(), "");
+    }
+    
+    return xhr["responseText"].as<std::string>();
+}
+#else
+// Native filesystem operations for non-WASM builds
 bool fileExists(const std::string& path)
 {
     std::ifstream f(path.c_str());
     return f.good();
 }
+
+std::string readFile(const std::string& path)
+{
+    std::ifstream file(path);
+    if (!file) {
+        throw std::runtime_error("Unable to open file: " + path);
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+#endif
 
 bool isDefinition(const std::shared_ptr<Expression>& expr)
 {
@@ -68,6 +111,54 @@ void importLibrary(
     }
 }
 
+#ifdef WASM_BUILD
+std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
+{
+    if (spec.library.size() == 1) {
+        if (auto* atom = std::get_if<AtomExpression>(&spec.library[0]->as)) {
+            std::string fileName = atom->value.lexeme + ".scm";
+            
+            // First try in /lib directory (preferred location for web)
+            std::string webPath = "/lib/" + fileName;
+            if (fileExists(webPath)) {
+                return webPath;
+            }
+            
+            // Then try in current directory
+            if (fileExists(fileName)) {
+                return fileName;
+            }
+            
+            // Fallback to the original paths for backward compatibility
+            std::string localPath = atom->value.lexeme + ".scm";
+            std::string libPath = "../lib/" + localPath;
+            
+            if (fileExists(libPath)) {
+                return libPath;
+            }
+            
+            // For web, also try the public/lib path
+            return "/lib/" + fileName;
+        }
+    }
+
+    std::string libPath;
+    for (const auto& part : spec.library) {
+        if (auto* atom = std::get_if<AtomExpression>(&part->as)) {
+            libPath += atom->value.lexeme + "/";
+        }
+    }
+    
+    // First try the web-specific path
+    std::string webPath = "/lib/" + libPath.substr(0, libPath.length() - 1) + ".scm";
+    if (fileExists(webPath)) {
+        return webPath;
+    }
+    
+    // Fallback to original path format
+    return "../lib/" + libPath.substr(0, libPath.length() - 1) + ".scm";
+}
+#else
 std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
 {
     if (spec.library.size() == 1) {
@@ -88,6 +179,7 @@ std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
     }
     return std::format("../lib/{}.scm", libPath.substr(0, libPath.length() - 1));
 }
+#endif
 
 std::shared_ptr<Expression> transformExpression(
     const std::shared_ptr<Expression>& expr,

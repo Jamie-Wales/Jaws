@@ -14,6 +14,7 @@ import {
     X
 } from 'lucide-react';
 import { useState } from 'react';
+import { Footer } from '@/components/footer';
 
 type CodeLine = {
     type: 'input' | 'output';
@@ -57,33 +58,39 @@ export function WelcomePage() {
                             <NavLink
                                 to="/editor"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
+                                    isActive
+                                        ? "px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                             >
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/examples"
+                                to="/docs"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
+                                    isActive
+                                        ? "px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                             >
-                                Examples
+                                Docs
                             </NavLink>
                             <NavLink
                                 to="/compiler-explorer"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
+                                    isActive
+                                        ? "px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                             >
                                 Compiler Explorer
                             </NavLink>
-                            <Button
-                                className="bg-[#dd3f0c] text-white hover:opacity-90"
-                                onClick={() => navigate('/learn')}
+                            <NavLink
+                                to="/learn"
+                                className="px-4 py-2 rounded-md font-medium bg-[#dd3f0c] text-white no-underline hover:no-underline hover:text-white hover:bg-[#dd3f0c]"
                             >
                                 Learn Scheme
-                            </Button>
+                            </NavLink>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -133,39 +140,43 @@ export function WelcomePage() {
                             <NavLink
                                 to="/editor"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
+                                    isActive
+                                        ? "block px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "block px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/examples"
+                                to="/docs"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
+                                    isActive
+                                        ? "block px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "block px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
-                                Examples
+                                Docs
                             </NavLink>
                             <NavLink
                                 to="/compiler-explorer"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
+                                    isActive
+                                        ? "block px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "block px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
                                 Compiler Explorer
                             </NavLink>
-                            <Button
-                                className="w-full bg-[#dd3f0c] text-white hover:opacity-90"
-                                onClick={() => {
-                                    navigate('learn');
-                                    setMobileMenuOpen(false);
-                                }}
+                            <NavLink
+                                to="/learn"
+                                className="block px-4 py-2 rounded-md font-medium w-full text-center bg-[#dd3f0c] text-white no-underline hover:no-underline hover:text-white hover:bg-[#dd3f0c]"
+                                onClick={() => setMobileMenuOpen(false)}
                             >
                                 Learn Scheme
-                            </Button>
+                            </NavLink>
                         </div>
                     </div>
                 </div>
@@ -177,12 +188,12 @@ export function WelcomePage() {
                         <div className="space-y-6 animate-floatIn">
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
-                                    <h1 className="text-4xl md:text-6xl font-semibold leading-tight">
+                                    <h1 className="text-4xl md:text-6xl font-semibold leading-tight text-white">
                                         JAWS
                                     </h1>
-                                    <Parentheses className="h-8 w-8 md:h-12 md:w-12 text-cyan-400" />
+                                    <Parentheses className="h-8 w-8 md:h-12 md:w-12 text-[#dd3f0c]" />
                                 </div>
-                                <p className="text-lg md:text-xl font-medium tracking-wide animate-shimmer text-cyan-400">
+                                <p className="text-lg md:text-xl font-medium tracking-wide text-cyan-400">
                                     Jaws Awesomely Wrangles Scheme
                                 </p>
                             </div>
@@ -202,9 +213,9 @@ export function WelcomePage() {
                                     variant="outline"
                                     size="lg"
                                     className="bg-transparent text-white hover:bg-slate-800/60 border-white hover:border-white w-full sm:w-auto text-base"
-                                    onClick={() => navigate('/examples')}
+                                    onClick={() => navigate('/docs')}
                                 >
-                                    View Examples
+                                    View Docs
                                 </Button>
                             </div>
                         </div>
@@ -264,7 +275,7 @@ export function WelcomePage() {
                 </div>
             </section>
 
-            <footer className="py-12 border-t">
+            <section className="py-12 border-t">
                 <div className="container mx-auto px-4 text-center">
                     <div className="max-w-md mx-auto">
                         <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-8">
@@ -282,14 +293,16 @@ export function WelcomePage() {
                                 variant="outline"
                                 size="lg"
                                 className="border-slate-800 text-slate-800 hover:bg-slate-100/60 hover:text-slate-900 w-full sm:w-auto text-base"
-                                onClick={() => navigate('/examples')}
+                                onClick={() => navigate('/docs')}
                             >
-                                Browse Examples
+                                Browse docs
                             </Button>
                         </div>
                     </div>
                 </div>
-            </footer>
+            </section>
+
+            <Footer />
         </div>
     );
 }

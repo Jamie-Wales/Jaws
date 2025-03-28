@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['op_0',['op',['../classtac_1_1_three_a_c_instruction.html#a42d64da63380e39e98b0f81accf2e31a',1,'tac::ThreeACInstruction']]],
-  ['outgoing_1',['outgoing',['../classoptimise_1_1_dependancy_graph.html#a24efdd30e69870319f6b8488fa0fd49f',1,'optimise::DependancyGraph']]],
-  ['output_2',['output',['../structassembly_1_1_assembly_generator_state.html#a46f316e295afc83fa35c20c3d783661a',1,'assembly::AssemblyGeneratorState::output'],['../struct_q_b_e_generator_state.html#a961c48bee9827f6843bfd762d095a02b',1,'QBEGeneratorState::output']]]
+  ['name_0',['name',['../classir_1_1_let.html#af1bf52fdc7048a13dc4bb67edcf5a6a8',1,'ir::Let::name'],['../classir_1_1_app.html#a7f2d9546260bb882287de1098380c504',1,'ir::App::name'],['../classir_1_1_t_define.html#aa0e1ab381fcbcd7d3adf83dd1e187ba1',1,'ir::TDefine::name']]]
 ];

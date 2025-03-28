@@ -138,7 +138,6 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         }
         std::cout << "\n"
                   << std::endl;
-
         ss.str("");
         ss.clear();
     }
@@ -166,7 +165,6 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
     const auto expanded = macroexp::expandMacros(withImports);
 
     if (opts.printMacro) {
-
         ss.str("");
         ss.clear();
         for (const auto& expression : expanded) {
@@ -194,8 +192,26 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
     if (opts.compile || opts.optimise) {
         auto anf = ir::ANFtransform(expanded);
         if (!anf.empty()) {
-            anf = optimise::optimise(anf, opts.printANF);
-            const auto _3ac = tac::anfToTac(anf);
+            if (opts.printANF) {
+                std::cout << "\n<| ANF Before Optimization |>\n";
+                for (const auto& tl : anf) {
+                    std::cout << tl->toString() << "\n";
+                }
+                std::cout << std::endl;
+            }
+
+            // Use new optimise interface
+            auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(anf);
+
+            if (opts.printANF) {
+                std::cout << "\n<| ANF After Optimization |>\n";
+                for (const auto& tl : optimizedAnf) {
+                    std::cout << tl->toString() << "\n";
+                }
+                std::cout << std::endl;
+            }
+
+            const auto _3ac = tac::anfToTac(optimizedAnf);
 
             if (opts.print3AC) {
                 std::cout << "<| Three Address Code |>" << std::endl

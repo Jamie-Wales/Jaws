@@ -24,26 +24,38 @@ export function Layout() {
                             <NavLink
                                 to="/editor"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
+                                    isActive
+                                        ? "px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                             >
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/examples"
+                                to="/docs"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
+                                    isActive
+                                        ? "px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                             >
-                                Examples
+                                Docs
                             </NavLink>
                             <NavLink
                                 to="/compiler-explorer"
                                 className={({ isActive }) =>
-                                    `px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:text-slate-900'}`
+                                    isActive
+                                        ? "px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                             >
                                 Compiler Explorer
+                            </NavLink>
+                            <NavLink
+                                to="/learn"
+                                className="px-4 py-2 rounded-md font-medium bg-[#dd3f0c] text-white no-underline hover:no-underline hover:text-white hover:bg-[#dd3f0c]"
+                            >
+                                Learn Scheme
                             </NavLink>
                             <Button
                                 variant="ghost"
@@ -94,29 +106,42 @@ export function Layout() {
                             <NavLink
                                 to="/editor"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
+                                    isActive
+                                        ? "block px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "block px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
                                 Editor
                             </NavLink>
                             <NavLink
-                                to="/examples"
+                                to="/docs"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
+                                    isActive
+                                        ? "block px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "block px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
-                                Examples
+                                Docs
                             </NavLink>
                             <NavLink
                                 to="/compiler-explorer"
                                 className={({ isActive }) =>
-                                    `block px-4 py-2 rounded-md transition-colors ${isActive ? 'bg-slate-100 text-slate-900' : 'text-slate-600'}`
+                                    isActive
+                                        ? "block px-4 py-2 rounded-md bg-blue-900 text-white no-underline hover:no-underline hover:text-white hover:bg-blue-900"
+                                        : "block px-4 py-2 rounded-md text-slate-600 hover:text-white hover:bg-slate-800"
                                 }
                                 onClick={() => setMobileMenuOpen(false)}
                             >
                                 Compiler Explorer
+                            </NavLink>
+                            <NavLink
+                                to="/learn"
+                                className="block px-4 py-2 rounded-md font-medium w-full text-center bg-[#dd3f0c] text-white no-underline hover:no-underline hover:text-white hover:bg-[#dd3f0c]"
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                Learn Scheme
                             </NavLink>
                         </div>
                     </div>
