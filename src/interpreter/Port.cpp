@@ -69,7 +69,7 @@ Port Port::connectToServer(const std::string& host, int port)
     addr.sin_port = htons(port);
 
     if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) <= 0) {
-        ::close(sock); // Use global namespace explicitly
+        ::close(sock);
         throw std::runtime_error("Invalid address or address not supported: " + host);
     }
 

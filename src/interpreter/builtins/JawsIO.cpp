@@ -270,4 +270,114 @@ std::optional<SchemeValue> socketConnect(interpret::InterpreterState& state, con
     }
 }
 
-} // namespace jaws_io
+std::optional<SchemeValue> socketAccept(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("socket-accept requires exactly 1 argument");
+    }
+
+    auto val = args[0].ensureValue();
+    const auto* port = std::get_if<Port>(&val.value);
+    if (!port || port->type != PortType::ServerSocket) {
+        throw InterpreterError("socket-accept: argument must be a server socket");
+    }
+
+    try {
+        auto p = port->acceptConnection();
+        return SchemeValue(p);
+    } catch (const std::exception& e) {
+        throw InterpreterError("socket-accept: " + std::string(e.what()));
+    }
+}
+
+std::optional<SchemeValue> socketRead(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 1 || args.size() > 2) {
+        throw InterpreterError("socket-read requires 1 or 2 arguments");
+    }
+
+    auto val = args[0].ensureValue();
+    const auto* port = std::get_if<Port>(&val.value);
+    if (!port || port->type != PortType::ClientSocket) {
+        throw InterpreterError("socket-read: argument must be a client socket");
+    }
+
+    size_t maxBytes = 1024;
+    if (args.size() == 2) {
+        if (!args[1].ensureValue().isNumber()) {
+            throw InterpreterError("socket-read: max-bytes argument must be a number");
+        }
+        maxBytes = args[1].ensureValue().asNumber().toInt();
+    }
+
+    try {
+        auto data = port->socketRead(maxBytes);
+        return SchemeValue(data);
+    } catch (const std::exception& e) {
+        throw InterpreterError("socket-read: " + std::string(e.what()));
+    }
+};
+
+std::optional<SchemeValue> socketWrite(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("socket-write requires exactly 2 arguments");
+    }
+
+    auto val = args[0].ensureValue();
+    const auto* port = std::get_if<Port>(&val.value);
+    if (!port || port->type != PortType::ClientSocket) {
+        throw InterpreterError("socket-write: first argument must be a client socket");
+    }
+
+    auto data = getStringArg(args[1], "socket-write");
+
+    try {
+        auto bytesWritten = port->socketWrite(data);
+        return SchemeValue(Number(static_cast<int>(bytesWritten)));
+    } catch (const std::exception& e) {
+        throw InterpreterError("socket-write: " + std::string(e.what()));
+    }
+}
+
+std::optional<SchemeValue> socketClose(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("socket-close requires exactly 1 argument");
+    }
+
+    auto val = args[0].ensureValue();
+    const auto* port = std::get_if<Port>(&val.value);
+
+    if (!port || (port->type != PortType::ClientSocket && port->type != PortType::ServerSocket)) {
+        throw InterpreterError("socket-close: argument must be a client or server socket port");
+    }
+
+    try {
+        if (port->isOpen()) {
+            port->close();
+        }
+        return std::nullopt;
+    } catch (const std::exception& e) {
+        throw InterpreterError("socket-close: failed to close socket - " + std::string(e.what()));
+    }
+}
+
+std::optional<SchemeValue> socketSetNonBlocking(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("socket-set-nonblocking! requires exactly 2 argument");
+    }
+
+    auto val = args[0].ensureValue();
+    const auto* port = std::get_if<Port>(&val.value);
+    if (!port || port->type != PortType::ClientSocket) {
+        throw InterpreterError("socket-set-nonblocking!: argument must be a client socket");
+    }
+
+    const auto b = args[1].ensureValue().as<bool>();
+    port->setNonBlocking(b);
+    return std::nullopt;
+}
+
+} // (JawsIO)

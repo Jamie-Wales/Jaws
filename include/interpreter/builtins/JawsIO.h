@@ -1,6 +1,6 @@
 #pragma once
-#include "interpret.h"
 #include "Value.h"
+#include "interpret.h"
 #include <optional>
 #include <vector>
 
@@ -35,6 +35,34 @@ std::optional<SchemeValue> newline(
     const std::vector<SchemeValue>& args);
 
 std::optional<SchemeValue> closePort(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketServer(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketConnect(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketAccept(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketRead(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketWrite(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketClose(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> socketSetNonBlocking(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 

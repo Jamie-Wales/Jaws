@@ -38,6 +38,13 @@ InterpreterState createInterpreter()
     define("null?", jaws_eq::isNull);
     define("port?", jaws_eq::isPort);
     define("eqv?", jaws_eq::isEqv);
+    define("socket-server", jaws_io::socketServer);
+    define("socket-connect", jaws_io::socketConnect);
+    define("socket-accept", jaws_io::socketAccept);
+    define("socket-read", jaws_io::socketRead);
+    define("socket-write", jaws_io::socketWrite);
+    define("socket-close", jaws_io::socketClose);
+    define("socket-set-nonblocking!", jaws_io::socketSetNonBlocking);
     define("error", jaws_io::error);
     define("symbol?", jaws_eq::isSymbol);
     define("number?", jaws_eq::isNumber);
