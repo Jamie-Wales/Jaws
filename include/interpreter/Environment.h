@@ -1,25 +1,24 @@
 #pragma once
 #include "Value.h"
-#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
+#include <tbb/concurrent_unordered_map.h>
+#include <iostream>
 
-struct Frame {
-    std::unordered_map<std::string, SchemeValue> bound;
-};
+class Environment : public std::enable_shared_from_this<Environment> {
+private:
+    std::shared_ptr<Environment> parent;
+    tbb::concurrent_unordered_map<std::string, SchemeValue> variables;
 
-class Environment {
 public:
-    std::shared_ptr<Environment> enclosing;
-    std::deque<std::shared_ptr<Frame>> frames;
     Environment();
     Environment(std::shared_ptr<Environment> parent);
-    void pushFrame();
-    void popFrame();
     void define(const std::string& name, const SchemeValue& value);
     void set(const std::string& name, const SchemeValue& value);
     std::optional<SchemeValue> get(const std::string& name) const;
+    std::shared_ptr<Environment> extend();
     std::shared_ptr<Environment> copy() const;
+    void printEnv() const;
+    std::shared_ptr<Environment> getParent() const { return parent; }
 };

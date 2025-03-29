@@ -431,9 +431,12 @@ bool SchemeValue::isTrue() const
                           [](const std::string& arg) { return !arg.empty(); },
                           [](bool arg) { return arg; },
                           [](const Symbol&) { return true; },
-                          [](const std::list<SchemeValue> l) { return l.size() != 0; },
+                          [](const std::list<SchemeValue>& l) { return l.size() != 0; },
                           [](const std::vector<SchemeValue>& arg) { return !arg.empty(); },
                           [](const std::shared_ptr<Procedure>&) { return true; },
+                          [](const std::shared_ptr<ThreadHandle>&) { return true; },
+                          [](const std::shared_ptr<MutexHandle>&) { return true; },
+                          [](const std::shared_ptr<ConditionVarHandle>&) { return true; },
                           [](const Port& p) { return p.isOpen(); } },
         value);
 }
@@ -481,6 +484,10 @@ std::string SchemeValue::toString() const
                           [](const std::shared_ptr<Expression>& e) {
                               return e->toString();
                           },
+
+                          [](const std::shared_ptr<ThreadHandle>&) { return std::string("<thread>"); },
+                          [](const std::shared_ptr<MutexHandle>&) { return std::string("<mutex>"); },
+                          [](const std::shared_ptr<ConditionVarHandle>&) { return std::string("<condtion>"); },
                       },
         value);
 }

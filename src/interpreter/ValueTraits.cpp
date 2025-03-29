@@ -21,5 +21,8 @@ template struct ValueTrait<Symbol>;
 template struct ValueTrait<std::list<SchemeValue>>;
 template struct ValueTrait<std::vector<SchemeValue>>;
 template struct ValueTrait<std::shared_ptr<Procedure>>;
+template struct ValueTrait<std::shared_ptr<ThreadHandle>>;
+template struct ValueTrait<std::shared_ptr<MutexHandle>>;
+template struct ValueTrait<std::shared_ptr<ConditionVarHandle>>;
 template struct ValueTrait<Port>;
 template struct ValueTrait<char>;

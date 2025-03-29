@@ -9,16 +9,20 @@
 
 namespace interpret {
 
-// Central interpreter state
 struct InterpreterState {
     std::shared_ptr<Environment> env;
     std::shared_ptr<Environment> rootEnv;
-    bool tailPosition = false;
-
     InterpreterState()
     {
         rootEnv = std::make_shared<Environment>();
         env = rootEnv;
+    }
+    InterpreterState createChildState()
+    {
+        InterpreterState state;
+        state.rootEnv = rootEnv;
+        state.env = rootEnv->extend();
+        return state;
     }
 };
 

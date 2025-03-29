@@ -32,6 +32,21 @@ namespace {
     }
 }
 
+std::optional<SchemeValue> numberToString(
+    interpret::InterpreterState&,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 1) {
+        throw InterpreterError("number->string requires exactly 1 argument");
+    }
+
+    if (!args[0].ensureValue().isNumber()) {
+        throw InterpreterError("number->string: argument must be a number");
+    }
+
+    return SchemeValue(args[0].asNumber().toString());
+}
+
 std::optional<SchemeValue> stringEqual(
     interpret::InterpreterState&,
     const std::vector<SchemeValue>& args)

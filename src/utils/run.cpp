@@ -189,7 +189,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         }
     }
 
-    if (opts.compile || opts.optimise) {
+    if (opts.compile) {
         auto anf = ir::ANFtransform(expanded);
         if (!anf.empty()) {
             if (opts.printANF) {
@@ -200,25 +200,26 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                 std::cout << std::endl;
             }
 
-            // Use new optimise interface
-            auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(anf);
+            if (opts.optimise) {
+                auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(anf);
 
-            if (opts.printANF) {
-                std::cout << "\n<| ANF After Optimization |>\n";
-                for (const auto& tl : optimizedAnf) {
-                    std::cout << tl->toString() << "\n";
+                if (opts.printANF) {
+                    std::cout << "\n<| ANF After Optimization |>\n";
+                    for (const auto& tl : optimizedAnf) {
+                        std::cout << tl->toString() << "\n";
+                    }
+                    std::cout << std::endl;
                 }
-                std::cout << std::endl;
-            }
 
-            const auto _3ac = tac::anfToTac(optimizedAnf);
+                const auto _3ac = tac::anfToTac(optimizedAnf);
+            } else {
+                const auto _3ac = tac::anfToTac(anf);
 
-            if (opts.print3AC) {
-                std::cout << "<| Three Address Code |>" << std::endl
-                          << _3ac.toString() << std::endl;
-            }
+                if (opts.print3AC) {
+                    std::cout << "<| Three Address Code |>" << std::endl
+                              << _3ac.toString() << std::endl;
+                }
 
-            if (opts.compile) {
                 try {
                     std::filesystem::create_directories(opts.outputPath);
                     auto outPath = std::filesystem::path(opts.outputPath);
@@ -249,8 +250,6 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                 } catch (const std::filesystem::filesystem_error& e) {
                     throw std::runtime_error("Filesystem error: " + std::string(e.what()));
                 }
-
-                return;
             }
         }
     }

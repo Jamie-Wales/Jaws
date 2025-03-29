@@ -1,63 +1,53 @@
 #pragma once
+
+#include "Value.h"
 #include "interpret.h"
 #include <optional>
-#include <vector>
 
-namespace jaws_string {
+namespace jaws_thread {
 
-std::optional<SchemeValue> stringEqual(
+std::optional<SchemeValue> threadSpawn(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringLess(
+std::optional<SchemeValue> threadJoin(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringGreater(
+std::optional<SchemeValue> threadSleep(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringCiEqual(
+std::optional<SchemeValue> threadCurrentId(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringLength(
+std::optional<SchemeValue> mutexCreate(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringAppend(
+std::optional<SchemeValue> mutexLock(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> substring(
+std::optional<SchemeValue> mutexUnlock(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringRef(
+std::optional<SchemeValue> conditionCreate(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringToList(
+std::optional<SchemeValue> conditionWait(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> listToString(
+std::optional<SchemeValue> conditionSignal(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringCopy(
+std::optional<SchemeValue> conditionBroadcast(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
-std::optional<SchemeValue> stringUpcase(
-    interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args);
-
-std::optional<SchemeValue> stringDowncase(
-    interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args);
-
-std::optional<SchemeValue> numberToString(
-    interpret::InterpreterState&,
-    const std::vector<SchemeValue>& args);
-} // namespace jaws_string
+} // namespace jaws_thread

@@ -136,33 +136,37 @@ std::optional<SchemeValue> write(
 }
 
 std::optional<SchemeValue> display(
-    interpret::InterpreterState&,
+    interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
+    static std::mutex displayMutex; // Add a static mutex for thread-safe display
+
     if (args.size() < 1 || args.size() > 2) {
         throw InterpreterError("display requires 1 or 2 arguments");
     }
 
     auto val = args[0].ensureValue();
+
+    // Lock for thread-safe output
+    std::lock_guard<std::mutex> lock(displayMutex);
+
     if (args.size() == 1) {
         if (const auto* str = std::get_if<std::string>(&val.value)) {
-            std::cout << *str << std::flush; // Added flush here
+            std::cout << *str << std::flush;
         } else {
-            std::cout << val.toString() << std::flush; // Added flush here
+            std::cout << val.toString() << std::flush;
         }
-        return std::nullopt;
-    }
-
-    auto* output = getOutputStream(args, 1);
-    if (const auto* str = std::get_if<std::string>(&val.value)) {
-        *output << *str << std::flush; // Added flush here
     } else {
-        *output << val.toString() << std::flush; // Added flush here
+        auto* output = getOutputStream(args, 1);
+        if (const auto* str = std::get_if<std::string>(&val.value)) {
+            *output << *str << std::flush;
+        } else {
+            *output << val.toString() << std::flush;
+        }
     }
 
     return std::nullopt;
 }
-
 std::optional<SchemeValue> error(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)

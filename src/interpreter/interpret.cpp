@@ -1,12 +1,14 @@
 #include "interpret.h"
 #include "Expression.h"
 #include "Procedure.h"
+
 #include "Value.h"
 #include "builtins/JawsEq.h"
 #include "builtins/JawsHof.h"
 #include "builtins/JawsIO.h"
 #include "builtins/JawsList.h"
 #include "builtins/JawsMath.h"
+#include "builtins/JawsThread.h"
 #include "builtins/JawsVector.h"
 #include "builtins/jaws_ffi.h"
 #include "builtins/jaws_string.h"
@@ -79,6 +81,7 @@ InterpreterState createInterpreter()
     define("apply", jaws_hof::apply);
     define("call/cc", jaws_hof::callCC);
     define("call-with-current-continuation", jaws_hof::callCC);
+    define("number->string", jaws_string::numberToString);
     define("string=?", jaws_string::stringEqual);
     define("string<?", jaws_string::stringLess);
     define("string>?", jaws_string::stringGreater);
@@ -92,6 +95,17 @@ InterpreterState createInterpreter()
     define("string-copy", jaws_string::stringCopy);
     define("string-upcase", jaws_string::stringUpcase);
     define("string-downcase", jaws_string::stringDowncase);
+    define("thread-spawn", jaws_thread::threadSpawn);
+    define("thread-join", jaws_thread::threadJoin);
+    define("thread-sleep!", jaws_thread::threadSleep);
+    define("thread-current-id", jaws_thread::threadCurrentId);
+    define("mutex-create", jaws_thread::mutexCreate);
+    define("mutex-lock!", jaws_thread::mutexLock);
+    define("mutex-unlock!", jaws_thread::mutexUnlock);
+    define("condition-variable-create", jaws_thread::conditionCreate);
+    define("condition-variable-wait", jaws_thread::conditionWait);
+    define("condition-variable-signal!", jaws_thread::conditionSignal);
+    define("condition-variable-broadcast!", jaws_thread::conditionBroadcast);
 
     return state;
 }
@@ -279,12 +293,12 @@ std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, con
 
 std::optional<SchemeValue> interpretLambda(InterpreterState& state, const LambdaExpression& lambda)
 {
-    auto closureEnv = state.env->copy();
+    auto closureEnv = state.env;
 
     auto proc = std::make_shared<UserProcedure>(
         lambda.parameters,
         lambda.body,
-        closureEnv, // Use the copied environment
+        closureEnv,
         lambda.isVariadic);
     return SchemeValue(std::move(proc));
 }
@@ -305,8 +319,6 @@ std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpressi
 std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpression& let)
 {
     auto letEnv = std::make_shared<Environment>(state.env);
-    letEnv->pushFrame();
-
     std::vector<Token> params;
     std::vector<SchemeValue> args;
     for (const auto& [param, argExpr] : let.arguments) {

@@ -1,8 +1,8 @@
 // Value.h
 #pragma once
-#include "Error.h"
 #include "Number.h"
 #include "Port.h"
+#include "Thread.h"
 #include "ValueTraits.h"
 #include <compare>
 #include <list>
@@ -26,6 +26,9 @@ public:
         std::vector<SchemeValue>,
         std::shared_ptr<Procedure>,
         Port,
+        std::shared_ptr<ThreadHandle>,
+        std::shared_ptr<MutexHandle>,
+        std::shared_ptr<ConditionVarHandle>,
         std::shared_ptr<Expression>,
         char>;
     SchemeValue(SchemeValue&& other) noexcept
@@ -72,6 +75,43 @@ public:
     const std::list<SchemeValue>& asList() const;
     std::list<SchemeValue>& asList();
 
+    bool isThread() const
+    {
+        return std::holds_alternative<std::shared_ptr<ThreadHandle>>(value);
+    }
+
+    bool isMutex() const
+    {
+        return std::holds_alternative<std::shared_ptr<MutexHandle>>(value);
+    }
+
+    bool isConditionVar() const
+    {
+        return std::holds_alternative<std::shared_ptr<ConditionVarHandle>>(value);
+    }
+    std::shared_ptr<ThreadHandle> asThread() const
+    {
+        if (!isThread()) {
+            throw std::runtime_error("Value is not a thread");
+        }
+        return std::get<std::shared_ptr<ThreadHandle>>(value);
+    }
+
+    std::shared_ptr<MutexHandle> asMutex() const
+    {
+        if (!isMutex()) {
+            throw std::runtime_error("Value is not a mutex");
+        }
+        return std::get<std::shared_ptr<MutexHandle>>(value);
+    }
+
+    std::shared_ptr<ConditionVarHandle> asConditionVar() const
+    {
+        if (!isConditionVar()) {
+            throw std::runtime_error("Value is not a condition variable");
+        }
+        return std::get<std::shared_ptr<ConditionVarHandle>>(value);
+    }
     std::string asSymbol() const;
     bool isTrue() const;
 
