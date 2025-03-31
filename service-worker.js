@@ -1,43 +1,38 @@
-// public/service-worker.js
+// public/service-worker.js (with logging)
 
 self.addEventListener('install', () => {
-    // Skip waiting to activate the new service worker immediately.
     self.skipWaiting();
-    console.log('Service Worker: Installed');
+    console.log('SW: Installed @', new Date().toLocaleTimeString()); // SW Console
 });
 
 self.addEventListener('activate', (event) => {
-    // Take control of all clients (tabs) immediately.
     event.waitUntil(self.clients.claim());
-    console.log('Service Worker: Activated');
+    console.log('SW: Activated and claimed clients @', new Date().toLocaleTimeString()); // SW Console
 });
 
 self.addEventListener('fetch', (event) => {
-    // We only need to modify navigation requests or requests for the main document
-    // to set the COOP/COEP headers effectively for the page context.
-    // However, applying to all same-origin responses is often simpler and safe.
+    const url = event.request.url;
+    const isDocRequest = event.request.mode === 'navigate' || url.endsWith('/') || url.endsWith('index.html') || url.includes('compiler-explorer'); // Try to catch doc requests
 
-    // Check if the request is for the same origin. Avoid modifying cross-origin requests.
-    if (event.request.url.startsWith(self.origin)) {
+    if (isDocRequest) {
+        console.log(`SW: Handling potential document request: ${url}`); // SW Console
         event.respondWith(
             fetch(event.request)
                 .then((response) => {
-                    if (!response) {
+                    console.log(`SW: Fetched response for ${url}, status: ${response.status}, type: ${response.type}`); // SW Console
+                    if (!response || response.status === 0 || response.type === 'opaque' || response.type === 'opaqueredirect') {
+                        // Don't modify non-clonable/error responses. Status 0 can occur for fetch errors.
+                        console.log(`SW: Not modifying headers for ${url} (status: ${response.status}, type: ${response.type})`); // SW Console
                         return response;
                     }
+                    // Log original headers for debugging
+                    // console.log('SW: Original headers:', Object.fromEntries(response.headers.entries()));
 
-                    // Check if we can clone the response (needed to modify headers)
-                    // Opaque responses (e.g., from no-cors cross-origin requests) cannot be cloned.
-                    if (response.status === 0 || response.type === 'opaque' || response.type === 'opaqueredirect') {
-                        return response; // Cannot modify headers, return original response
-                    }
-
-                    // Clone the headers and add the COI headers.
                     const newHeaders = new Headers(response.headers);
                     newHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
                     newHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
+                    console.log(`SW: Added COOP/COEP headers for ${url}`); // SW Console
 
-                    // Return a new response with the original body and status, but new headers.
                     return new Response(response.body, {
                         status: response.status,
                         statusText: response.statusText,
@@ -45,16 +40,14 @@ self.addEventListener('fetch', (event) => {
                     });
                 })
                 .catch((error) => {
-                    console.error('Service Worker: Fetch failed:', error);
-                    // Fallback or re-throw
+                    console.error(`SW: Fetch failed for ${url}:`, error); // SW Console
                     return new Response(`Service Worker fetch failed: ${error}`, { status: 500 });
                 })
         );
     } else {
-        // For cross-origin requests, let them pass through without modification.
-        // Or handle them differently if needed, but usually passing through is fine.
+        // Let other requests like assets (JS, CSS, Wasm) pass through without modification
         event.respondWith(fetch(event.request));
     }
 });
 
-console.log('Service Worker: Script loaded (public/service-worker.js)');
+console.log('SW: Script loaded (public/service-worker.js) @', new Date().toLocaleTimeString()); // SW Console
