@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['macrodefinition_0',['MacroDefinition',['../struct_macro_expander_1_1_macro_definition.html',1,'MacroExpander::MacroDefinition'],['../struct_macro_processor_1_1_macro_definition.html',1,'MacroProcessor::MacroDefinition']]],
-  ['macroexpander_1',['MacroExpander',['../class_macro_expander.html',1,'']]],
-  ['macroprocessor_2',['MacroProcessor',['../class_macro_processor.html',1,'']]]
+  ['tdefine_0',['TDefine',['../classir_1_1_t_define.html',1,'ir']]],
+  ['threeacinstruction_1',['ThreeACInstruction',['../classtac_1_1_three_a_c_instruction.html',1,'tac']]],
+  ['threeaddressmodule_2',['ThreeAddressModule',['../classtac_1_1_three_address_module.html',1,'tac']]],
+  ['toplevel_3',['TopLevel',['../classir_1_1_top_level.html',1,'ir']]]
 ];
