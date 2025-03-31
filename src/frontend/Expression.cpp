@@ -64,6 +64,16 @@ LetExpression::LetExpression(std::optional<Token> name, Args arguments, std::vec
     , body { std::move(body) } {
     };
 
+std::vector<Token> LetExpression::getParameterTokens() const
+{
+    std::vector<Token> params;
+    params.reserve(arguments.size());
+    for (const auto& pair : arguments) {
+        params.push_back(pair.first);
+    }
+    return params;
+}
+
 SyntaxRule::SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expression> template_expr)
     : pattern(std::move(pattern))
     , template_expr(std::move(template_expr)) {

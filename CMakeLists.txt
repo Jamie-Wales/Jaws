@@ -159,26 +159,5 @@ target_link_libraries(tests PRIVATE
 )
 
 
-# <<< --- ADDITIONS FOR MEMORY DEBUGGING (ASan) --- >>>
-
-# Define the flags needed for ASan and debugging
-# Using semicolon-separated list for target_compile_options
-set(MEMORY_DEBUG_COMPILE_FLAGS "-g;-O0;-fsanitize=address;-fno-omit-frame-pointer")
-
-message(STATUS "Adding ASan/Debug compile flags: ${MEMORY_DEBUG_COMPILE_FLAGS}")
-
-# Apply the compile flags to your library and executables
-# The compiler driver (clang++ on macOS) usually handles passing
-# the necessary sanitizer options to the linker automatically.
-target_compile_options(app_lib PRIVATE ${MEMORY_DEBUG_COMPILE_FLAGS})
-target_compile_options(jaws PRIVATE ${MEMORY_DEBUG_COMPILE_FLAGS})
-target_compile_options(tests PRIVATE ${MEMORY_DEBUG_COMPILE_FLAGS})
-
-target_link_options(jaws PRIVATE "-fsanitize=address")
-target_link_options(tests PRIVATE "-fsanitize=address")
-
-# <<< --- END OF ADDITIONS --- >>>
-
-
 include(GoogleTest)
 gtest_discover_tests(tests)

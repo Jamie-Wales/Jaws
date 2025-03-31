@@ -603,4 +603,4 @@ std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_pt
     return finalExpandedExprs;
 }
 
-} // namespace (macroexp)
+}

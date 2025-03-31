@@ -17,7 +17,7 @@ public:
         const std::vector<SchemeValue>& args) const
         = 0;
     virtual ~Procedure() = default;
-    virtual bool isTailCall() const { return false; }
+    virtual bool isUserProcedure() const { return false; }
     virtual bool isBuiltin() const { return false; }
     virtual bool isMacro() const { return false; }
 };
@@ -63,30 +63,14 @@ public:
     {
     }
 
+    bool isUserProcedure() const override { return true; }
+    std::optional<SchemeValue> executeBody(
+        interpret::InterpreterState& state,
+        const std::vector<SchemeValue>& args) const;
+
     std::optional<SchemeValue> operator()(
         interpret::InterpreterState& state,
         const std::vector<SchemeValue>& args) const override;
-};
-
-class TailCall : public Procedure {
-public:
-    std::shared_ptr<Procedure> proc;
-    std::vector<SchemeValue> args;
-
-    TailCall(std::shared_ptr<Procedure> proc, std::vector<SchemeValue> args)
-        : proc(std::move(proc))
-        , args(std::move(args))
-    {
-    }
-
-    std::optional<SchemeValue> operator()(
-        interpret::InterpreterState& state,
-        const std::vector<SchemeValue>&) const override
-    {
-        throw std::runtime_error("TailCall::operator() should not be called directly");
-    }
-
-    bool isTailCall() const override { return true; }
 };
 
 class Continuation : public Procedure {

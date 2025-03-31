@@ -43,7 +43,6 @@ public:
     }
 };
 
-// Enhanced MutexHandle with debugging
 class MutexHandle {
 public:
     std::mutex mutex;

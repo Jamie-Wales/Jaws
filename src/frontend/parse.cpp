@@ -147,27 +147,29 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     }
 }
 
+// In parse.cpp
 std::shared_ptr<Expression> parseSExpression(ParserState& state)
 {
+    int line = peek(state).line; // Assuming peek doesn't advance
+
     std::vector<std::shared_ptr<Expression>> elements;
-    while (!match(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) { // Use check before consuming ')'
         elements.push_back(parseExpression(state));
     }
-    if (!elements.empty()) {
-        elements.back() = std::make_shared<Expression>(
-            Expression { TailExpression { elements.back() }, previousToken(state).line });
-    }
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' to close S-Expression"); // Consume the ')'
+
+    // NO TAIL EXPRESSION WRAPPING HERE!
     return std::make_shared<Expression>(
-        Expression { sExpression { std::move(elements) }, previousToken(state).line });
+        Expression { sExpression { std::move(elements) }, line }); // Use line of opening paren maybe? Or prev token?
 }
 
 std::shared_ptr<Expression> parseDefine(ParserState& state)
 {
     if (match(state, Tokentype::LEFT_PAREN)) {
         Token name = consume(state, Tokentype::IDENTIFIER, "Expected function name");
+        int line = name.line; // Use function name's line for the node
         std::vector<Token> parameters;
         bool isVariadic = false;
-
         while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
             if (match(state, Tokentype::DOT)) {
                 parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
@@ -176,18 +178,21 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
             }
             parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
         }
-
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameter list");
-
         std::vector<std::shared_ptr<Expression>> body;
-        while (!check(state, Tokentype::RIGHT_PAREN)) {
+        while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) { // Use check before consuming ')'
             body.push_back(parseExpression(state));
         }
+        if (!body.empty()) {
+            auto lastBodyExpr = body.back();
+            body.back() = std::make_shared<Expression>(
+                Expression { TailExpression { lastBodyExpr }, lastBodyExpr->line }); // Wrap last body expr
+        }
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after function body");
-
         return std::make_shared<Expression>(Expression {
             DefineProcedure { name, std::move(parameters), std::move(body), isVariadic },
-            name.line });
+            line });
+
     } else {
         Token name = consume(state, Tokentype::IDENTIFIER, "Expected variable name");
         auto value = parseExpression(state);
@@ -256,44 +261,40 @@ std::shared_ptr<Expression> parseQuoted(ParserState& state)
 
 std::shared_ptr<Expression> parseLet(ParserState& state)
 {
-    LetExpression::Args output;
-    std::optional<Token> token;
-    if (match(state, Tokentype::IDENTIFIER)) {
-        token = previousToken(state);
+    std::optional<Token> letNameToken;
+    int line = previousToken(state).line;
+    if (check(state, Tokentype::IDENTIFIER)) {
+        letNameToken = peek(state);
+        advance(state);
+        line = letNameToken->line;
     }
+    consume(state, Tokentype::LEFT_PAREN, "Expected '(' after 'let' or named let identifier");
 
-    consume(state, Tokentype::LEFT_PAREN, "Expected '(' after let");
-    if (match(state, Tokentype::RIGHT_PAREN)) {
-        std::vector<std::shared_ptr<Expression>> body;
-        while (!match(state, Tokentype::RIGHT_PAREN)) {
-            body.emplace_back(parseExpression(state));
-        }
-        return std::make_shared<Expression>(
-            LetExpression { token, output, body },
-            previousToken(state).line);
-    }
-    int count = 1;
-    while (count != 0) {
-        if (match(state, Tokentype::LEFT_PAREN)) {
-            count++;
-        }
-        auto name = consume(state, Tokentype::IDENTIFIER, "Expected identifier");
-        auto value = parseExpression(state);
-        output.push_back({ name, value });
-
-        while (match(state, Tokentype::RIGHT_PAREN)) {
-            count--;
+    std::vector<std::pair<Token, std::shared_ptr<Expression>>> bindings;
+    if (!check(state, Tokentype::RIGHT_PAREN)) {
+        while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+            consume(state, Tokentype::LEFT_PAREN, "Expected '(' to start binding pair in 'let'");
+            Token name = consume(state, Tokentype::IDENTIFIER, "Expected identifier for binding variable in 'let'");
+            auto value = parseExpression(state); // Parse the value expression
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' to end binding pair in 'let'");
+            bindings.push_back({ name, value });
         }
     }
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after 'let' bindings");
 
+    // Parse the body expressions
     std::vector<std::shared_ptr<Expression>> body;
-    while (!match(state, Tokentype::RIGHT_PAREN)) {
+    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         body.emplace_back(parseExpression(state));
     }
-
+    if (!body.empty()) {
+        auto lastBodyExpr = body.back();
+        body.back() = std::make_shared<Expression>(
+            Expression { TailExpression { lastBodyExpr }, lastBodyExpr->line });
+    }
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after 'let' body");
     return std::make_shared<Expression>(
-        LetExpression { token, output, body },
-        previousToken(state).line);
+        Expression { LetExpression { letNameToken, std::move(bindings), std::move(body) }, line });
 }
 
 std::shared_ptr<Expression> parseTailExpression(ParserState& state)

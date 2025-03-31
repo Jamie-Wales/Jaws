@@ -2,6 +2,13 @@
 #include "Expression.h"
 #include "Procedure.h"
 
+// #define DEBUG_LOGGING
+#ifdef DEBUG_LOGGING
+#define DEBUG_LOG(x) std::cerr << "[DEBUG] " << x << std::endl
+#else
+#define DEBUG_LOG(x)
+#endif
+
 #include "Value.h"
 #include "builtins/JawsEq.h"
 #include "builtins/JawsHof.h"
@@ -263,10 +270,29 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
 
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
 {
+
     auto call = evaluateProcedureCall(state, sexpr);
-    if (!call)
-        return std::nullopt;
-    return executeProcedure(state, call->procedure, call->arguments);
+    if (!call) {
+        // --- ADD LOGGING ---
+        DEBUG_LOG("InterpretSExpr: evaluateProcedureCall failed!");
+        // --- END LOGGING ---
+        return std::nullopt; // Or throw? evaluateProcedureCall likely throws already
+    }
+
+    // --- ADD LOGGING ---
+    DEBUG_LOG("InterpretSExpr: Calling executeProcedure for proc: " << call->procedure.toString());
+    // --- END LOGGING ---
+
+    auto result = executeProcedure(state, call->procedure, std::move(call->arguments));
+
+    // --- ADD LOGGING ---
+    if (result) {
+        DEBUG_LOG("InterpretSExpr: executeProcedure result -> " << result->toString());
+    } else {
+        DEBUG_LOG("InterpretSExpr: executeProcedure result -> nullopt");
+    }
+    // --- END LOGGING ---
+    return result;
 }
 
 std::optional<SchemeValue> interpretDefine(InterpreterState& state, const DefineExpression& def)
@@ -294,14 +320,11 @@ std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, con
 std::optional<SchemeValue> interpretLambda(InterpreterState& state, const LambdaExpression& lambda)
 {
     auto closureEnv = state.env;
-
     auto proc = std::make_shared<UserProcedure>(
-        lambda.parameters,
-        lambda.body,
-        closureEnv,
-        lambda.isVariadic);
+        lambda.parameters, lambda.body, closureEnv, lambda.isVariadic);
     return SchemeValue(std::move(proc));
 }
+
 std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpression& ifexpr)
 {
     auto condition = interpret(state, ifexpr.condition);
@@ -318,27 +341,29 @@ std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpressi
 
 std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpression& let)
 {
-    auto letEnv = std::make_shared<Environment>(state.env);
-    std::vector<Token> params;
+    auto closureEnv = state.env;
+    auto lambdaProc = std::make_shared<UserProcedure>(
+        let.getParameterTokens(), let.body, closureEnv, false);
+
     std::vector<SchemeValue> args;
-    for (const auto& [param, argExpr] : let.arguments) {
-        auto arg = interpret(state, argExpr);
-        if (!arg) {
-            return std::nullopt;
-        }
-        letEnv->define(param.lexeme, *arg);
-        params.push_back(param);
-        args.push_back(*arg);
-    }
-    auto proc = std::make_shared<UserProcedure>(
-        params,
-        let.body,
-        letEnv);
-    if (let.name) {
-        letEnv->define(let.name->lexeme, SchemeValue(proc));
+    args.reserve(let.arguments.size());
+    for (const auto& binding : let.arguments) {
+        auto argValOpt = interpret(state, binding.second);
+        if (!argValOpt)
+            throw InterpreterError("Let binding value evaluated to void.");
+        args.push_back(*argValOpt);
     }
 
-    return executeProcedure(state, SchemeValue(proc), args);
+    if (let.name) {
+        auto letExecEnv = std::make_shared<Environment>(closureEnv);
+        for (size_t k = 0; k < let.arguments.size(); ++k) {
+            letExecEnv->define(let.arguments[k].first.lexeme, args[k]);
+        }
+        lambdaProc->closure = letExecEnv;
+        letExecEnv->define(let.name->lexeme, SchemeValue(lambdaProc));
+    }
+
+    return executeProcedure(state, SchemeValue(lambdaProc), std::move(args));
 }
 
 std::optional<SchemeValue> interpretQuote(InterpreterState& state, const QuoteExpression& quote)
@@ -360,25 +385,29 @@ std::optional<SchemeValue> interpretVector(InterpreterState& state, const Vector
     return SchemeValue(std::move(elements));
 }
 
-// #TODO: Refactor this so tail calls are less hacky
 std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const TailExpression& tail)
 {
-    if (auto sexpr = std::get_if<sExpression>(&tail.expression->as)) {
-        auto call = evaluateProcedureCall(state, *sexpr);
-        if (!call)
-            return std::nullopt;
-        if (call->procedure.asProc()->isBuiltin()) {
-            return interpret(state, tail.expression);
-        }
-        auto tailCall = std::make_shared<TailCall>(call->procedure.asProc(), call->arguments);
-
-        if (sexpr->elements.size() == 1) {
-            return executeProcedure(state, SchemeValue(tailCall), tailCall->args);
+    auto innerExpr = tail.expression; // The std::shared_ptr<Expression> inside
+    if (auto sexpr = std::get_if<sExpression>(&innerExpr->as)) {
+        auto callOpt = evaluateProcedureCall(state, *sexpr);
+        if (!callOpt) {
+            throw InterpreterError("Failed to evaluate potential tail call sExpression.");
         }
 
-        return SchemeValue(tailCall);
+        if (callOpt->procedure.isProc() && callOpt->procedure.asProc()->isUserProcedure()) {
+            state.isTailCallPending = true;
+            state.pendingProcedure = callOpt->procedure;
+            state.pendingArguments = std::move(callOpt->arguments);
+            return std::nullopt; // Signal TCO state was set
+        } else if (callOpt->procedure.isProc()) {
+            return (*callOpt->procedure.asProc())(state, callOpt->arguments);
+        } else {
+            throw InterpreterError("Tail call target evaluated to non-procedure.");
+        }
+
+    } else {
+        return interpret(state, innerExpr);
     }
-    return interpret(state, tail.expression);
 }
 
 bool fileExists(const std::string& path)
@@ -404,65 +433,89 @@ std::optional<ProcedureCall> evaluateProcedureCall(
     if (sexpr.elements.empty()) {
         throw InterpreterError("Empty procedure call");
     }
+    DEBUG_LOG("EvaluateProcCall: Interpreting operator: " << sexpr.elements[0]->toString());
 
-    auto proc = interpret(state, sexpr.elements[0]);
-    if (!proc)
-        return std::nullopt;
-    if (!proc->isProc()) {
-        throw InterpreterError("First element is not a procedure: " + proc->toString());
+    auto procValueOpt = interpret(state, sexpr.elements[0]);
+    if (!procValueOpt) {
+        DEBUG_LOG("EvaluateProcCall: Operator interpretation failed!");
+        throw InterpreterError("Procedure expression did not evaluate to a value.");
     }
+    if (!procValueOpt->isProc()) {
+        DEBUG_LOG("EvaluateProcCall: Operator not a procedure: " << procValueOpt->toString());
+        throw InterpreterError("Expression does not evaluate to a procedure: " + procValueOpt->toString());
+    }
+
+    DEBUG_LOG("EvaluateProcCall: Operator is: " << procValueOpt->toString());
 
     std::vector<SchemeValue> args;
     args.reserve(sexpr.elements.size() - 1);
     for (size_t i = 1; i < sexpr.elements.size(); i++) {
-        auto arg = interpret(state, sexpr.elements[i]);
-        if (!arg)
-            return std::nullopt;
-
-        if (arg->isProc() && arg->asProc()->isTailCall()) {
-            auto tailProc = arg->asProc();
-            auto tailCall = std::dynamic_pointer_cast<TailCall>(tailProc);
-            auto result = executeProcedure(state, SchemeValue(tailCall->proc), tailCall->args);
-            if (result) {
-                arg = result;
-            }
+        DEBUG_LOG("EvaluateProcCall: Interpreting argument " << i << ": " << sexpr.elements[i]->toString());
+        auto argOpt = interpret(state, sexpr.elements[i]);
+        if (!argOpt) {
+            DEBUG_LOG("EvaluateProcCall: Argument " << i << " interpretation failed!");
+            throw InterpreterError("cannot evaluate argument " + std::to_string(i));
         }
-
-        args.push_back(*arg);
+        DEBUG_LOG("EvaluateProcCall: Argument " << i << " result: " << argOpt->toString());
+        args.push_back(*argOpt);
     }
 
-    return ProcedureCall { *proc, std::move(args) };
+    DEBUG_LOG("EvaluateProcCall: Evaluation successful.");
+    return ProcedureCall { *procValueOpt, std::move(args) };
 }
 
 std::optional<SchemeValue> executeProcedure(
     InterpreterState& state,
-    const SchemeValue& proc,
-    const std::vector<SchemeValue>& args)
+    SchemeValue currentProcedure,
+    std::vector<SchemeValue> currentArgs)
 {
-
-    if (!proc.isProc()) {
-        throw InterpreterError("Cannot execute non-procedure: " + proc.toString());
-    }
-
-    auto procedure = proc.asProc();
-    auto currentArgs = args;
-
     while (true) {
-        while (procedure->isTailCall()) {
-            auto tailCall = std::dynamic_pointer_cast<TailCall>(procedure);
-            procedure = tailCall->proc;
-            currentArgs = tailCall->args;
+        auto envBeforeCurrentCallAttempt = state.env;
+        DEBUG_LOG("ExecuteProc: Loop start. Env before call attempt: " << envBeforeCurrentCallAttempt.get());
+
+        if (state.isTailCallPending) {
+            DEBUG_LOG("ExecuteProc: Handling pending TAIL CALL to: " << state.pendingProcedure->toString());
+            currentProcedure = *state.pendingProcedure;
+            currentArgs = std::move(state.pendingArguments);
+            // Clear pending state
+            state.isTailCallPending = false;
+            state.pendingProcedure.reset();
+            state.pendingArguments.clear();
+            DEBUG_LOG("ExecuteProc: Loaded pending call. Env is still: " << state.env.get() << ". Continuing loop.");
+            continue;
         }
 
-        auto result = (*procedure)(state, currentArgs);
-        if (!result) {
-            return std::nullopt;
+        DEBUG_LOG("ExecuteProc: Executing: " << currentProcedure.toString() << " in Env@ " << state.env.get());
+
+        if (!currentProcedure.isProc()) {
+            throw new InterpreterError("Procedure is not a procedure: " + currentProcedure.toString());
+        }
+        auto procedurePtr = currentProcedure.asProc();
+
+        if (procedurePtr->isBuiltin()) {
+            DEBUG_LOG("ExecuteProc: Calling builtin " << currentProcedure.toString());
+            return (*procedurePtr)(state, currentArgs);
         }
 
-        if (!result->isProc() || !result->asProc()->isTailCall()) {
-            return result;
+        if (auto userProc = std::dynamic_pointer_cast<UserProcedure>(procedurePtr)) {
+            std::optional<SchemeValue> result = userProc->executeBody(state, currentArgs);
+
+            if (state.isTailCallPending) {
+                if (result) {
+                    throw InterpreterError("Tail call optimization requested by body, but result was returned.");
+                }
+                DEBUG_LOG("ExecuteProc: TCO requested by body. Restoring env from " << state.env.get() << " to " << envBeforeCurrentCallAttempt.get() << " before looping.");
+                state.env = envBeforeCurrentCallAttempt;
+                continue;
+            } else {
+                DEBUG_LOG("ExecuteProc: Normal return from procedure. Final Env: " << state.env.get());
+                if (state.env != envBeforeCurrentCallAttempt) {
+                    DEBUG_LOG("ExecuteProc: WARNING! Env mismatch after normal return.");
+                }
+                return result;
+            }
         }
-        procedure = result->asProc();
+        throw InterpreterError("Unhandled procedure type in execution loop: " + currentProcedure.toString());
     }
 }
 }

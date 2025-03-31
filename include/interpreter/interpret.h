@@ -17,6 +17,9 @@ struct InterpreterState {
         rootEnv = std::make_shared<Environment>();
         env = rootEnv;
     }
+    bool isTailCallPending = false;
+    std::optional<SchemeValue> pendingProcedure;
+    std::vector<SchemeValue> pendingArguments;
     InterpreterState createChildState()
     {
         InterpreterState state;
@@ -67,6 +70,6 @@ std::optional<ProcedureCall> evaluateProcedureCall(
 
 std::optional<SchemeValue> executeProcedure(
     InterpreterState& state,
-    const SchemeValue& proc,
-    const std::vector<SchemeValue>& args);
+    SchemeValue currentProcedure,
+    std::vector<SchemeValue> currentArgs);
 }

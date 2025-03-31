@@ -18,58 +18,62 @@
 #endif
 
 namespace jaws_thread {
-
 std::optional<SchemeValue> threadSpawn(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
-    DEBUG_LOG("threadSpawn called");
-
     if (args.size() != 1) {
-        DEBUG_LOG("threadSpawn: wrong number of arguments");
         throw InterpreterError("thread-spawn: requires exactly 1 argument (a procedure)");
     }
-
-    DEBUG_LOG("threadSpawn: checking if argument is a procedure");
     auto procVal = args[0].ensureValue();
     if (!procVal.isProc()) {
-        DEBUG_LOG("threadSpawn: argument is not a procedure");
         throw InterpreterError("thread-spawn: argument must be a procedure");
     }
-
-    DEBUG_LOG("threadSpawn: got procedure, creating thread handle");
     auto proc = procVal.asProc();
     auto threadHandle = std::make_shared<ThreadHandle>();
-
+    auto capturedEnv = state.env;
+    DEBUG_LOG("threadSpawn: Capturing current environment @ " << capturedEnv.get() << " for new thread");
+    auto rootEnv = state.rootEnv; // Keep reference to rootEnv
+    DEBUG_LOG("threadSpawn: Root environment is @ " << rootEnv.get());
     DEBUG_LOG("threadSpawn: starting thread");
+    threadHandle->thread = std::thread([proc, threadHandle, capturedEnv, rootEnv]() {
+        std::optional<SchemeValue> finalResult = std::nullopt;
 
-    threadHandle->thread = std::thread([proc, threadHandle, &state]() {
         try {
             threadHandle->threadId = std::this_thread::get_id();
             DEBUG_LOG("Thread " << threadHandle->threadId << " started");
-
-            // Create a child state with shared root environment
-            interpret::InterpreterState threadState = state.createChildState();
-
-            DEBUG_LOG("Thread " << threadHandle->threadId << " calling procedure");
-            auto result = (*proc)(threadState, {});
-
-            DEBUG_LOG("Thread " << threadHandle->threadId << " procedure completed");
+            interpret::InterpreterState threadState;
+            threadState.rootEnv = rootEnv;
+            threadState.env = capturedEnv->extend();
+            DEBUG_LOG("Thread " << threadHandle->threadId << " created extended environment @ "
+                                << threadState.env.get() << " with parent @ " << capturedEnv.get());
+            SchemeValue procSchemeValue(proc);
+            finalResult = interpret::executeProcedure(threadState, procSchemeValue, {});
+            DEBUG_LOG("Thread " << threadHandle->threadId << " executeProcedure call completed.");
             std::lock_guard<std::mutex> lock(threadHandle->resultMutex);
-            if (result) {
-                DEBUG_LOG("Thread " << threadHandle->threadId << " storing result");
-                threadHandle->result = std::make_shared<SchemeValue>(*result);
+            if (finalResult) {
+                DEBUG_LOG("Thread " << threadHandle->threadId << " storing final result: " << finalResult->toString());
+                threadHandle->result = std::make_shared<SchemeValue>(*finalResult);
             } else {
-                DEBUG_LOG("Thread " << threadHandle->threadId << " procedure returned no result");
+                DEBUG_LOG("Thread " << threadHandle->threadId << " procedure returned no final result");
             }
             threadHandle->completed = true;
             DEBUG_LOG("Thread " << threadHandle->threadId << " marked as completed");
+
+        } catch (const InterpreterError& e) {
+            DEBUG_LOG("Thread " << std::this_thread::get_id() << " InterpreterError: " << e.what());
+            std::lock_guard<std::mutex> lock(threadHandle->resultMutex);
+            threadHandle->completed = true; // Mark as completed even on error
         } catch (const std::exception& e) {
-            DEBUG_LOG("Thread exception: " << e.what());
+            DEBUG_LOG("Thread " << std::this_thread::get_id() << " std::exception: " << e.what());
+            std::lock_guard<std::mutex> lock(threadHandle->resultMutex);
+            threadHandle->completed = true;
         } catch (...) {
-            DEBUG_LOG("Thread unknown exception");
+            DEBUG_LOG("Thread " << std::this_thread::get_id() << " unknown exception");
+            std::lock_guard<std::mutex> lock(threadHandle->resultMutex);
+            threadHandle->completed = true;
         }
-        DEBUG_LOG("Thread function ending");
+        DEBUG_LOG("Thread " << threadHandle->threadId << " function ending");
     });
 
     DEBUG_LOG("threadSpawn: thread created, returning handle");
@@ -265,7 +269,8 @@ std::optional<SchemeValue> conditionWait(
 
     if (args.size() != 2) {
         DEBUG_LOG("conditionWait: wrong number of arguments");
-        throw InterpreterError("condition-variable-wait: requires exactly 2 arguments (condition variable and mutex)");
+        throw InterpreterError(
+            "condition-variable-wait: requires exactly 2 arguments (condition variable and mutex)");
     }
 
     auto condVal = args[0].ensureValue();
@@ -286,13 +291,8 @@ std::optional<SchemeValue> conditionWait(
 
     DEBUG_LOG("conditionWait: got condition variable @ " << condHandle.get()
                                                          << " and mutex @ " << mutexHandle.get() << ", waiting");
-
-    // Create unique_lock with adopt_lock to assume the mutex is already locked
     std::unique_lock<std::mutex> lock(mutexHandle->mutex, std::adopt_lock);
-
     DEBUG_LOG("conditionWait: about to wait on condition variable");
-
-    // Add a timeout to avoid a potential deadlock - this is safer than infinite wait
     auto status = condHandle->cv.wait_for(lock, std::chrono::seconds(30));
 
     if (status == std::cv_status::timeout) {
@@ -300,8 +300,6 @@ std::optional<SchemeValue> conditionWait(
     } else {
         DEBUG_LOG("conditionWait: condition variable wait completed normally");
     }
-
-    // Release ownership so the lock doesn't unlock the mutex when destroyed
     lock.release();
     DEBUG_LOG("conditionWait: unique_lock released");
 
@@ -327,8 +325,6 @@ std::optional<SchemeValue> conditionSignal(
 
     auto condHandle = condVal.asConditionVar();
     DEBUG_LOG("conditionSignal: signaling condition variable @ " << condHandle.get());
-
-    // Notify one waiting thread
     condHandle->cv.notify_one();
     DEBUG_LOG("conditionSignal: condition variable signaled");
 
@@ -354,12 +350,9 @@ std::optional<SchemeValue> conditionBroadcast(
 
     auto condHandle = condVal.asConditionVar();
     DEBUG_LOG("conditionBroadcast: broadcasting condition variable @ " << condHandle.get());
-
-    // Notify all waiting threads
     condHandle->cv.notify_all();
     DEBUG_LOG("conditionBroadcast: condition variable broadcast complete");
 
     return std::nullopt;
 }
-
 } // namespace jaws_thread

@@ -75,7 +75,7 @@ public:
     using Args = std::vector<std::pair<Token, std::shared_ptr<Expression>>>;
     Args arguments;
     std::vector<std::shared_ptr<Expression>> body;
-
+    std::vector<Token> getParameterTokens() const;
     LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body);
 };
 
