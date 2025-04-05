@@ -27,9 +27,6 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },
-                          [&](const MacroAtomExpression& e) -> std::shared_ptr<Expression> {
-                              return expr;
-                          },
                           [&](const sExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               for (const auto& elem : e.elements) {
@@ -75,6 +72,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           },
                           [&](const VectorExpression& v) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("vector"));
                               for (const auto& elem : v.elements) {
                                   elements.push_back(exprToList(elem));
                               }

@@ -20,7 +20,6 @@ const std::unordered_map<std::string, Tokentype> keywords = {
     { "=>", Tokentype::ARROW },
     { "...", Tokentype::ELLIPSIS },
     { "set!", Tokentype::SET },
-    { "else", Tokentype::ELSE },
 };
 
 const std::vector<RegexInfo> regexPatterns = {

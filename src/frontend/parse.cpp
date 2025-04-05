@@ -469,7 +469,6 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
     std::vector<SyntaxRule> rules;
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         consume(state, Tokentype::LEFT_PAREN, "Expected '(' before pattern in 'syntax-rules'");
-        // Use the same macro expression parser for both pattern and template
         auto pattern = parseMacroExpression(state);
         auto template_expr = parseMacroExpression(state);
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after template in 'syntax-rules'");

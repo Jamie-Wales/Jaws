@@ -9,7 +9,6 @@
 class Expression;
 
 enum class ExprType {
-    MacroAtom,
     QuasiQuote,
     Atom,
     SExpr,
@@ -42,16 +41,6 @@ public:
     Token value;
 
     AtomExpression(Token token);
-
-    void toString(std::stringstream& ss) const;
-};
-
-class MacroAtomExpression {
-public:
-    Token value;
-    bool isVariadic;
-
-    MacroAtomExpression(Token token, bool isVariadic);
 
     void toString(std::stringstream& ss) const;
 };
@@ -273,10 +262,10 @@ public:
  * Uses std::variant to implement a discriminated union of all possible expression types.
  * Provides methods for converting expressions to strings and creating deep copies.
  */
-class Expression {
+class Expression : public std::enable_shared_from_this<Expression> {
+
 public:
     using ExpressionVariant = std::variant<
-        MacroAtomExpression,
         AtomExpression,
         sExpression,
         ListExpression,
@@ -338,7 +327,6 @@ public:
         return std::visit(overloaded {
 
                               [](const QuasiQuoteExpression&) { return ExprType::QuasiQuote; },
-                              [](const MacroAtomExpression&) { return ExprType::MacroAtom; },
                               [](const AtomExpression&) { return ExprType::Atom; },
                               [](const sExpression&) { return ExprType::SExpr; },
                               [](const ListExpression&) { return ExprType::List; },
@@ -365,8 +353,6 @@ static std::string typeToString(ExprType type)
     switch (type) {
     case ExprType::QuasiQuote:
         return "QuasiQuote";
-    case ExprType::MacroAtom:
-        return "MacroAtom";
     case ExprType::Atom:
         return "Atom";
     case ExprType::SExpr:
@@ -400,3 +386,12 @@ static std::string typeToString(ExprType type)
     }
     return "Unknown";
 }
+
+bool compareExpressionVectors(
+    const std::vector<std::shared_ptr<Expression>>& lhs,
+    const std::vector<std::shared_ptr<Expression>>& rhs);
+
+bool compareTokenVectors(const std::vector<Token>& lhs, const std::vector<Token>& rhs);
+bool compareTokens(const Token& lhs, const Token& rhs);
+bool operator==(const Expression& lhs, const Expression& rhs);
+bool operator!=(const Expression& lhs, const Expression& rhs);

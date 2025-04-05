@@ -47,12 +47,6 @@ DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters,
 {
 }
 
-MacroAtomExpression::MacroAtomExpression(Token token, bool isVariadic)
-    : value(std::move(token))
-    , isVariadic(isVariadic)
-{
-}
-
 AtomExpression::AtomExpression(Token token)
     : value(std::move(token))
 {
@@ -245,11 +239,6 @@ void Expression::toString(std::stringstream& ss) const
                                                    : ss << ele->toString();
                 }
                 ss << ")";
-            },
-            [&](const MacroAtomExpression& e) {
-                ss << e.value.lexeme;
-                if (e.isVariadic)
-                    ss << "...";
             },
             [&](const sExpression& e) {
                 ss << "(";
@@ -512,9 +501,6 @@ std::shared_ptr<Expression> Expression::clone() const
                               return std::make_shared<Expression>(AtomExpression { e.value }, line);
                           },
 
-                          [&](const MacroAtomExpression& e) -> std::shared_ptr<Expression> {
-                              return std::make_shared<Expression>(MacroAtomExpression { e.value, e.isVariadic }, line);
-                          },
                           [&](const ListExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> clonedElements;
                               clonedElements.reserve(e.elements.size());
@@ -617,13 +603,6 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                     ele->toString(ss);
                 }
                 ss << std::endl;
-            },
-            [&](const MacroAtomExpression& e) {
-                indent(ss, indentLevel);
-                ss << "MacroAtomExpression: \"" << e.value.lexeme << "\"";
-                if (e.isVariadic)
-                    ss << " (variadic)";
-                ss << "\n";
             },
             [&](const ListExpression& e) {
                 indent(ss, indentLevel);
@@ -833,4 +812,167 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                 }
             } },
         as);
+}
+
+bool compareExpressionVectors(
+    const std::vector<std::shared_ptr<Expression>>& lhs,
+    const std::vector<std::shared_ptr<Expression>>& rhs)
+{
+    if (lhs.size() != rhs.size())
+        return false;
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        if (!lhs[i] && !rhs[i])
+            continue;
+        if (!lhs[i] || !rhs[i])
+            return false;
+        if (!(*lhs[i] == *rhs[i]))
+            return false;
+    }
+    return true;
+}
+
+bool compareTokenVectors(const std::vector<Token>& lhs, const std::vector<Token>& rhs)
+{
+    if (lhs.size() != rhs.size())
+        return false;
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        if (lhs[i].type != rhs[i].type || lhs[i].lexeme != rhs[i].lexeme) {
+            return false;
+        }
+    }
+    return true;
+
+    // #TODO: hygene check
+}
+
+bool compareTokens(const Token& lhs, const Token& rhs)
+{
+    return lhs.type == rhs.type && lhs.lexeme == rhs.lexeme;
+    // #TODO: hygene check
+}
+
+bool operator==(const Expression& lhs, const Expression& rhs)
+{
+
+    if (lhs.as.index() != rhs.as.index()) {
+        return false;
+    }
+
+    return std::visit(overloaded {
+                          // --- Compare Specific Variants ---
+                          [&](const AtomExpression& lhs_v) {
+                              const auto& rhs_v = std::get<AtomExpression>(rhs.as);
+                              return compareTokens(lhs_v.value, rhs_v.value);
+                          },
+                          [&](const sExpression& lhs_v) {
+                              const auto& rhs_v = std::get<sExpression>(rhs.as);
+                              return compareExpressionVectors(lhs_v.elements, rhs_v.elements);
+                          },
+                          [&](const ListExpression& lhs_v) { // Include if ListExpression still exists
+                              const auto& rhs_v = std::get<ListExpression>(rhs.as);
+                              return compareExpressionVectors(lhs_v.elements, rhs_v.elements);
+                          },
+                          [&](const VectorExpression& lhs_v) {
+                              const auto& rhs_v = std::get<VectorExpression>(rhs.as);
+                              return compareExpressionVectors(lhs_v.elements, rhs_v.elements);
+                          },
+                          [&](const QuoteExpression& lhs_v) {
+                              const auto& rhs_v = std::get<QuoteExpression>(rhs.as);
+                              if (!lhs_v.expression && !rhs_v.expression)
+                                  return true;
+                              if (!lhs_v.expression || !rhs_v.expression)
+                                  return false;
+                              return *lhs_v.expression == *rhs_v.expression; // Recursive call
+                          },
+                          [&](const IfExpression& lhs_v) {
+                              const auto& rhs_v = std::get<IfExpression>(rhs.as);
+                              // Null checks needed before dereferencing shared_ptr
+                              if (!lhs_v.condition || !rhs_v.condition || !(*lhs_v.condition == *rhs_v.condition))
+                                  return false;
+                              if (!lhs_v.then || !rhs_v.then || !(*lhs_v.then == *rhs_v.then))
+                                  return false;
+                              if (lhs_v.el.has_value() != rhs_v.el.has_value())
+                                  return false;
+                              if (lhs_v.el.has_value()) {
+                                  if (!*lhs_v.el || !*rhs_v.el || !(**lhs_v.el == **rhs_v.el))
+                                      return false;
+                              }
+                              return true;
+                          },
+                          [&](const LambdaExpression& lhs_v) {
+                              const auto& rhs_v = std::get<LambdaExpression>(rhs.as);
+                              if (lhs_v.isVariadic != rhs_v.isVariadic)
+                                  return false;
+                              if (!compareTokenVectors(lhs_v.parameters, rhs_v.parameters))
+                                  return false;
+                              if (!compareExpressionVectors(lhs_v.body, rhs_v.body))
+                                  return false;
+                              return true;
+                          },
+                          [&](const DefineProcedure& lhs_v) {
+                              const auto& rhs_v = std::get<DefineProcedure>(rhs.as);
+                              if (!compareTokens(lhs_v.name, rhs_v.name))
+                                  return false;
+                              if (lhs_v.isVariadic != rhs_v.isVariadic)
+                                  return false;
+                              if (!compareTokenVectors(lhs_v.parameters, rhs_v.parameters))
+                                  return false;
+                              if (!compareExpressionVectors(lhs_v.body, rhs_v.body))
+                                  return false;
+                              return true;
+                          },
+                          [&](const DefineExpression& lhs_v) {
+                              const auto& rhs_v = std::get<DefineExpression>(rhs.as);
+                              if (!compareTokens(lhs_v.name, rhs_v.name))
+                                  return false;
+                              if (!lhs_v.value || !rhs_v.value || !(*lhs_v.value == *rhs_v.value))
+                                  return false;
+                              return true;
+                          },
+                          [&](const SetExpression& lhs_v) {
+                              const auto& rhs_v = std::get<SetExpression>(rhs.as);
+                              if (!compareTokens(lhs_v.identifier, rhs_v.identifier))
+                                  return false;
+                              if (!lhs_v.value || !rhs_v.value || !(*lhs_v.value == *rhs_v.value))
+                                  return false;
+                              return true;
+                          },
+                          [&](const TailExpression& lhs_v) {
+                              const auto& rhs_v = std::get<TailExpression>(rhs.as);
+                              if (!lhs_v.expression && !rhs_v.expression)
+                                  return true;
+                              if (!lhs_v.expression || !rhs_v.expression)
+                                  return false;
+                              return *lhs_v.expression == *rhs_v.expression;
+                          },
+                          [&](const LetExpression& lhs_v) {
+                              const auto& rhs_v = std::get<LetExpression>(rhs.as);
+                              if (lhs_v.name.has_value() != rhs_v.name.has_value())
+                                  return false;
+                              if (lhs_v.name.has_value() && !compareTokens(*lhs_v.name, *rhs_v.name))
+                                  return false;
+                              if (lhs_v.arguments.size() != rhs_v.arguments.size())
+                                  return false;
+                              for (size_t i = 0; i < lhs_v.arguments.size(); ++i) {
+                                  if (!compareTokens(lhs_v.arguments[i].first, rhs_v.arguments[i].first))
+                                      return false;
+                                  if (!lhs_v.arguments[i].second || !rhs_v.arguments[i].second || !(*lhs_v.arguments[i].second == *rhs_v.arguments[i].second))
+                                      return false;
+                              }
+                              if (!compareExpressionVectors(lhs_v.body, rhs_v.body))
+                                  return false;
+                              return true;
+                          },
+                          [&](const QuasiQuoteExpression&) { return false; },
+
+                          [&](const auto&) {
+                              std::cerr << "Warning: operator== not fully implemented for Expression variant index " << lhs.as.index() << std::endl;
+                              return false;
+                          } },
+        lhs.as);
+}
+
+bool operator!=(const Expression& lhs, const Expression& rhs)
+{
+    return !(lhs == rhs);
 }

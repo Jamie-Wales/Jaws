@@ -37,8 +37,24 @@ public:
 struct PatternMatch {
     std::vector<std::shared_ptr<MacroExpression>> matches;
 };
+std::shared_ptr<Expression> convertMacroResultToExpressionInternal(
+    const std::shared_ptr<macroexp::MacroExpression>& macroResult);
 
-using MatchEnv = std::unordered_map<std::string, PatternMatch>;
+std::pair<std::vector<Token>, bool> parseMacroParameters(
+    const std::shared_ptr<macroexp::MacroExpression>& paramsMacroExpr);
+
+void wrapLastBodyExpression(std::vector<std::shared_ptr<Expression>>& body);
+std::shared_ptr<Expression> convertQuote(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertSet(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertIf(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertLambda(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertDefine(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertMacroResultToExpression(
+    const std::shared_ptr<macroexp::MacroExpression>& macroResult);
+
+std::string getKeyword(const macroexp::MacroList& ml);
+using MatchEnv
+    = std::unordered_map<std::string, PatternMatch>;
 
 bool isEllipsis(std::shared_ptr<MacroExpression> me);
 bool isPatternVariable(const Token& token, const std::vector<Token>& literals);

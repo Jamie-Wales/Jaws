@@ -33,7 +33,6 @@ MacroExpression::MacroExpression(const MacroList& list, bool variadic, int lineN
 {
 }
 
-// --- toString (No Changes) ---
 std::string MacroExpression::toString()
 {
     return std::visit(overloaded {
@@ -552,55 +551,370 @@ std::shared_ptr<MacroExpression> transformMacro(
 
 std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_ptr<Expression>> exprs)
 {
-    std::vector<std::shared_ptr<Expression>> toExpand;
     std::vector<std::shared_ptr<Expression>> finalExpandedExprs;
     pattern::MacroEnvironment env;
-    for (const auto& expr : exprs) {
-        std::visit(overloaded {
-                       [&](const DefineSyntaxExpression& de) {
-                           if (std::holds_alternative<SyntaxRulesExpression>(de.rule->as)) {
-                               auto ruleExpr = std::make_shared<Expression>(*de.rule);
-                               env.defineMacro(de.name.lexeme, ruleExpr);
-                           } },
-                       [&](const auto&) {
-                       } },
-            expr->as);
-    }
 
     for (const auto& expr : exprs) {
-        if (std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
-            // skip definitions in this pass
-        } else if (std::holds_alternative<VectorExpression>(expr->as)) {
-            finalExpandedExprs.push_back(expr);
-        } else {
-            auto userMacroExpr = fromExpr(expr);
-            auto expandedMacro = transformMacroRecursive(userMacroExpr, env);
-            std::string expandedString = expandedMacro->toString();
-            std::vector<Token> tokens;
-            try {
-                tokens = scanner::tokenize(expandedString);
-            } catch (const std::exception& e) {
-                finalExpandedExprs.push_back(expr);
-                continue;
-            }
-
-            std::vector<std::shared_ptr<Expression>> parsedExprsPtr;
-            try {
-                parsedExprsPtr = *parse::parse(std::move(tokens));
-            } catch (const std::exception& e) {
-                finalExpandedExprs.push_back(expr);
-                continue;
-            }
-
-            if (!parsedExprsPtr.empty()) {
-                for (const auto& expandedExpr : parsedExprsPtr) {
-                    finalExpandedExprs.push_back(expandedExpr);
-                }
+        if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+            if (std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
+                auto ruleExpr = de->rule;
+                env.defineMacro(de->name.lexeme, ruleExpr);
+            } else {
+                std::cerr << "Warning: define-syntax used without syntax-rules for macro " << de->name.lexeme << std::endl;
             }
         }
     }
 
+    for (const auto& expr : exprs) {
+        if (std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
+            continue;
+        } else if (std::holds_alternative<VectorExpression>(expr->as)) {
+            finalExpandedExprs.push_back(expr); // Pass through vector literals
+        } else {
+            auto userMacroExpr = fromExpr(expr);
+            if (!userMacroExpr) {
+                finalExpandedExprs.push_back(expr);
+                std::cerr << "[Warning] fromExpr failed for: " << expr->toString() << std::endl;
+                continue;
+            }
+            auto expandedMacro = transformMacroRecursive(userMacroExpr, env);
+            if (!expandedMacro) {
+                continue;
+            }
+            auto finalExprForInterpreter = convertMacroResultToExpression(expandedMacro);
+            if (finalExprForInterpreter) {
+                finalExpandedExprs.push_back(finalExprForInterpreter);
+            } else {
+                finalExpandedExprs.push_back(expr);
+                std::cerr << "[Warning] Macro expansion failed for: " << expr->toString() << ", keeping original." << std::endl;
+            }
+        }
+    }
     return finalExpandedExprs;
+}
+
+std::string getKeyword(const MacroList& ml)
+{
+    if (ml.elements.empty())
+        return "";
+    const auto& firstElement = ml.elements[0];
+    if (!firstElement)
+        return "";
+
+    if (const MacroAtom* atom = std::get_if<MacroAtom>(&firstElement->value)) {
+        return atom->token.lexeme;
+    }
+    return "";
+}
+
+std::shared_ptr<Expression> convertQuote(const MacroList& ml, int line)
+{
+    if (ml.elements.size() != 2)
+        throw std::runtime_error("Invalid quote structure during conversion");
+    auto datum = convertMacroResultToExpressionInternal(ml.elements[1]);
+    if (!datum)
+        throw std::runtime_error("Invalid quote datum during conversion");
+    return std::make_shared<Expression>(QuoteExpression { datum }, line);
+}
+
+std::shared_ptr<Expression> convertSet(const MacroList& ml, int line)
+{
+    if (ml.elements.size() != 3)
+        throw std::runtime_error("Invalid set! structure during conversion");
+    auto identExpr = convertMacroResultToExpressionInternal(ml.elements[1]);
+    auto valueExpr = convertMacroResultToExpressionInternal(ml.elements[2]);
+    if (!identExpr || !valueExpr || !std::holds_alternative<AtomExpression>(identExpr->as)) {
+        throw std::runtime_error("Invalid set! parts during conversion (expected identifier and value)");
+    }
+    Token identifier = std::get<AtomExpression>(identExpr->as).value;
+    return std::make_shared<Expression>(SetExpression { identifier, valueExpr }, line);
+}
+
+std::shared_ptr<Expression> convertIf(const MacroList& ml, int line)
+{
+    if (ml.elements.size() < 3 || ml.elements.size() > 4)
+        throw std::runtime_error("Invalid if structure during conversion");
+    auto condition = convertMacroResultToExpressionInternal(ml.elements[1]);
+    auto thenBranch = convertMacroResultToExpressionInternal(ml.elements[2]);
+    std::optional<std::shared_ptr<Expression>> elseBranchOpt = std::nullopt;
+
+    if (!condition || !thenBranch)
+        throw std::runtime_error("Invalid if parts during conversion");
+    thenBranch = std::make_shared<Expression>(TailExpression { thenBranch }, thenBranch->line);
+
+    if (ml.elements.size() == 4) {
+        auto elseConv = convertMacroResultToExpressionInternal(ml.elements[3]);
+        if (!elseConv)
+            throw std::runtime_error("Invalid if else part during conversion");
+        elseBranchOpt = std::make_shared<Expression>(TailExpression { elseConv }, elseConv->line);
+    }
+    return std::make_shared<Expression>(IfExpression { condition, thenBranch, elseBranchOpt }, line);
+}
+
+std::shared_ptr<Expression> convertLambda(const MacroList& ml, int line)
+{
+    if (ml.elements.size() < 2)
+        throw std::runtime_error("Invalid lambda structure (needs params)");
+    auto [params, isVariadic] = parseMacroParameters(ml.elements[1]);
+
+    std::vector<std::shared_ptr<Expression>> body;
+    body.reserve(ml.elements.size() - 2);
+    for (size_t i = 2; i < ml.elements.size(); ++i) {
+        if (auto converted = convertMacroResultToExpressionInternal(ml.elements[i])) {
+            body.push_back(converted);
+        } else {
+            throw std::runtime_error("Invalid lambda body element during conversion");
+        }
+    }
+    wrapLastBodyExpression(body);
+
+    return std::make_shared<Expression>(LambdaExpression { params, std::move(body), isVariadic }, line);
+}
+
+std::shared_ptr<Expression> convertDefine(const MacroList& ml, int line)
+{
+    if (ml.elements.size() < 3)
+        throw std::runtime_error("Invalid define structure during conversion");
+
+    if (ml.elements[1] && std::holds_alternative<MacroList>(ml.elements[1]->value)) {
+        const auto& procHeaderNode = ml.elements[1];
+        const auto& procHeaderList = std::get<MacroList>(procHeaderNode->value);
+
+        if (procHeaderList.elements.empty())
+            throw std::runtime_error("Empty define procedure header");
+        Token name;
+        if (procHeaderList.elements[0] && std::holds_alternative<MacroAtom>(procHeaderList.elements[0]->value)) {
+            name = std::get<MacroAtom>(procHeaderList.elements[0]->value).token;
+        } else {
+            throw std::runtime_error("Expected procedure name atom in define");
+        }
+        auto paramsOnlyList = std::make_shared<MacroList>();
+        paramsOnlyList->elements.assign(procHeaderList.elements.begin() + 1, procHeaderList.elements.end());
+        int paramsLine = procHeaderNode->line;
+        auto paramsMacroExpr = std::make_shared<MacroExpression>(*paramsOnlyList, false, paramsLine);
+
+        auto [params, isVariadic] = parseMacroParameters(paramsMacroExpr);
+
+        std::vector<std::shared_ptr<Expression>> body;
+        body.reserve(ml.elements.size() - 2);
+        for (size_t i = 2; i < ml.elements.size(); ++i) {
+            if (auto converted = convertMacroResultToExpressionInternal(ml.elements[i])) {
+                body.push_back(converted);
+            } else {
+                throw std::runtime_error("Invalid define body element during conversion");
+            }
+        }
+        if (body.empty())
+            throw std::runtime_error("Define procedure requires a body");
+        wrapLastBodyExpression(body);
+
+        return std::make_shared<Expression>(DefineProcedure { name, params, std::move(body), isVariadic }, line);
+
+    } else if (ml.elements[1] && std::holds_alternative<MacroAtom>(ml.elements[1]->value)) {
+        if (ml.elements.size() != 3)
+            throw std::runtime_error("Invalid define variable structure");
+        Token name = std::get<MacroAtom>(ml.elements[1]->value).token;
+        auto value = convertMacroResultToExpressionInternal(ml.elements[2]);
+        if (!value)
+            throw std::runtime_error("Invalid define value part during conversion");
+        return std::make_shared<Expression>(DefineExpression { name, value }, line);
+    } else {
+        throw std::runtime_error("Invalid structure after define keyword during conversion");
+    }
+}
+std::pair<std::vector<Token>, bool> parseMacroParameters(
+    const std::shared_ptr<MacroExpression>& paramsMacroExpr)
+{
+    std::vector<Token> params;
+    bool isVariadic = false;
+
+    if (!paramsMacroExpr) {
+        throw std::runtime_error("Invalid null parameter list structure during conversion");
+    }
+
+    if (const MacroList* paramList = std::get_if<MacroList>(&paramsMacroExpr->value)) {
+        for (size_t i = 0; i < paramList->elements.size(); ++i) {
+            const auto& paramNode = paramList->elements[i];
+            if (!paramNode)
+                throw std::runtime_error("Null parameter node during conversion");
+
+            if (const MacroAtom* paramAtom = std::get_if<MacroAtom>(&paramNode->value)) {
+                if (paramAtom->token.type == Tokentype::DOT) {
+                    if (isVariadic)
+                        throw std::runtime_error("Multiple dots found in params");
+                    if (i == 0 || i != paramList->elements.size() - 2) {
+                        throw std::runtime_error("Invalid dot placement in lambda params during conversion");
+                    }
+                    isVariadic = true;
+                    continue;
+                }
+                if (isVariadic) {
+                    params.push_back(paramAtom->token);
+                    if (i != paramList->elements.size() - 1)
+                        throw std::runtime_error("More tokens found after dot parameter");
+                    break;
+                }
+                params.push_back(paramAtom->token);
+            } else {
+                throw std::runtime_error("Non-atom found in parameter list structure during conversion");
+            }
+        }
+
+    } else if (const MacroAtom* paramAtom = std::get_if<MacroAtom>(&paramsMacroExpr->value)) {
+        params.push_back(paramAtom->token);
+        isVariadic = false;
+    } else {
+        throw std::runtime_error("Unsupported parameter structure during conversion (neither list nor atom)");
+    }
+    return { params, isVariadic };
+}
+
+std::shared_ptr<Expression> convertLet(const macroexp::MacroList& ml, int line)
+{
+
+    if (ml.elements.size() < 2) {
+        throw std::runtime_error("Invalid let structure during conversion (too few parts)");
+    }
+
+    std::optional<Token> letNameToken = std::nullopt;
+    size_t bindingsIndex = 0;
+    size_t bodyStartIndex = 0;
+
+    const auto& secondElementNode = ml.elements[1];
+    if (!secondElementNode)
+        throw std::runtime_error("Internal error: null node after let");
+
+    if (const macroexp::MacroAtom* nameAtom = std::get_if<macroexp::MacroAtom>(&secondElementNode->value)) {
+        letNameToken = nameAtom->token;
+        bindingsIndex = 2;
+        bodyStartIndex = 3;
+        if (ml.elements.size() < 3) {
+            throw std::runtime_error("Invalid named let structure (missing bindings list)");
+        }
+    } else if (std::holds_alternative<macroexp::MacroList>(secondElementNode->value)) {
+        letNameToken = std::nullopt;
+        bindingsIndex = 1;
+        bodyStartIndex = 2;
+    } else {
+        throw std::runtime_error("Invalid let structure: expected identifier or bindings list after 'let'");
+    }
+
+    if (bindingsIndex >= ml.elements.size()) {
+        throw std::runtime_error("Missing bindings list in let structure");
+    }
+    const auto& bindingsNode = ml.elements[bindingsIndex];
+    if (!bindingsNode || !std::holds_alternative<macroexp::MacroList>(bindingsNode->value)) {
+        throw std::runtime_error("Expected list structure for let bindings");
+    }
+    const auto& bindingsList = std::get<macroexp::MacroList>(bindingsNode->value);
+
+    std::vector<std::pair<Token, std::shared_ptr<Expression>>> bindings;
+    bindings.reserve(bindingsList.elements.size());
+    for (const auto& bindingPairNode : bindingsList.elements) {
+        if (!bindingPairNode || !std::holds_alternative<macroexp::MacroList>(bindingPairNode->value)) {
+            throw std::runtime_error("Expected list for let binding pair");
+        }
+        const auto& bindingPairList = std::get<macroexp::MacroList>(bindingPairNode->value);
+        if (bindingPairList.elements.size() != 2) {
+            throw std::runtime_error("Let binding pair must have exactly size 2 (variable value)");
+        }
+
+        if (!bindingPairList.elements[0] || !std::holds_alternative<macroexp::MacroAtom>(bindingPairList.elements[0]->value)) {
+            throw std::runtime_error("Expected identifier atom for let binding variable");
+        }
+        Token varToken = std::get<macroexp::MacroAtom>(bindingPairList.elements[0]->value).token;
+        auto valExpr = convertMacroResultToExpressionInternal(bindingPairList.elements[1]);
+        if (!valExpr)
+            throw std::runtime_error("Invalid let binding value during conversion");
+
+        bindings.push_back({ varToken, valExpr });
+    }
+
+    std::vector<std::shared_ptr<Expression>> body;
+    body.reserve(ml.elements.size() - bodyStartIndex);
+    for (size_t i = bodyStartIndex; i < ml.elements.size(); ++i) {
+        if (auto converted = convertMacroResultToExpressionInternal(ml.elements[i])) {
+            body.push_back(converted);
+        } else {
+            throw std::runtime_error("Invalid let body element during conversion");
+        }
+    }
+    wrapLastBodyExpression(body);
+    return std::make_shared<Expression>(LetExpression { letNameToken, std::move(bindings), std::move(body) }, line);
+}
+
+std::shared_ptr<Expression> convertMacroResultToExpressionInternal(
+    const std::shared_ptr<MacroExpression>& macroResult)
+{
+    if (!macroResult)
+        return nullptr;
+    int line = macroResult->line;
+
+    return std::visit(overloaded {
+                          [&](const MacroAtom& ma) -> std::shared_ptr<Expression> {
+                              Token token = ma.token;
+                              return std::make_shared<Expression>(AtomExpression { token }, line);
+                          },
+
+                          [&](const MacroList& ml) -> std::shared_ptr<Expression> {
+                              if (ml.elements.empty()) {
+                                  return std::make_shared<Expression>(sExpression { {} }, line);
+                              }
+
+                              std::string keyword = getKeyword(ml);
+                              if (keyword == "quote") {
+                                  return convertQuote(ml, line);
+                              } else if (keyword == "set!") {
+                                  return convertSet(ml, line);
+                              } else if (keyword == "if") {
+                                  return convertIf(ml, line);
+                              } else if (keyword == "let") {
+                                  return convertLet(ml, line);
+                              } else if (keyword == "lambda") {
+                                  return convertLambda(ml, line);
+                              } else if (keyword == "define") {
+                                  return convertDefine(ml, line);
+                              } else {
+                                  std::vector<std::shared_ptr<Expression>> convertedElements;
+                                  convertedElements.reserve(ml.elements.size());
+                                  for (const auto& elem : ml.elements) {
+                                      if (auto convertedElem = convertMacroResultToExpressionInternal(elem)) {
+                                          convertedElements.push_back(convertedElem);
+                                      } else {
+                                          throw std::runtime_error("Null expression encountered during sExpression conversion");
+                                      }
+                                  }
+                                  return std::make_shared<Expression>(sExpression { std::move(convertedElements) }, line);
+                              }
+                          },
+
+                          [&](const auto& other) -> std::shared_ptr<Expression> {
+                              throw std::runtime_error("Internal Error: Unexpected variant type found within MacroExpression");
+                          } },
+        macroResult->value);
+}
+
+void wrapLastBodyExpression(std::vector<std::shared_ptr<Expression>>& body)
+{
+    if (!body.empty() && body.back()) {
+        if (!std::holds_alternative<TailExpression>(body.back()->as)) {
+            body.back() = std::make_shared<Expression>(TailExpression { body.back() }, body.back()->line);
+        }
+    }
+}
+
+std::shared_ptr<Expression> convertMacroResultToExpression(
+    const std::shared_ptr<MacroExpression>& macroResult)
+{
+    try {
+        return convertMacroResultToExpressionInternal(macroResult);
+    } catch (const std::exception& e) {
+        std::cerr << "[Error] Macro Conversion Failed: " << e.what();
+        std::cerr << " (Line approx " << (macroResult ? macroResult->line : -1) << ")" << std::endl;
+        std::cerr << " Input: " << (macroResult ? macroResult->toString() : "null") << std::endl;
+        return nullptr;
+        return nullptr;
+    }
 }
 
 }

@@ -3,13 +3,15 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tbb/concurrent_unordered_map.h>
+#include <unordered_map>
+#include <mutex>
 #include <iostream>
 
 class Environment : public std::enable_shared_from_this<Environment> {
 private:
     std::shared_ptr<Environment> parent;
-    tbb::concurrent_unordered_map<std::string, SchemeValue> variables;
+    std::unordered_map<std::string, SchemeValue> variables;
+    mutable std::mutex mutex;  
 
 public:
     Environment();
