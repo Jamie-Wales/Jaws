@@ -182,7 +182,7 @@ std::optional<SchemeValue> interpret(
 }
 std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpression& atom)
 {
-    const Token& token = atom.value;
+    const Token& token = atom.value.token;
     try {
         switch (token.type) {
         case Tokentype::INTEGER:
@@ -273,25 +273,17 @@ std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const s
 
     auto call = evaluateProcedureCall(state, sexpr);
     if (!call) {
-        // --- ADD LOGGING ---
         DEBUG_LOG("InterpretSExpr: evaluateProcedureCall failed!");
-        // --- END LOGGING ---
-        return std::nullopt; // Or throw? evaluateProcedureCall likely throws already
+        return std::nullopt;
     }
 
-    // --- ADD LOGGING ---
     DEBUG_LOG("InterpretSExpr: Calling executeProcedure for proc: " << call->procedure.toString());
-    // --- END LOGGING ---
-
     auto result = executeProcedure(state, call->procedure, std::move(call->arguments));
-
-    // --- ADD LOGGING ---
     if (result) {
         DEBUG_LOG("InterpretSExpr: executeProcedure result -> " << result->toString());
     } else {
         DEBUG_LOG("InterpretSExpr: executeProcedure result -> nullopt");
     }
-    // --- END LOGGING ---
     return result;
 }
 
@@ -303,25 +295,35 @@ std::optional<SchemeValue> interpretDefine(InterpreterState& state, const Define
     if (value->isProc() && !value->asProc()->isBuiltin()) {
         auto proc = value->asProc();
         if (auto userProc = std::dynamic_pointer_cast<UserProcedure>(proc)) {
-            userProc->closure->define(def.name.lexeme, *value);
+            userProc->closure->define(def.name.token.lexeme, *value);
         }
     }
-    state.env->define(def.name.lexeme, *value);
+    state.env->define(def.name.token.lexeme, *value);
     return std::nullopt;
 }
 
 std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, const DefineProcedure& proc)
 {
-    auto procedure = std::make_shared<UserProcedure>(proc.parameters, proc.body, state.env, proc.isVariadic);
-    state.env->define(proc.name.lexeme, SchemeValue(std::move(procedure)));
+    std::vector<Token> paramTokens;
+    paramTokens.reserve(proc.parameters.size());
+    for (const auto& param : proc.parameters) {
+        paramTokens.push_back(param.token);
+    }
+    auto procedure = std::make_shared<UserProcedure>(paramTokens, proc.body, state.env, proc.isVariadic);
+    state.env->define(proc.name.token.lexeme, SchemeValue(std::move(procedure)));
     return std::nullopt;
 }
 
 std::optional<SchemeValue> interpretLambda(InterpreterState& state, const LambdaExpression& lambda)
 {
+    std::vector<Token> paramTokens;
+    paramTokens.reserve(lambda.parameters.size());
+    for (const auto& param : lambda.parameters) {
+        paramTokens.push_back(param.token);
+    }
     auto closureEnv = state.env;
     auto proc = std::make_shared<UserProcedure>(
-        lambda.parameters, lambda.body, closureEnv, lambda.isVariadic);
+        paramTokens, lambda.body, closureEnv, lambda.isVariadic);
     return SchemeValue(std::move(proc));
 }
 
@@ -342,8 +344,9 @@ std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpressi
 std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpression& let)
 {
     auto closureEnv = state.env;
+    std::vector<Token> paramTokens = let.getParameterTokens();
     auto lambdaProc = std::make_shared<UserProcedure>(
-        let.getParameterTokens(), let.body, closureEnv, false);
+        paramTokens, let.body, closureEnv, false);
 
     std::vector<SchemeValue> args;
     args.reserve(let.arguments.size());
@@ -357,10 +360,10 @@ std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpres
     if (let.name) {
         auto letExecEnv = std::make_shared<Environment>(closureEnv);
         for (size_t k = 0; k < let.arguments.size(); ++k) {
-            letExecEnv->define(let.arguments[k].first.lexeme, args[k]);
+            letExecEnv->define(let.arguments[k].first.token.lexeme, args[k]);
         }
         lambdaProc->closure = letExecEnv;
-        letExecEnv->define(let.name->lexeme, SchemeValue(lambdaProc));
+        letExecEnv->define(let.name->token.lexeme, SchemeValue(lambdaProc));
     }
 
     return executeProcedure(state, SchemeValue(lambdaProc), std::move(args));
@@ -422,7 +425,7 @@ std::optional<SchemeValue> interpretSet(InterpreterState& state, const SetExpres
     if (!val) {
         throw InterpreterError("Cannot set undefined value");
     }
-    state.env->set(set.identifier.lexeme, *val);
+    state.env->set(set.identifier.token.lexeme, *val);
     return std::nullopt;
 }
 
@@ -477,7 +480,6 @@ std::optional<SchemeValue> executeProcedure(
             DEBUG_LOG("ExecuteProc: Handling pending TAIL CALL to: " << state.pendingProcedure->toString());
             currentProcedure = *state.pendingProcedure;
             currentArgs = std::move(state.pendingArguments);
-            // Clear pending state
             state.isTailCallPending = false;
             state.pendingProcedure.reset();
             state.pendingArguments.clear();

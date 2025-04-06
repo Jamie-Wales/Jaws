@@ -1,7 +1,6 @@
 #include "Import.h"
 #include "Error.h"
 #include "parse.h"
-#include "run.h"
 #include "scan.h"
 #include <fstream>
 #include <set>
@@ -19,17 +18,19 @@ std::shared_ptr<Expression> renameDefinition(
     const std::string& newName)
 {
     Token newToken(Tokentype::IDENTIFIER, newName, expr->line, expr->line);
+    // Create a HygienicSyntax with the new token and empty context
+    HygienicSyntax newSyntax { newToken, SyntaxContext {} };
 
     if (auto* define = std::get_if<DefineExpression>(&expr->as)) {
         return std::make_shared<Expression>(
-            Expression { DefineExpression { newToken, define->value }, expr->line });
+            Expression { DefineExpression { newSyntax, define->value }, expr->line });
     } else if (auto* defineProc = std::get_if<DefineProcedure>(&expr->as)) {
         return std::make_shared<Expression>(
-            Expression { DefineProcedure { newToken, defineProc->parameters, defineProc->body },
+            Expression { DefineProcedure { newSyntax, defineProc->parameters, defineProc->body, defineProc->isVariadic },
                 expr->line });
     } else if (auto* defineSyntax = std::get_if<DefineSyntaxExpression>(&expr->as)) {
         return std::make_shared<Expression>(
-            Expression { DefineSyntaxExpression { newToken, defineSyntax->rule }, expr->line });
+            Expression { DefineSyntaxExpression { newSyntax, defineSyntax->rule }, expr->line });
     }
 
     return expr;
@@ -42,7 +43,7 @@ bool fileExists(const std::string& path)
     emscripten::val xhr = emscripten::val::global("XMLHttpRequest").new_();
     xhr.call<void>("open", std::string("HEAD"), path, false);
     xhr.call<void>("send");
-    
+
     return xhr["status"].as<int>() == 200;
 }
 
@@ -52,11 +53,11 @@ std::string readFile(const std::string& path)
     emscripten::val xhr = emscripten::val::global("XMLHttpRequest").new_();
     xhr.call<void>("open", std::string("GET"), path, false);
     xhr.call<void>("send");
-    
+
     if (xhr["status"].as<int>() != 200) {
         throw ParseError("Failed to load file: " + path, Token(), "");
     }
-    
+
     return xhr["responseText"].as<std::string>();
 }
 #else
@@ -116,27 +117,27 @@ std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
 {
     if (spec.library.size() == 1) {
         if (auto* atom = std::get_if<AtomExpression>(&spec.library[0]->as)) {
-            std::string fileName = atom->value.lexeme + ".scm";
-            
+            std::string fileName = atom->value.token.lexeme + ".scm";
+
             // First try in /lib directory (preferred location for web)
             std::string webPath = "/lib/" + fileName;
             if (fileExists(webPath)) {
                 return webPath;
             }
-            
+
             // Then try in current directory
             if (fileExists(fileName)) {
                 return fileName;
             }
-            
+
             // Fallback to the original paths for backward compatibility
-            std::string localPath = atom->value.lexeme + ".scm";
+            std::string localPath = atom->value.token.lexeme + ".scm";
             std::string libPath = "../lib/" + localPath;
-            
+
             if (fileExists(libPath)) {
                 return libPath;
             }
-            
+
             // For web, also try the public/lib path
             return "/lib/" + fileName;
         }
@@ -145,16 +146,16 @@ std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
     std::string libPath;
     for (const auto& part : spec.library) {
         if (auto* atom = std::get_if<AtomExpression>(&part->as)) {
-            libPath += atom->value.lexeme + "/";
+            libPath += atom->value.token.lexeme + "/";
         }
     }
-    
+
     // First try the web-specific path
     std::string webPath = "/lib/" + libPath.substr(0, libPath.length() - 1) + ".scm";
     if (fileExists(webPath)) {
         return webPath;
     }
-    
+
     // Fallback to original path format
     return "../lib/" + libPath.substr(0, libPath.length() - 1) + ".scm";
 }
@@ -163,7 +164,7 @@ std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
 {
     if (spec.library.size() == 1) {
         if (auto* atom = std::get_if<AtomExpression>(&spec.library[0]->as)) {
-            std::string localPath = atom->value.lexeme + ".scm";
+            std::string localPath = atom->value.token.lexeme + ".scm";
             if (fileExists(localPath)) {
                 return localPath;
             }
@@ -174,7 +175,7 @@ std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
     std::string libPath;
     for (const auto& part : spec.library) {
         if (auto* atom = std::get_if<AtomExpression>(&part->as)) {
-            libPath += atom->value.lexeme + "/";
+            libPath += atom->value.token.lexeme + "/";
         }
     }
     return std::format("../lib/{}.scm", libPath.substr(0, libPath.length() - 1));
@@ -187,11 +188,11 @@ std::shared_ptr<Expression> transformExpression(
 {
     std::optional<std::string> defName;
     if (auto* define = std::get_if<DefineExpression>(&expr->as)) {
-        defName = define->name.lexeme;
+        defName = define->name.token.lexeme;
     } else if (auto* defineProc = std::get_if<DefineProcedure>(&expr->as)) {
-        defName = defineProc->name.lexeme;
+        defName = defineProc->name.token.lexeme;
     } else if (auto* defineSyntax = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-        defName = defineSyntax->name.lexeme;
+        defName = defineSyntax->name.token.lexeme;
     }
 
     if (!defName) {
@@ -203,7 +204,7 @@ std::shared_ptr<Expression> transformExpression(
 
     case ImportExpression::ImportSet::Type::ONLY:
         for (const auto& id : spec.identifiers) {
-            if (id.lexeme == *defName) {
+            if (id.token.lexeme == *defName) {
                 return expr;
             }
         }
@@ -211,19 +212,19 @@ std::shared_ptr<Expression> transformExpression(
 
     case ImportExpression::ImportSet::Type::EXCEPT:
         for (const auto& id : spec.identifiers) {
-            if (id.lexeme == *defName) {
+            if (id.token.lexeme == *defName) {
                 return nullptr;
             }
         }
         return expr;
 
     case ImportExpression::ImportSet::Type::PREFIX:
-        return renameDefinition(expr, *defName, spec.prefix.lexeme + *defName);
+        return renameDefinition(expr, *defName, spec.prefix.token.lexeme + *defName);
 
     case ImportExpression::ImportSet::Type::RENAME:
         for (const auto& [oldName, newName] : spec.renames) {
-            if (oldName.lexeme == *defName) {
-                return renameDefinition(expr, *defName, newName.lexeme);
+            if (oldName.token.lexeme == *defName) {
+                return renameDefinition(expr, *defName, newName.token.lexeme);
             }
         }
         return expr;

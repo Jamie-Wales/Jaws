@@ -119,7 +119,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                                       specElements.push_back(std::make_shared<Expression>(
                                           Expression { ListExpression { spec.library, false }, expr->line }));
                                       for (const auto& id : spec.identifiers) {
-                                          specElements.push_back(makeAtom(id.lexeme));
+                                          specElements.push_back(makeAtom(id.token.lexeme));
                                       }
                                       break;
                                   }
@@ -128,7 +128,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                                       specElements.push_back(std::make_shared<Expression>(
                                           Expression { ListExpression { spec.library, false }, expr->line }));
                                       for (const auto& id : spec.identifiers) {
-                                          specElements.push_back(makeAtom(id.lexeme));
+                                          specElements.push_back(makeAtom(id.token.lexeme));
                                       }
                                       break;
                                   }
@@ -136,7 +136,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                                       specElements.push_back(makeAtom("prefix"));
                                       specElements.push_back(std::make_shared<Expression>(
                                           Expression { ListExpression { spec.library, false }, expr->line }));
-                                      specElements.push_back(makeAtom(spec.prefix.lexeme));
+                                      specElements.push_back(makeAtom(spec.prefix.token.lexeme));
                                       break;
                                   }
                                   case ImportExpression::ImportSet::Type::RENAME: {
@@ -145,8 +145,8 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                                           Expression { ListExpression { spec.library, false }, expr->line }));
                                       for (const auto& [old_name, new_name] : spec.renames) {
                                           std::vector<std::shared_ptr<Expression>> renameElements;
-                                          renameElements.push_back(makeAtom(old_name.lexeme));
-                                          renameElements.push_back(makeAtom(new_name.lexeme));
+                                          renameElements.push_back(makeAtom(old_name.token.lexeme));
+                                          renameElements.push_back(makeAtom(new_name.token.lexeme));
                                           specElements.push_back(std::make_shared<Expression>(
                                               Expression { ListExpression { renameElements, false }, expr->line }));
                                       }
@@ -202,7 +202,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const SetExpression& se) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("set!"));
-                              elements.push_back(makeAtom(se.identifier.lexeme));
+                              elements.push_back(makeAtom(se.identifier.token.lexeme));
                               elements.push_back(exprToList(se.value));
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
@@ -211,7 +211,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("let"));
                               if (l.name.has_value()) {
-                                  elements.push_back(makeAtom(l.name.value().lexeme));
+                                  elements.push_back(makeAtom(l.name.value().token.lexeme));
                               }
                               std::vector<std::shared_ptr<Expression>> bindingElements;
                               for (const auto& [name, value] : l.arguments) {

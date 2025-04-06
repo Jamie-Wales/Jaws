@@ -107,10 +107,10 @@ std::vector<std::shared_ptr<TopLevel>> ANFtransform(const std::vector<std::share
 
 std::shared_ptr<ANF> Aatom(const AtomExpression& e)
 {
-    return std::make_shared<ANF>(Atom { e.value });
+    return std::make_shared<ANF>(Atom { e.value.token });
 }
 
-std::shared_ptr<ANF> ALet(const LetExpression& l, size_t currentNumber)
+std::shared_ptr<ANF> ALet(const LetExpression& l, size_t& currentNumber)
 {
     std::vector<std::pair<Token, std::shared_ptr<ANF>>> transformed_bindings;
 
@@ -119,7 +119,7 @@ std::shared_ptr<ANF> ALet(const LetExpression& l, size_t currentNumber)
         if (!transformed_value) {
             throw std::runtime_error("Failed to transform let binding");
         }
-        transformed_bindings.emplace_back(name, *transformed_value);
+        transformed_bindings.emplace_back(name.token, *transformed_value);
     }
 
     std::shared_ptr<ANF> body = nullptr;
@@ -248,10 +248,10 @@ std::shared_ptr<ANF> ASet(const SetExpression& set, size_t& currentNumber)
     std::shared_ptr<ANF> result;
 
     if (const auto atom = std::get_if<Atom>(&(*transformed_value)->term)) {
-        value_token = atom->atom;
+        value_token = atom->atom; // Fixed trailing dot here
         result = std::make_shared<ANF>(App {
             Token { Tokentype::IDENTIFIER, "set!", 0, 0 },
-            std::vector<Token> { set.identifier, value_token },
+            std::vector<Token> { set.identifier.token, value_token },
             false });
     } else {
         Token temp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
@@ -260,7 +260,7 @@ std::shared_ptr<ANF> ASet(const SetExpression& set, size_t& currentNumber)
             *transformed_value,
             std::make_shared<ANF>(App {
                 Token { Tokentype::IDENTIFIER, "set!", 0, 0 },
-                std::vector<Token> { set.identifier, temp },
+                std::vector<Token> { set.identifier.token, temp },
                 false }) });
     }
     return result;
@@ -284,8 +284,15 @@ std::shared_ptr<ANF> ADefineProcedure(const DefineProcedure& proc, size_t& curre
         }
     }
 
+    // Extract Token from HygienicSyntax
+    std::vector<Token> paramTokens;
+    paramTokens.reserve(proc.parameters.size());
+    for (const auto& param : proc.parameters) {
+        paramTokens.push_back(param.token);
+    }
+
     return std::make_shared<ANF>(Lambda {
-        proc.parameters,
+        paramTokens,
         body });
 }
 std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& currentNumber)
@@ -315,7 +322,14 @@ std::optional<std::shared_ptr<ANF>> ALambda(const LambdaExpression& le, size_t& 
         return std::nullopt;
     }
 
-    const auto lambda = std::make_shared<ANF>(Lambda { le.parameters, body });
+    // Extract Token from HygienicSyntax
+    std::vector<Token> paramTokens;
+    paramTokens.reserve(le.parameters.size());
+    for (const auto& param : le.parameters) {
+        paramTokens.push_back(param.token);
+    }
+
+    const auto lambda = std::make_shared<ANF>(Lambda { paramTokens, body });
     Token lambdaTemp = { Tokentype::IDENTIFIER, std::format("temp{}", currentNumber++), 0, 0 };
     return std::make_shared<ANF>(Let {
         std::optional<Token>(lambdaTemp),
@@ -412,12 +426,14 @@ std::optional<std::shared_ptr<TopLevel>> transformTop(const std::shared_ptr<Expr
 {
     return std::visit(overloaded {
                           [&](const DefineExpression& e) -> std::optional<std::shared_ptr<TopLevel>> {
+                              // Fix: Use the full DefineExpression and extract Token from HygienicSyntax
+                              auto anf_value = ADefine(e, currentNumber);
                               return std::make_shared<TopLevel>(TDefine {
-                                  e.name, flattenLets(ADefine(e, currentNumber)) });
+                                  e.name.token, flattenLets(anf_value) });
                           },
                           [&](const DefineSyntaxExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; },
                           [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<TopLevel>> {
-                              return std::make_shared<TopLevel>(TDefine { e.name, flattenLets(ADefineProcedure(e, currentNumber)) });
+                              return std::make_shared<TopLevel>(TDefine { e.name.token, flattenLets(ADefineProcedure(e, currentNumber)) });
                           },
                           [&](const auto& _) -> std::optional<std::shared_ptr<TopLevel>> {
                               if (const auto ele = transform(toTransform, currentNumber)) {

@@ -36,26 +36,26 @@ SchemeValue expressionToValue(const Expression& expr)
                           },
 
                           [&](const AtomExpression& a) -> SchemeValue {
-                              switch (a.value.type) {
+                              switch (a.value.token.type) {
                               case Tokentype::IDENTIFIER:
                               case Tokentype::SYMBOL:
                               case Tokentype::QUOTE_SYMBOL:
-                                  return SchemeValue(Symbol { a.value.lexeme });
+                                  return SchemeValue(Symbol { a.value.token.lexeme });
                               case Tokentype::INTEGER:
-                                  return SchemeValue(Number(std::stoi(a.value.lexeme)));
+                                  return SchemeValue(Number(std::stoi(a.value.token.lexeme)));
                               case Tokentype::FLOAT:
-                                  return SchemeValue(Number(std::stod(a.value.lexeme)));
+                                  return SchemeValue(Number(std::stod(a.value.token.lexeme)));
                               case Tokentype::RATIONAL: {
-                                  size_t slashPos = a.value.lexeme.find('/');
+                                  size_t slashPos = a.value.token.lexeme.find('/');
                                   if (slashPos != std::string::npos) {
-                                      int num = std::stoi(a.value.lexeme.substr(0, slashPos));
-                                      int den = std::stoi(a.value.lexeme.substr(slashPos + 1));
+                                      int num = std::stoi(a.value.token.lexeme.substr(0, slashPos));
+                                      int den = std::stoi(a.value.token.lexeme.substr(slashPos + 1));
                                       return SchemeValue(Number(Number::Rational(num, den)));
                                   }
                                   throw std::runtime_error("Invalid rational format");
                               }
                               case Tokentype::COMPLEX: {
-                                  std::string complexStr = a.value.lexeme;
+                                  std::string complexStr = a.value.token.lexeme;
                                   size_t plusPos = complexStr.rfind('+');
                                   size_t minusPos = complexStr.rfind('-');
                                   size_t iPos = complexStr.find('i');
@@ -87,7 +87,7 @@ SchemeValue expressionToValue(const Expression& expr)
                               }
 
                               case Tokentype::STRING:
-                                  return SchemeValue(a.value.lexeme.substr(1, a.value.lexeme.length() - 2));
+                                  return SchemeValue(a.value.token.lexeme.substr(1, a.value.token.lexeme.length() - 2));
                               case Tokentype::TRUE:
                                   return SchemeValue(true);
                               case Tokentype::FALSE:
@@ -123,7 +123,7 @@ SchemeValue expressionToValue(const Expression& expr)
                               case Tokentype::QUOTE:
                                   return SchemeValue(Symbol { "quote" });
                               default:
-                                  throw std::runtime_error("Unexpected token type in expressionToValue: " + a.value.lexeme);
+                                  throw std::runtime_error("Unexpected token type in expressionToValue: " + a.value.token.lexeme);
                               }
                           },
 
@@ -149,13 +149,13 @@ SchemeValue expressionToValue(const Expression& expr)
                               values.push_back(SchemeValue(Symbol { "let" }));
 
                               if (l.name.has_value()) {
-                                  values.push_back(SchemeValue(Symbol { l.name.value().lexeme }));
+                                  values.push_back(SchemeValue(Symbol { l.name.value().token.lexeme }));
                               }
 
                               std::list<SchemeValue> bindings;
                               for (const auto& [param, val] : l.arguments) {
                                   std::list<SchemeValue> binding;
-                                  binding.push_back(SchemeValue(Symbol { param.lexeme }));
+                                  binding.push_back(SchemeValue(Symbol { param.token.lexeme }));
                                   binding.push_back(expressionToValue(*val));
                                   bindings.push_back(SchemeValue(std::move(binding)));
                               }
@@ -190,7 +190,7 @@ SchemeValue expressionToValue(const Expression& expr)
                                       }
                                       onlySpec.push_back(SchemeValue(std::move(libRef)));
                                       for (const auto& id : spec.identifiers) {
-                                          onlySpec.push_back(SchemeValue(Symbol { id.lexeme }));
+                                          onlySpec.push_back(SchemeValue(Symbol { id.token.lexeme }));
                                       }
                                       values.push_back(SchemeValue(std::move(onlySpec)));
                                       break;
@@ -205,7 +205,7 @@ SchemeValue expressionToValue(const Expression& expr)
                                       }
                                       exceptSpec.push_back(SchemeValue(std::move(libRef)));
                                       for (const auto& id : spec.identifiers) {
-                                          exceptSpec.push_back(SchemeValue(Symbol { id.lexeme }));
+                                          exceptSpec.push_back(SchemeValue(Symbol { id.token.lexeme }));
                                       }
                                       values.push_back(SchemeValue(std::move(exceptSpec)));
                                       break;
@@ -219,7 +219,7 @@ SchemeValue expressionToValue(const Expression& expr)
                                           libRef.push_back(expressionToValue(*part));
                                       }
                                       prefixSpec.push_back(SchemeValue(std::move(libRef)));
-                                      prefixSpec.push_back(SchemeValue(Symbol { spec.prefix.lexeme }));
+                                      prefixSpec.push_back(SchemeValue(Symbol { spec.prefix.token.lexeme }));
                                       values.push_back(SchemeValue(std::move(prefixSpec)));
                                       break;
                                   }
@@ -234,8 +234,8 @@ SchemeValue expressionToValue(const Expression& expr)
                                       renameSpec.push_back(SchemeValue(std::move(libRef)));
                                       for (const auto& [old_name, new_name] : spec.renames) {
                                           std::list<SchemeValue> renamePair;
-                                          renamePair.push_back(SchemeValue(Symbol { old_name.lexeme }));
-                                          renamePair.push_back(SchemeValue(Symbol { new_name.lexeme }));
+                                          renamePair.push_back(SchemeValue(Symbol { old_name.token.lexeme }));
+                                          renamePair.push_back(SchemeValue(Symbol { new_name.token.lexeme }));
                                           renameSpec.push_back(SchemeValue(std::move(renamePair)));
                                       }
                                       values.push_back(SchemeValue(std::move(renameSpec)));
@@ -267,7 +267,7 @@ SchemeValue expressionToValue(const Expression& expr)
                           [&](const SetExpression& s) -> SchemeValue {
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "set!" }));
-                              values.push_back(SchemeValue(Symbol { s.identifier.lexeme }));
+                              values.push_back(SchemeValue(Symbol { s.identifier.token.lexeme }));
                               values.push_back(expressionToValue(*s.value));
                               return SchemeValue(std::move(values));
                           },
@@ -275,7 +275,7 @@ SchemeValue expressionToValue(const Expression& expr)
                           [&](const DefineExpression& d) -> SchemeValue {
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "define" }));
-                              values.push_back(SchemeValue(Symbol { d.name.lexeme }));
+                              values.push_back(SchemeValue(Symbol { d.name.token.lexeme }));
                               values.push_back(expressionToValue(*d.value));
                               return SchemeValue(std::move(values));
                           },
@@ -284,9 +284,9 @@ SchemeValue expressionToValue(const Expression& expr)
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "define" }));
                               std::list<SchemeValue> params;
-                              params.push_back(SchemeValue(Symbol { d.name.lexeme }));
+                              params.push_back(SchemeValue(Symbol { d.name.token.lexeme }));
                               for (const auto& param : d.parameters) {
-                                  params.push_back(SchemeValue(Symbol { param.lexeme }));
+                                  params.push_back(SchemeValue(Symbol { param.token.lexeme }));
                               }
                               values.push_back(SchemeValue(std::move(params)));
                               for (auto p : d.body) {
@@ -298,7 +298,7 @@ SchemeValue expressionToValue(const Expression& expr)
                           [&](const DefineSyntaxExpression& ds) -> SchemeValue {
                               std::list<SchemeValue> values;
                               values.push_back(SchemeValue(Symbol { "define-syntax" }));
-                              values.push_back(SchemeValue(Symbol { ds.name.lexeme }));
+                              values.push_back(SchemeValue(Symbol { ds.name.token.lexeme }));
                               values.push_back(expressionToValue(*ds.rule));
                               return SchemeValue(std::move(values));
                           },
@@ -308,7 +308,7 @@ SchemeValue expressionToValue(const Expression& expr)
                               values.push_back(SchemeValue(Symbol { "lambda" }));
                               std::list<SchemeValue> params;
                               for (const auto& param : l.parameters) {
-                                  params.push_back(SchemeValue(Symbol { param.lexeme }));
+                                  params.push_back(SchemeValue(Symbol { param.token.lexeme }));
                               }
                               values.push_back(SchemeValue(std::move(params)));
                               for (auto p : l.body) {

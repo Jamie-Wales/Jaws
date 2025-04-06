@@ -15,7 +15,7 @@ void debugPrintExpression(std::shared_ptr<Expression> expr, int indent)
 
     std::visit(overloaded {
                    [&](const AtomExpression& e) {
-                       std::cout << spaces << "Atom: " << e.value.lexeme << "\n";
+                       std::cout << spaces << "Atom: " << e.value.token.lexeme << "\n";
                    },
                    [&](const ListExpression& l) {
                        std::cout << spaces << "List (variadic=" << l.isVariadic << ") with "
@@ -36,7 +36,7 @@ void debugPrintPatternStructure(std::shared_ptr<Expression> expr, int indent)
 
     std::visit(overloaded {
                    [&](const AtomExpression& atom) {
-                       std::cout << spaces << "Atom: " << atom.value.lexeme << "\n";
+                       std::cout << spaces << "Atom: " << atom.value.token.lexeme << "\n";
                    },
                    [&](const ListExpression& list) {
                        std::cout << spaces << "List (variadic=" << list.isVariadic << ") with "

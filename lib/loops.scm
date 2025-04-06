@@ -95,25 +95,35 @@
 
 (define-syntax select-case
   (syntax-rules (else)
+    ;; First rule: single value with else
     ((select-case key ((v1) e1 ...) rest ... (else ee ...))
      (if (memq key '(v1))
          (begin e1 ...)
          (select-case key rest ... (else ee ...))))
+    
+    ;; Second rule: multiple values with else
     ((select-case key ((v1 v2 ...) e1 ...) rest ... (else ee ...))
      (if (memq key '(v1 v2 ...))
          (begin e1 ...)
          (select-case key rest ... (else ee ...))))
+    
+    ;; Terminal else case
     ((select-case key (else ee ...))
      (begin ee ...))
     
+    ;; Single value without else
     ((select-case key ((v1) e1 ...) rest ...)
      (if (memq key '(v1))
          (begin e1 ...)
          (select-case key rest ...)))
+    
+    ;; Multiple values without else
     ((select-case key ((v1 v2 ...) e1 ...) rest ...)
      (if (memq key '(v1 v2 ...))
          (begin e1 ...)
          (select-case key rest ...)))
+    
+    ;; Empty case
     ((select-case key)
      '())))
 

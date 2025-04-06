@@ -26,19 +26,58 @@ QuasiQuoteExpression::QuasiQuoteExpression(std::vector<std::shared_ptr<Expressio
 {
 }
 
+// AtomExpression implementation
+AtomExpression::AtomExpression(Token token)
+    : value { token, SyntaxContext {} }
+{
+}
+
+AtomExpression::AtomExpression(HygienicSyntax syntax)
+    : value(std::move(syntax))
+{
+}
+
+// SetExpression implementation
 SetExpression::SetExpression(const Token& identifier, std::shared_ptr<Expression> value)
-    : identifier(std::move(identifier))
+    : identifier { identifier, SyntaxContext {} }
     , value(std::move(value))
 {
 }
 
+SetExpression::SetExpression(const HygienicSyntax& syntax, std::shared_ptr<Expression> value)
+    : identifier(syntax)
+    , value(std::move(value))
+{
+}
+
+// DefineSyntaxExpression implementation
 DefineSyntaxExpression::DefineSyntaxExpression(Token name, std::shared_ptr<Expression> rule)
+    : name { name, SyntaxContext {} }
+    , rule(std::move(rule))
+{
+}
+
+DefineSyntaxExpression::DefineSyntaxExpression(HygienicSyntax name, std::shared_ptr<Expression> rule)
     : name(std::move(name))
     , rule(std::move(rule))
 {
 }
 
+// DefineProcedure implementation
 DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters,
+    std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
+    : name { name, SyntaxContext {} }
+    , parameters {}
+    , body(std::move(body))
+    , isVariadic(isVariadic)
+{
+    this->parameters.reserve(parameters.size());
+    for (const auto& param : parameters) {
+        this->parameters.push_back(HygienicSyntax { param, SyntaxContext {} });
+    }
+}
+
+DefineProcedure::DefineProcedure(HygienicSyntax name, std::vector<HygienicSyntax> parameters,
     std::vector<std::shared_ptr<Expression>> body, bool isVariadic)
     : name(std::move(name))
     , parameters(std::move(parameters))
@@ -47,20 +86,45 @@ DefineProcedure::DefineProcedure(Token name, std::vector<Token> parameters,
 {
 }
 
-AtomExpression::AtomExpression(Token token)
-    : value(std::move(token))
+// LetExpression implementation
+LetExpression::LetExpression(std::optional<Token> name,
+    std::vector<std::pair<Token, std::shared_ptr<Expression>>> arguments,
+    std::vector<std::shared_ptr<Expression>> body)
+    : name {}
+    , arguments {}
+    , body(std::move(body))
 {
+    if (name) {
+        this->name = HygienicSyntax { *name, SyntaxContext {} };
+    }
+
+    this->arguments.reserve(arguments.size());
+    for (const auto& [token, expr] : arguments) {
+        this->arguments.push_back({ HygienicSyntax { token, SyntaxContext {} }, expr });
+    }
 }
 
-LetExpression::LetExpression(std::optional<Token> name, Args arguments, std::vector<std::shared_ptr<Expression>> body)
-    : name { std::move(name) }
-    , arguments { std::move(arguments) }
-    , body { std::move(body) } {
-    };
+LetExpression::LetExpression(std::optional<HygienicSyntax> name, Args arguments,
+    std::vector<std::shared_ptr<Expression>> body)
+    : name(std::move(name))
+    , arguments(std::move(arguments))
+    , body(std::move(body))
+{
+}
 
 std::vector<Token> LetExpression::getParameterTokens() const
 {
     std::vector<Token> params;
+    params.reserve(arguments.size());
+    for (const auto& pair : arguments) {
+        params.push_back(pair.first.token);
+    }
+    return params;
+}
+
+std::vector<HygienicSyntax> LetExpression::getParameterSyntax() const
+{
+    std::vector<HygienicSyntax> params;
     params.reserve(arguments.size());
     for (const auto& pair : arguments) {
         params.push_back(pair.first);
@@ -68,36 +132,46 @@ std::vector<Token> LetExpression::getParameterTokens() const
     return params;
 }
 
+// SyntaxRule implementation
 SyntaxRule::SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expression> template_expr)
     : pattern(std::move(pattern))
-    , template_expr(std::move(template_expr)) {
-    };
+    , template_expr(std::move(template_expr))
+{
+}
 
+// SyntaxRulesExpression implementation
 SyntaxRulesExpression::SyntaxRulesExpression(std::vector<Token> literals, std::vector<SyntaxRule> rules)
     : literals(std::move(literals))
     , rules(std::move(rules))
 {
 }
 
+// QuoteExpression implementation
 QuoteExpression::QuoteExpression(std::shared_ptr<Expression> expression)
     : expression(std::move(expression))
 {
 }
 
+// DefineExpression implementation
 DefineExpression::DefineExpression(Token n, std::shared_ptr<Expression> v)
+    : name { n, SyntaxContext {} }
+    , value(std::move(v))
+{
+}
+
+DefineExpression::DefineExpression(HygienicSyntax n, std::shared_ptr<Expression> v)
     : name(std::move(n))
     , value(std::move(v))
 {
 }
 
+// TailExpression implementation
 TailExpression::TailExpression(std::shared_ptr<Expression> expression)
     : expression(expression)
 {
 }
 
-#include <cassert>
-
-// ImportSpec constructors
+// ImportSpec implementation with constructors for backward compatibility
 ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib)
     : type(ImportSet::Type::DIRECT)
     , library(std::move(lib))
@@ -106,16 +180,27 @@ ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>
 
 ImportExpression::ImportSpec::ImportSpec(ImportSet::Type t,
     std::vector<std::shared_ptr<Expression>> lib,
-    std::vector<Token> ids)
+    std::vector<HygienicSyntax> ids)
     : type(t)
     , library(std::move(lib))
     , identifiers(std::move(ids))
 {
-    assert(t == ImportSet::Type::ONLY || t == ImportSet::Type::EXCEPT);
+}
+
+ImportExpression::ImportSpec::ImportSpec(ImportSet::Type t,
+    std::vector<std::shared_ptr<Expression>> lib,
+    std::vector<Token> ids)
+    : type(t)
+    , library(std::move(lib))
+{
+    identifiers.reserve(ids.size());
+    for (const auto& id : ids) {
+        identifiers.push_back(HygienicSyntax { id, SyntaxContext {} });
+    }
 }
 
 ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
-    Token pfx)
+    HygienicSyntax pfx)
     : type(ImportSet::Type::PREFIX)
     , library(std::move(lib))
     , prefix(std::move(pfx))
@@ -123,10 +208,39 @@ ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>
 }
 
 ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
-    std::vector<std::pair<Token, Token>> renames_)
+    Token pfx)
+    : type(ImportSet::Type::PREFIX)
+    , library(std::move(lib))
+    , prefix { pfx, SyntaxContext {} }
+{
+}
+
+ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
+    std::vector<std::pair<HygienicSyntax, HygienicSyntax>> renames_)
     : type(ImportSet::Type::RENAME)
     , library(std::move(lib))
     , renames(std::move(renames_))
+{
+}
+
+ImportExpression::ImportSpec::ImportSpec(std::vector<std::shared_ptr<Expression>> lib,
+    std::vector<std::pair<Token, Token>> renames_)
+    : type(ImportSet::Type::RENAME)
+    , library(std::move(lib))
+{
+    renames.reserve(renames_.size());
+    for (const auto& [oldName, newName] : renames_) {
+        renames.push_back({ HygienicSyntax { oldName, SyntaxContext {} },
+            HygienicSyntax { newName, SyntaxContext {} } });
+    }
+}
+
+ImportExpression::ImportSpec::ImportSpec(const ImportSpec& other)
+    : type(other.type)
+    , library(other.library)
+    , identifiers(other.identifiers)
+    , prefix(other.prefix)
+    , renames(other.renames)
 {
 }
 
@@ -136,6 +250,7 @@ ImportExpression::ImportExpression(std::vector<ImportSpec> imports_)
 {
 }
 
+// Helper factory functions
 ImportExpression::ImportSpec makeDirectImport(std::vector<std::shared_ptr<Expression>> library)
 {
     return ImportExpression::ImportSpec(std::move(library));
@@ -175,22 +290,27 @@ ImportExpression::ImportSpec makeRenameImport(
     return ImportExpression::ImportSpec(std::move(library), std::move(renames));
 }
 
-ImportExpression::ImportSpec::ImportSpec(const ImportSpec& other)
-    : type(other.type)
-    , library(other.library) // shared_ptr copy
-    , identifiers(other.identifiers)
-    , prefix(other.prefix)
-    , renames(other.renames)
-{
-}
-
+// ListExpression implementation
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic)
     : elements(std::move(elems))
     , isVariadic(variadic)
 {
 }
 
+// LambdaExpression implementation
 LambdaExpression::LambdaExpression(std::vector<Token> parameters, std::vector<std::shared_ptr<Expression>> body,
+    bool isVariadic)
+    : parameters {}
+    , body(std::move(body))
+    , isVariadic(isVariadic)
+{
+    this->parameters.reserve(parameters.size());
+    for (const auto& param : parameters) {
+        this->parameters.push_back(HygienicSyntax { param, SyntaxContext {} });
+    }
+}
+
+LambdaExpression::LambdaExpression(std::vector<HygienicSyntax> parameters, std::vector<std::shared_ptr<Expression>> body,
     bool isVariadic)
     : parameters(std::move(parameters))
     , body(std::move(body))
@@ -198,11 +318,13 @@ LambdaExpression::LambdaExpression(std::vector<Token> parameters, std::vector<st
 {
 }
 
+// VectorExpression implementation
 VectorExpression::VectorExpression(std::vector<std::shared_ptr<Expression>> elems)
     : elements(std::move(elems))
 {
 }
 
+// IfExpression implementation
 IfExpression::IfExpression(std::shared_ptr<Expression> condition, std::shared_ptr<Expression> then,
     std::optional<std::shared_ptr<Expression>> el)
     : condition(std::move(condition))
@@ -210,6 +332,7 @@ IfExpression::IfExpression(std::shared_ptr<Expression> condition, std::shared_pt
     , el(std::move(el))
 {
 }
+
 void indent(std::stringstream& ss, int indentLevel)
 {
     for (int i = 0; i < indentLevel; i++) {
@@ -229,7 +352,7 @@ void Expression::toString(std::stringstream& ss) const
     std::visit(
         overloaded {
             [&](const AtomExpression& e) {
-                ss << e.value.lexeme;
+                ss << e.value.token.lexeme;
             },
 
             [&](const QuasiQuoteExpression& e) {
@@ -259,14 +382,14 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const DefineExpression& e) {
-                ss << "(define " << e.name.lexeme << " ";
+                ss << "(define " << e.name.token.lexeme << " ";
                 e.value->toString(ss);
                 ss << ")";
             },
             [&](const DefineProcedure& e) {
-                ss << "(define (" << e.name.lexeme;
+                ss << "(define (" << e.name.token.lexeme;
                 for (const auto& param : e.parameters) {
-                    ss << " " << param.lexeme;
+                    ss << " " << param.token.lexeme;
                 }
                 ss << ") ";
                 for (const auto& expr : e.body) {
@@ -286,7 +409,7 @@ void Expression::toString(std::stringstream& ss) const
             [&](const LambdaExpression& e) {
                 ss << "(lambda (";
                 for (size_t i = 0; i < e.parameters.size(); ++i) {
-                    ss << e.parameters[i].lexeme;
+                    ss << e.parameters[i].token.lexeme;
                     if (i < e.parameters.size() - 1)
                         ss << " ";
                 }
@@ -315,7 +438,7 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const SetExpression& e) {
-                ss << "(set! " << e.identifier.lexeme << " ";
+                ss << "(set! " << e.identifier.token.lexeme << " ";
                 e.value->toString(ss);
                 ss << ")";
             },
@@ -342,7 +465,7 @@ void Expression::toString(std::stringstream& ss) const
                         }
                         ss << ")";
                         for (const auto& id : spec.identifiers) {
-                            ss << " " << id.lexeme;
+                            ss << " " << id.token.lexeme;
                         }
                         ss << ")";
                         break;
@@ -354,7 +477,7 @@ void Expression::toString(std::stringstream& ss) const
                         }
                         ss << ")";
                         for (const auto& id : spec.identifiers) {
-                            ss << " " << id.lexeme;
+                            ss << " " << id.token.lexeme;
                         }
                         ss << ")";
                         break;
@@ -364,7 +487,7 @@ void Expression::toString(std::stringstream& ss) const
                         for (const auto& part : spec.library) {
                             ss << " " << part->toString();
                         }
-                        ss << ") " << spec.prefix.lexeme << ")";
+                        ss << ") " << spec.prefix.token.lexeme << ")";
                         break;
                     }
                     case ImportExpression::ImportSet::Type::RENAME: {
@@ -374,7 +497,7 @@ void Expression::toString(std::stringstream& ss) const
                         }
                         ss << ")";
                         for (const auto& [old_name, new_name] : spec.renames) {
-                            ss << " (" << old_name.lexeme << " " << new_name.lexeme << ")";
+                            ss << " (" << old_name.token.lexeme << " " << new_name.token.lexeme << ")";
                         }
                         ss << ")";
                         break;
@@ -401,18 +524,18 @@ void Expression::toString(std::stringstream& ss) const
                 ss << ")";
             },
             [&](const DefineSyntaxExpression& e) {
-                ss << "(define-syntax " << e.name.lexeme << " ";
+                ss << "(define-syntax " << e.name.token.lexeme << " ";
                 e.rule->toString(ss);
                 ss << ")";
             },
             [&](const LetExpression& e) {
                 ss << "(let ";
                 if (e.name) {
-                    ss << e.name->lexeme << " ";
+                    ss << e.name->token.lexeme << " ";
                 }
                 ss << "(";
                 for (size_t i = 0; i < e.arguments.size(); ++i) {
-                    ss << "(" << e.arguments[i].first.lexeme << " ";
+                    ss << "(" << e.arguments[i].first.token.lexeme << " ";
                     e.arguments[i].second->toString(ss);
                     ss << ")";
                     if (i < e.arguments.size() - 1)
@@ -432,7 +555,6 @@ void Expression::toString(std::stringstream& ss) const
 std::shared_ptr<Expression> Expression::clone() const
 {
     return std::visit(overloaded {
-
                           [&](const QuasiQuoteExpression& p) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements = {};
                               for (const auto& ele : p.elements) {
@@ -445,8 +567,8 @@ std::shared_ptr<Expression> Expression::clone() const
                           },
                           [&](const LetExpression& p) -> std::shared_ptr<Expression> {
                               LetExpression::Args output;
-                              for (const auto& [first, second] : p.arguments) {
-                                  output.push_back({ first, second->clone() });
+                              for (const auto& [syntax, second] : p.arguments) {
+                                  output.push_back({ syntax, second->clone() });
                               }
                               std::vector<std::shared_ptr<Expression>> clonedBody;
                               for (const auto& expr : p.body) {
@@ -541,7 +663,6 @@ std::shared_ptr<Expression> Expression::clone() const
                                   clonedBody.push_back(expr->clone());
                               }
                               return std::make_shared<Expression>(
-
                                   DefineProcedure { e.name, e.parameters, std::move(clonedBody), e.isVariadic },
                                   line);
                           },
@@ -593,7 +714,19 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
         overloaded {
             [&](const AtomExpression& e) {
                 indent(ss, indentLevel);
-                ss << "AtomExpression: " << e.value.lexeme << std::endl;
+                ss << "AtomExpression: " << e.value.token.lexeme;
+                // Print hygiene information if needed
+                if (!e.value.context.marks.empty()) {
+                    ss << " [marks: ";
+                    for (auto it = e.value.context.marks.begin(); it != e.value.context.marks.end(); ++it) {
+                        if (it != e.value.context.marks.begin()) {
+                            ss << ", ";
+                        }
+                        ss << *it;
+                    }
+                    ss << "]";
+                }
+                ss << std::endl;
             },
 
             [&](const QuasiQuoteExpression& e) {
@@ -626,14 +759,37 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
             },
             [&](const DefineExpression& e) {
                 indent(ss, indentLevel);
-                ss << "DefineExpression: name=\"" << e.name.lexeme << "\"\n";
+                ss << "DefineExpression: name=\"" << e.name.token.lexeme << "\"";
+                // Print hygiene information if needed
+                if (!e.name.context.marks.empty()) {
+                    ss << " [marks: ";
+                    for (auto it = e.name.context.marks.begin(); it != e.name.context.marks.end(); ++it) {
+                        if (it != e.name.context.marks.begin()) {
+                            ss << ", ";
+                        }
+                        ss << *it;
+                    }
+                    ss << "]";
+                }
+                ss << "\n";
                 indent(ss, indentLevel);
                 ss << "Value:\n";
                 e.value->ASTToString(ss, indentLevel + 1);
             },
             [&](const DefineProcedure& e) {
                 indent(ss, indentLevel);
-                ss << "DefineProcedure: name=\"" << e.name.lexeme << "\"";
+                ss << "DefineProcedure: name=\"" << e.name.token.lexeme << "\"";
+                // Print hygiene information if needed
+                if (!e.name.context.marks.empty()) {
+                    ss << " [marks: ";
+                    for (auto it = e.name.context.marks.begin(); it != e.name.context.marks.end(); ++it) {
+                        if (it != e.name.context.marks.begin()) {
+                            ss << ", ";
+                        }
+                        ss << *it;
+                    }
+                    ss << "]";
+                }
                 if (e.isVariadic)
                     ss << " (variadic)";
                 ss << "\n";
@@ -642,7 +798,19 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                     ss << "Params:\n";
                     for (auto& param : e.parameters) {
                         indent(ss, indentLevel + 2);
-                        ss << param.lexeme << "\n";
+                        ss << param.token.lexeme;
+                        // Print hygiene information if needed
+                        if (!param.context.marks.empty()) {
+                            ss << " [marks: ";
+                            for (auto it = param.context.marks.begin(); it != param.context.marks.end(); ++it) {
+                                if (it != param.context.marks.begin()) {
+                                    ss << ", ";
+                                }
+                                ss << *it;
+                            }
+                            ss << "]";
+                        }
+                        ss << "\n";
                     }
                 }
                 indent(ss, indentLevel + 1);
@@ -669,7 +837,19 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                     ss << "Parameters:\n";
                     for (auto& param : e.parameters) {
                         indent(ss, indentLevel + 2);
-                        ss << param.lexeme << "\n";
+                        ss << param.token.lexeme;
+                        // Print hygiene information if needed
+                        if (!param.context.marks.empty()) {
+                            ss << " [marks: ";
+                            for (auto it = param.context.marks.begin(); it != param.context.marks.end(); ++it) {
+                                if (it != param.context.marks.begin()) {
+                                    ss << ", ";
+                                }
+                                ss << *it;
+                            }
+                            ss << "]";
+                        }
+                        ss << "\n";
                     }
                 }
                 indent(ss, indentLevel + 1);
@@ -703,7 +883,19 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
             },
             [&](const SetExpression& e) {
                 indent(ss, indentLevel);
-                ss << "SetExpression: identifier=\"" << e.identifier.lexeme << "\"\n";
+                ss << "SetExpression: identifier=\"" << e.identifier.token.lexeme << "\"";
+                // Print hygiene information if needed
+                if (!e.identifier.context.marks.empty()) {
+                    ss << " [marks: ";
+                    for (auto it = e.identifier.context.marks.begin(); it != e.identifier.context.marks.end(); ++it) {
+                        if (it != e.identifier.context.marks.begin()) {
+                            ss << ", ";
+                        }
+                        ss << *it;
+                    }
+                    ss << "]";
+                }
+                ss << "\n";
                 indent(ss, indentLevel);
                 ss << "Value:\n";
                 e.value->ASTToString(ss, indentLevel + 1);
@@ -730,7 +922,7 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                         ss << "EXCEPT\n";
                         break;
                     case ImportExpression::ImportSet::Type::PREFIX:
-                        ss << "PREFIX (prefix=\"" << spec.prefix.lexeme << "\")\n";
+                        ss << "PREFIX (prefix=\"" << spec.prefix.token.lexeme << "\")\n";
                         break;
                     case ImportExpression::ImportSet::Type::RENAME:
                         ss << "RENAME\n";
@@ -746,15 +938,50 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                         ss << "Identifiers:\n";
                         for (auto& id : spec.identifiers) {
                             indent(ss, indentLevel + 3);
-                            ss << id.lexeme << "\n";
+                            ss << id.token.lexeme;
+                            // Print hygiene information if needed
+                            if (!id.context.marks.empty()) {
+                                ss << " [marks: ";
+                                for (auto it = id.context.marks.begin(); it != id.context.marks.end(); ++it) {
+                                    if (it != id.context.marks.begin()) {
+                                        ss << ", ";
+                                    }
+                                    ss << *it;
+                                }
+                                ss << "]";
+                            }
+                            ss << "\n";
                         }
                     }
                     if (!spec.renames.empty()) {
                         indent(ss, indentLevel + 2);
                         ss << "Renames:\n";
-                        for (auto& r : spec.renames) {
+                        for (auto& [old_name, new_name] : spec.renames) {
                             indent(ss, indentLevel + 3);
-                            ss << "(" << r.first.lexeme << " -> " << r.second.lexeme << ")\n";
+                            ss << "(" << old_name.token.lexeme << " -> " << new_name.token.lexeme << ")";
+                            // Print hygiene information if needed for old_name
+                            if (!old_name.context.marks.empty()) {
+                                ss << " [old marks: ";
+                                for (auto it = old_name.context.marks.begin(); it != old_name.context.marks.end(); ++it) {
+                                    if (it != old_name.context.marks.begin()) {
+                                        ss << ", ";
+                                    }
+                                    ss << *it;
+                                }
+                                ss << "]";
+                            }
+                            // Print hygiene information if needed for new_name
+                            if (!new_name.context.marks.empty()) {
+                                ss << " [new marks: ";
+                                for (auto it = new_name.context.marks.begin(); it != new_name.context.marks.end(); ++it) {
+                                    if (it != new_name.context.marks.begin()) {
+                                        ss << ", ";
+                                    }
+                                    ss << *it;
+                                }
+                                ss << "]";
+                            }
+                            ss << "\n";
                         }
                     }
                 }
@@ -784,7 +1011,19 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
             },
             [&](const DefineSyntaxExpression& e) {
                 indent(ss, indentLevel);
-                ss << "DefineSyntaxExpression: name=\"" << e.name.lexeme << "\"\n";
+                ss << "DefineSyntaxExpression: name=\"" << e.name.token.lexeme << "\"";
+                // Print hygiene information if needed
+                if (!e.name.context.marks.empty()) {
+                    ss << " [marks: ";
+                    for (auto it = e.name.context.marks.begin(); it != e.name.context.marks.end(); ++it) {
+                        if (it != e.name.context.marks.begin()) {
+                            ss << ", ";
+                        }
+                        ss << *it;
+                    }
+                    ss << "]";
+                }
+                ss << "\n";
                 indent(ss, indentLevel + 1);
                 ss << "Rule:\n";
                 e.rule->ASTToString(ss, indentLevel + 2);
@@ -793,15 +1032,38 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                 indent(ss, indentLevel);
                 ss << "LetExpression";
                 if (e.name.has_value()) {
-                    ss << " named=\"" << e.name->lexeme << "\"";
+                    ss << " named=\"" << e.name->token.lexeme << "\"";
+                    // Print hygiene information if needed
+                    if (!e.name->context.marks.empty()) {
+                        ss << " [marks: ";
+                        for (auto it = e.name->context.marks.begin(); it != e.name->context.marks.end(); ++it) {
+                            if (it != e.name->context.marks.begin()) {
+                                ss << ", ";
+                            }
+                            ss << *it;
+                        }
+                        ss << "]";
+                    }
                 }
                 ss << ":\n";
                 if (!e.arguments.empty()) {
                     indent(ss, indentLevel + 1);
                     ss << "Bindings:\n";
-                    for (auto& [tok, boundExpr] : e.arguments) {
+                    for (auto& [syntax, boundExpr] : e.arguments) {
                         indent(ss, indentLevel + 2);
-                        ss << tok.lexeme << " =>\n";
+                        ss << syntax.token.lexeme;
+                        // Print hygiene information if needed
+                        if (!syntax.context.marks.empty()) {
+                            ss << " [marks: ";
+                            for (auto it = syntax.context.marks.begin(); it != syntax.context.marks.end(); ++it) {
+                                if (it != syntax.context.marks.begin()) {
+                                    ss << ", ";
+                                }
+                                ss << *it;
+                            }
+                            ss << "]";
+                        }
+                        ss << " =>\n";
                         boundExpr->ASTToString(ss, indentLevel + 3);
                     }
                 }
@@ -841,14 +1103,35 @@ bool compareTokenVectors(const std::vector<Token>& lhs, const std::vector<Token>
         }
     }
     return true;
-
-    // #TODO: hygene check
 }
 
 bool compareTokens(const Token& lhs, const Token& rhs)
 {
     return lhs.type == rhs.type && lhs.lexeme == rhs.lexeme;
-    // #TODO: hygene check
+}
+
+// Updated for HygienicSyntax
+bool compareHygienicSyntax(const HygienicSyntax& lhs, const HygienicSyntax& rhs)
+{
+    // Compare tokens first
+    if (lhs.token.type != rhs.token.type || lhs.token.lexeme != rhs.token.lexeme) {
+        return false;
+    }
+
+    // For now, just comparing lexemes without contexts for compatibility
+    return true;
+}
+
+bool compareHygienicSyntaxVectors(const std::vector<HygienicSyntax>& lhs, const std::vector<HygienicSyntax>& rhs)
+{
+    if (lhs.size() != rhs.size())
+        return false;
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        if (!compareHygienicSyntax(lhs[i], rhs[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool operator==(const Expression& lhs, const Expression& rhs)
@@ -862,13 +1145,13 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                           // --- Compare Specific Variants ---
                           [&](const AtomExpression& lhs_v) {
                               const auto& rhs_v = std::get<AtomExpression>(rhs.as);
-                              return compareTokens(lhs_v.value, rhs_v.value);
+                              return compareHygienicSyntax(lhs_v.value, rhs_v.value);
                           },
                           [&](const sExpression& lhs_v) {
                               const auto& rhs_v = std::get<sExpression>(rhs.as);
                               return compareExpressionVectors(lhs_v.elements, rhs_v.elements);
                           },
-                          [&](const ListExpression& lhs_v) { // Include if ListExpression still exists
+                          [&](const ListExpression& lhs_v) {
                               const auto& rhs_v = std::get<ListExpression>(rhs.as);
                               return compareExpressionVectors(lhs_v.elements, rhs_v.elements);
                           },
@@ -903,7 +1186,7 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                               const auto& rhs_v = std::get<LambdaExpression>(rhs.as);
                               if (lhs_v.isVariadic != rhs_v.isVariadic)
                                   return false;
-                              if (!compareTokenVectors(lhs_v.parameters, rhs_v.parameters))
+                              if (!compareHygienicSyntaxVectors(lhs_v.parameters, rhs_v.parameters))
                                   return false;
                               if (!compareExpressionVectors(lhs_v.body, rhs_v.body))
                                   return false;
@@ -911,11 +1194,11 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                           },
                           [&](const DefineProcedure& lhs_v) {
                               const auto& rhs_v = std::get<DefineProcedure>(rhs.as);
-                              if (!compareTokens(lhs_v.name, rhs_v.name))
+                              if (!compareHygienicSyntax(lhs_v.name, rhs_v.name))
                                   return false;
                               if (lhs_v.isVariadic != rhs_v.isVariadic)
                                   return false;
-                              if (!compareTokenVectors(lhs_v.parameters, rhs_v.parameters))
+                              if (!compareHygienicSyntaxVectors(lhs_v.parameters, rhs_v.parameters))
                                   return false;
                               if (!compareExpressionVectors(lhs_v.body, rhs_v.body))
                                   return false;
@@ -923,7 +1206,7 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                           },
                           [&](const DefineExpression& lhs_v) {
                               const auto& rhs_v = std::get<DefineExpression>(rhs.as);
-                              if (!compareTokens(lhs_v.name, rhs_v.name))
+                              if (!compareHygienicSyntax(lhs_v.name, rhs_v.name))
                                   return false;
                               if (!lhs_v.value || !rhs_v.value || !(*lhs_v.value == *rhs_v.value))
                                   return false;
@@ -931,7 +1214,7 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                           },
                           [&](const SetExpression& lhs_v) {
                               const auto& rhs_v = std::get<SetExpression>(rhs.as);
-                              if (!compareTokens(lhs_v.identifier, rhs_v.identifier))
+                              if (!compareHygienicSyntax(lhs_v.identifier, rhs_v.identifier))
                                   return false;
                               if (!lhs_v.value || !rhs_v.value || !(*lhs_v.value == *rhs_v.value))
                                   return false;
@@ -949,12 +1232,12 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                               const auto& rhs_v = std::get<LetExpression>(rhs.as);
                               if (lhs_v.name.has_value() != rhs_v.name.has_value())
                                   return false;
-                              if (lhs_v.name.has_value() && !compareTokens(*lhs_v.name, *rhs_v.name))
+                              if (lhs_v.name.has_value() && !compareHygienicSyntax(*lhs_v.name, *rhs_v.name))
                                   return false;
                               if (lhs_v.arguments.size() != rhs_v.arguments.size())
                                   return false;
                               for (size_t i = 0; i < lhs_v.arguments.size(); ++i) {
-                                  if (!compareTokens(lhs_v.arguments[i].first, rhs_v.arguments[i].first))
+                                  if (!compareHygienicSyntax(lhs_v.arguments[i].first, rhs_v.arguments[i].first))
                                       return false;
                                   if (!lhs_v.arguments[i].second || !rhs_v.arguments[i].second || !(*lhs_v.arguments[i].second == *rhs_v.arguments[i].second))
                                       return false;
@@ -965,6 +1248,34 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                           },
                           [&](const QuasiQuoteExpression&) { return false; },
 
+                          [&](const SyntaxRulesExpression& lhs_v) {
+                              const auto& rhs_v = std::get<SyntaxRulesExpression>(rhs.as);
+                              if (!compareTokenVectors(lhs_v.literals, rhs_v.literals))
+                                  return false;
+                              if (lhs_v.rules.size() != rhs_v.rules.size())
+                                  return false;
+                              for (size_t i = 0; i < lhs_v.rules.size(); ++i) {
+                                  if (!(*lhs_v.rules[i].pattern == *rhs_v.rules[i].pattern))
+                                      return false;
+                                  if (!(*lhs_v.rules[i].template_expr == *rhs_v.rules[i].template_expr))
+                                      return false;
+                              }
+                              return true;
+                          },
+                          [&](const DefineSyntaxExpression& lhs_v) {
+                              const auto& rhs_v = std::get<DefineSyntaxExpression>(rhs.as);
+                              if (!compareHygienicSyntax(lhs_v.name, rhs_v.name))
+                                  return false;
+                              if (!(*lhs_v.rule == *rhs_v.rule))
+                                  return false;
+                              return true;
+                          },
+                          [&](const ImportExpression& lhs_v) {
+                              const auto& rhs_v = std::get<ImportExpression>(rhs.as);
+                              if (lhs_v.imports.size() != rhs_v.imports.size())
+                                  return false;
+                              return false;
+                          },
                           [&](const auto&) {
                               std::cerr << "Warning: operator== not fully implemented for Expression variant index " << lhs.as.index() << std::endl;
                               return false;
