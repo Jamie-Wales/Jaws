@@ -17,7 +17,27 @@
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>
+void prepareInterpreterEnvironment(const import::ProcessedCode& code, interpret::InterpreterState& state)
+{
+    for (const auto& libData : code.importedLibrariesData) {
+        for (const auto& [name, binding] : libData.exportedBindings) {
+            if (binding.type == import::ExportedBinding::Type::VALUE) {
+                interpret::interpret(state, binding.definition);
+            }
+        }
+    }
+}
 
+std::vector<std::shared_ptr<Expression>> prepareCompilerInput(const import::ProcessedCode& code)
+{
+    std::vector<std::shared_ptr<Expression>> compilerInputList;
+    for (const auto& libData : code.importedLibrariesData) {
+        for (const auto& [name, binding] : libData.exportedBindings) {
+            compilerInputList.push_back(binding.definition);
+        }
+    }
+    return compilerInputList;
+}
 std::string formatScheme(const std::string& code)
 {
     char filename[] = "/tmp/schemefmtXXXXXX.scm";
@@ -112,151 +132,198 @@ std::string readFile(const std::string& path)
 void evaluate(interpret::InterpreterState& state, Options& opts)
 {
     auto tokens = scanner::tokenize(opts.input);
-    auto expressions = parse::parse(std::move(tokens));
-    if (!expressions) {
+    auto expressionsOpt = parse::parse(std::move(tokens));
+    if (!expressionsOpt) {
         std::cerr << "Parsing failed\n";
         return;
     }
-    std::stringstream ss;
-    if (opts.printCode) {
-        for (const auto& expression : *expressions) {
-            ss << expression->toString() << "\n";
-        }
-        const auto output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
-        std::cout
-            << "<| Original File |>\n"
-            << output
-            << std::endl;
-        ss.str("");
-        ss.clear();
-    }
+    auto parsedExpressions = *expressionsOpt;
 
+    std::stringstream ss_print_buffer;
+    if (opts.printCode) {
+        ss_print_buffer.str("");
+        ss_print_buffer.clear();
+        for (const auto& expression : parsedExpressions) {
+            ss_print_buffer << expression->toString() << "\n";
+        }
+        const auto output = opts.prettyPrint ? formatScheme(ss_print_buffer.str()) : ss_print_buffer.str();
+        std::cout << "<| Original Code |>\n"
+                  << output << std::endl;
+    }
     if (opts.printAST) {
         std::cout << "\n<| Initial AST |>\n";
-        for (const auto& expression : *expressions) {
+        for (const auto& expression : parsedExpressions) {
             std::cout << expression->ASTToString() << "\n";
         }
         std::cout << "\n"
                   << std::endl;
-        ss.str("");
-        ss.clear();
     }
 
-    auto withImports = import::processImports(*expressions);
-    if (opts.printCode) {
-        for (const auto& expression : withImports) {
-            ss << expression->toString() << "\n";
-        }
-        const auto output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
-        std::cout << "\n<| File After Import |>\n"
-                  << output
-                  << std::endl;
-        ss.str("");
-        ss.clear();
+    // 2. Process Imports (Decoupled)
+    import::ProcessedCode processedCode;
+    try {
+        processedCode = import::processImports(parsedExpressions);
+    } catch (const std::exception& e) {
+        std::cerr << "[Import Error] " << e.what() << std::endl;
+        return;
     }
 
-    if (opts.printAST) {
-        std::cout << "\n<| AST After Import |>\n";
-        for (const auto& expression : withImports) {
-            std::cout << expression->ASTToString() << "\n";
+    if (opts.printCode || opts.printAST) {
+        std::vector<std::shared_ptr<Expression>> afterImportExpressions = processedCode.remainingExpressions;
+        for (const auto& libData : processedCode.importedLibrariesData) {
+            for (const auto& [name, binding] : libData.exportedBindings) {
+                afterImportExpressions.push_back(binding.definition);
+            }
         }
-    }
 
-    const auto expanded = macroexp::expandMacros(withImports);
-
-    if (opts.printMacro) {
-        ss.str("");
-        ss.clear();
-        for (const auto& expression : expanded) {
-            ss << expression->toString() << "\n";
+        if (opts.printCode) {
+            ss_print_buffer.str("");
+            ss_print_buffer.clear();
+            for (const auto& expression : afterImportExpressions) {
+                ss_print_buffer << expression->toString() << "\n";
+            }
+            const auto output = opts.prettyPrint ? formatScheme(ss_print_buffer.str()) : ss_print_buffer.str();
+            std::cout << "\n<| Code After Import Processing |>\n"
+                      << output << std::endl;
         }
-        const auto& output = opts.prettyPrint ? formatScheme(ss.str()) : ss.str();
-
-        std::cout << "\n<| Expanded Macro |>\n"
-                  << output
-                  << std::endl;
-
-        ss.str("");
-        ss.clear();
-
         if (opts.printAST) {
-            std::cout << "\n<| AST After Macro Expansion |>\n";
-            for (const auto& expression : expanded) {
+            std::cout << "\n<| AST After Import Processing |>\n";
+            for (const auto& expression : afterImportExpressions) {
                 std::cout << expression->ASTToString() << "\n";
             }
             std::cout << "\n"
                       << std::endl;
         }
     }
+    std::vector<std::shared_ptr<Expression>> finalExpressions;
+    try {
+        auto macroEnv = std::make_shared<pattern::MacroEnvironment>();
 
-    if (opts.compile) {
-        auto anf = ir::ANFtransform(expanded);
-        if (!anf.empty()) {
-            if (opts.printANF) {
-                std::cout << "\n<| ANF Before Optimization |>\n";
-                for (const auto& tl : anf) {
-                    std::cout << tl->toString() << "\n";
+        // Populate with imported macros
+        for (const auto& libData : processedCode.importedLibrariesData) {
+            for (const auto& [name, binding] : libData.exportedBindings) {
+                if (binding.type == import::ExportedBinding::Type::SYNTAX) {
+                    if (auto* ds = std::get_if<DefineSyntaxExpression>(&binding.definition->as)) {
+                        macroEnv->defineMacro(name, ds->rule);
+                    }
                 }
-                std::cout << std::endl;
             }
+        }
 
-            if (opts.optimise) {
-                auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(anf);
+        // Add top-level macros from the current file/input & prepare list for expansion
+        std::vector<std::shared_ptr<Expression>> expressionsToExpand;
+        for (const auto& expr : processedCode.remainingExpressions) {
+            if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+                if (std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
+                    macroEnv->defineMacro(de->name.token.lexeme, de->rule);
+                }
+            } else {
+                expressionsToExpand.push_back(expr);
+            }
+        }
 
-                if (opts.printANF) {
-                    std::cout << "\n<| ANF After Optimization |>\n";
-                    for (const auto& tl : optimizedAnf) {
+        finalExpressions = macroexp::expandMacros(expressionsToExpand, macroEnv);
+
+    } catch (const std::exception& e) {
+        std::cerr << "[Macro Expansion Error] " << e.what() << std::endl;
+        return;
+    }
+
+    if (opts.printMacro) {
+        ss_print_buffer.str("");
+        ss_print_buffer.clear();
+        for (const auto& expression : finalExpressions) {
+            ss_print_buffer << expression->toString() << "\n";
+        }
+        const auto output = opts.prettyPrint ? formatScheme(ss_print_buffer.str()) : ss_print_buffer.str();
+        std::cout << "\n<| Expanded Macro |>\n"
+                  << output << std::endl;
+    }
+    if (opts.printAST && (opts.printMacro || opts.prettyPrint)) { // Optionally print AST again after expansion
+        std::cout << "\n<| AST After Macro Expansion |>\n";
+        for (const auto& expression : finalExpressions) {
+            std::cout << expression->ASTToString() << "\n";
+        }
+        std::cout << "\n"
+                  << std::endl;
+    }
+
+    try {
+        if (opts.compile) {
+            auto importedDefinitions = prepareCompilerInput(processedCode);
+            importedDefinitions.insert(importedDefinitions.end(), finalExpressions.begin(), finalExpressions.end());
+            auto anf = ir::ANFtransform(importedDefinitions);
+            if (!anf.empty()) {
+                const auto* optimizedAnfPtr = &anf; // Pointer to use correct ANF list
+                std::vector<std::shared_ptr<ir::ANF>> optimizedAnfStorage;
+
+                if (opts.printANF) { // Print ANF before optimization
+                    std::cout << "\n<| ANF Before Optimization |>\n";
+                    for (const auto& tl : anf) {
                         std::cout << tl->toString() << "\n";
                     }
                     std::cout << std::endl;
                 }
 
-                const auto _3ac = tac::anfToTac(optimizedAnf);
-            } else {
-                const auto _3ac = tac::anfToTac(anf);
+                if (opts.optimise) {
+                    auto [optResult, preGraph, postGraph] = optimise::optimise(anf);
+                    if (opts.printANF) { // Print ANF after optimization
+                        std::cout << "\n<| ANF After Optimization |>\n";
+                        for (const auto& tl : *optimizedAnfPtr) {
+                            std::cout << tl->toString() << "\n";
+                        }
+                        std::cout << std::endl;
+                    }
+                }
 
-                if (opts.print3AC) {
-                    std::cout << "<| Three Address Code |>" << std::endl
+                const auto _3ac = tac::anfToTac(*optimizedAnfPtr);
+
+                if (opts.print3AC) { // Print 3AC
+                    std::cout << "\n<| Three Address Code |>\n"
                               << _3ac.toString() << std::endl;
                 }
 
-                try {
-                    std::filesystem::create_directories(opts.outputPath);
-                    auto outPath = std::filesystem::path(opts.outputPath);
-                    std::string qbeFile = (outPath / "output.qbe").string();
-                    std::string asmFile = (outPath / "output.asm").string();
-                    std::string exeFile = (outPath / "scheme_program").string();
+                // Compilation output steps
+                std::filesystem::create_directories(opts.outputPath);
+                auto outPath = std::filesystem::path(opts.outputPath);
+                std::string qbeFile = (outPath / "output.qbe").string();
+                std::string asmFile = (outPath / "output.asm").string();
+                std::string exeFile = (outPath / "scheme_program").string();
 
-                    // Generate QBE IR
-                    std::cout << "Generating QBE IR to: " << qbeFile << std::endl;
-                    generateQBEIr(_3ac, qbeFile);
+                std::cout << "Generating QBE IR to: " << qbeFile << std::endl;
+                generateQBEIr(_3ac, qbeFile);
 
-                    // Compile QBE IR to assembly (redirect output to file)
-                    std::cout << "Compiling QBE IR to assembly: " << asmFile << std::endl;
-                    std::string qbeCmd = "qbe " + qbeFile + " > " + asmFile;
-                    if (system(qbeCmd.c_str()) != 0) {
-                        throw std::runtime_error("QBE compilation failed: " + qbeCmd);
-                    }
-
-                    // Compile assembly to executable, linking with runtime
-                    std::cout << "Compiling assembly to executable: " << exeFile << std::endl;
-                    std::string linkCmd = "clang -o " + exeFile + " " + asmFile + " ../runtime/build/libruntime.a";
-                    if (system(linkCmd.c_str()) != 0) {
-                        throw std::runtime_error("Linking failed: " + linkCmd);
-                    }
-
-                    std::cout << "Successfully generated executable: " << exeFile << std::endl;
-                    return;
-                } catch (const std::filesystem::filesystem_error& e) {
-                    throw std::runtime_error("Filesystem error: " + std::string(e.what()));
+                std::cout << "Compiling QBE IR to assembly: " << asmFile << std::endl;
+                std::string qbeCmd = "qbe " + qbeFile + " > " + asmFile;
+                if (system(qbeCmd.c_str()) != 0) {
+                    throw std::runtime_error("QBE compilation failed");
                 }
+
+                std::cout << "Compiling assembly to executable: " << exeFile << std::endl;
+                std::string linkCmd = "clang -o " + exeFile + " " + asmFile + " ../runtime/build/libruntime.a";
+                if (system(linkCmd.c_str()) != 0) {
+                    throw std::runtime_error("Linking failed");
+                }
+
+                std::cout << "Successfully generated executable: " << exeFile << std::endl;
+                return;
+
+            } else {
+                std::cerr << "ANF transformation resulted in empty output." << std::endl;
+            }
+        } else {
+            prepareInterpreterEnvironment(processedCode, state);
+            auto val = interpret::interpret(state, finalExpressions);
+            if (val) {
+                std::cout << val->toString() << std::endl;
             }
         }
-    }
-
-    auto val = interpret::interpret(state, expanded);
-    if (val) {
-        std::cout << val->toString() << std::endl;
+    } catch (const InterpreterError& e) {
+        e.printFormattedError();
+    } catch (const ParseError& e) {
+        e.printFormattedError();
+    } catch (const std::exception& e) {
+        std::cerr << "[Runtime Error] " << e.what() << std::endl;
     }
 }
 

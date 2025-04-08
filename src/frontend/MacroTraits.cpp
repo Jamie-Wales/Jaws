@@ -555,41 +555,42 @@ std::shared_ptr<MacroExpression> transformTemplate(
 
 std::shared_ptr<MacroExpression> transformMacroRecursive(
     const std::shared_ptr<MacroExpression>& expr,
-    pattern::MacroEnvironment& env)
+    std::shared_ptr<pattern::MacroEnvironment> env)
 {
     bool expanded;
     auto current = expr;
     int recursion_depth = 0;
     const int MAX_RECURSION = 100;
 
+    if (!env) {
+        return expr;
+    }
+
     do {
         if (++recursion_depth > MAX_RECURSION) {
+            std::cerr << "[Warning] Max macro expansion depth exceeded for: " << expr->toString() << std::endl;
             return current;
         }
 
         expanded = false;
         if (auto* atom = std::get_if<MacroAtom>(&current->value)) {
-            if (env.isMacro(atom->syntax.token.lexeme)) {
+            // Use the passed-in env (shared_ptr)
+            if (env->isMacro(atom->syntax.token.lexeme)) {
                 std::string macro_name_str = atom->syntax.token.lexeme;
-                auto synt = env.getMacroDefinition(macro_name_str);
-                if (!synt || !*synt) {
-                    std::cerr << "[ERROR] Macro definition not found or invalid for atom: " << macro_name_str << std::endl;
+                auto synt = env->getMacroDefinition(macro_name_str); // Use env->
+                if (!synt || !*synt || !std::holds_alternative<SyntaxRulesExpression>((*synt)->as)) {
+                    // Handle non-syntax-rules macros or errors
                     break;
                 }
-                if (!std::holds_alternative<SyntaxRulesExpression>((*synt)->as)) {
-                    break;
-                }
+                // Extract rules and literals from the macro definition (Expression*)
                 auto rules = std::get<SyntaxRulesExpression>((*synt)->as).rules;
                 auto literals = std::get<SyntaxRulesExpression>((*synt)->as).literals;
-
                 SyntaxContext macroContext = SyntaxContext::createFresh();
 
                 for (const auto& rule : rules) {
                     auto patternExpr = fromExpr(rule.pattern);
                     auto [matchEnv, success] = tryMatch(patternExpr, current, literals, macro_name_str);
-
                     if (success) {
-                        printMatchEnv(matchEnv, 2);
                         auto templateMacroExpr = fromExpr(rule.template_expr);
                         current = transformTemplate(templateMacroExpr, matchEnv, macroContext);
                         expanded = true;
@@ -599,35 +600,39 @@ std::shared_ptr<MacroExpression> transformMacroRecursive(
             }
         } else if (auto* list = std::get_if<MacroList>(&current->value)) {
             if (!list->elements.empty()) {
+                bool list_was_macro_call = false;
                 if (auto* firstAtom = std::get_if<MacroAtom>(&list->elements[0]->value)) {
-                    if (env.isMacro(firstAtom->syntax.token.lexeme)) {
+                    // Use the passed-in env (shared_ptr)
+                    if (env->isMacro(firstAtom->syntax.token.lexeme)) {
                         std::string macro_name_str = firstAtom->syntax.token.lexeme;
-                        auto synt = env.getMacroDefinition(macro_name_str);
-                        auto rules = std::get<SyntaxRulesExpression>((*synt)->as).rules;
-                        auto literals = std::get<SyntaxRulesExpression>((*synt)->as).literals;
+                        auto synt = env->getMacroDefinition(macro_name_str); // Use env->
+                        if (synt && *synt && std::holds_alternative<SyntaxRulesExpression>((*synt)->as)) {
+                            auto rules = std::get<SyntaxRulesExpression>((*synt)->as).rules;
+                            auto literals = std::get<SyntaxRulesExpression>((*synt)->as).literals;
+                            SyntaxContext macroContext = SyntaxContext::createFresh();
 
-                        SyntaxContext macroContext = SyntaxContext::createFresh();
-
-                        for (const auto& rule : rules) {
-                            auto patternExpr = fromExpr(rule.pattern);
-                            auto [matchEnv, success] = tryMatch(patternExpr, current, literals, macro_name_str);
-
-                            if (success) {
-                                auto templateMacroExpr = fromExpr(rule.template_expr);
-                                current = transformTemplate(templateMacroExpr, matchEnv, macroContext);
-                                expanded = true;
-                                break;
+                            for (const auto& rule : rules) {
+                                auto patternExpr = fromExpr(rule.pattern);
+                                auto [matchEnv, success] = tryMatch(patternExpr, current, literals, macro_name_str);
+                                if (success) {
+                                    auto templateMacroExpr = fromExpr(rule.template_expr);
+                                    current = transformTemplate(templateMacroExpr, matchEnv, macroContext);
+                                    expanded = true;
+                                    list_was_macro_call = true; // Mark that this list *was* a macro call
+                                    break;
+                                }
                             }
                         }
                     }
                 }
 
-                if (!expanded) {
+                if (!list_was_macro_call) { // Only recurse if the list itself wasn't a macro call that expanded
                     std::vector<std::shared_ptr<MacroExpression>> newElements;
                     bool anySubExpanded = false;
                     for (const auto& elem : list->elements) {
+                        // Pass the env shared_ptr down recursively
                         auto newElem = transformMacroRecursive(elem, env);
-                        if (newElem->toString() != elem->toString()) {
+                        if (newElem != elem) {
                             anySubExpanded = true;
                         }
                         newElements.push_back(newElem);
@@ -637,6 +642,7 @@ std::shared_ptr<MacroExpression> transformMacroRecursive(
                             MacroList { std::move(newElements) },
                             current->isVariadic,
                             current->line);
+                        // Set expanded = true to force another pass in case the new structure is a macro call
                         expanded = true;
                     }
                 }
@@ -651,7 +657,8 @@ std::shared_ptr<MacroExpression> transformMacro(
     const std::shared_ptr<Expression>& template_expr,
     const MatchEnv& env,
     const std::string& macroName,
-    pattern::MacroEnvironment& macroEnv)
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv // Takes shared_ptr
+)
 {
     auto templateMacroExpr = fromExpr(template_expr);
 
@@ -759,13 +766,11 @@ std::shared_ptr<Expression> convertIf(const MacroList& ml, int line)
 
     if (!condition || !thenBranch)
         throw std::runtime_error("Invalid if parts during conversion");
-    thenBranch = std::make_shared<Expression>(TailExpression { thenBranch }, thenBranch->line);
 
     if (ml.elements.size() == 4) {
         auto elseConv = convertMacroResultToExpressionInternal(ml.elements[3]);
         if (!elseConv)
             throw std::runtime_error("Invalid if else part during conversion");
-        elseBranchOpt = std::make_shared<Expression>(TailExpression { elseConv }, elseConv->line);
     }
     return std::make_shared<Expression>(IfExpression { condition, thenBranch, elseBranchOpt }, line);
 }
@@ -986,50 +991,45 @@ std::shared_ptr<Expression> convertMacroResultToExpression(
     }
 }
 
-std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_ptr<Expression>> exprs)
+std::vector<std::shared_ptr<Expression>> expandMacros(
+    const std::vector<std::shared_ptr<Expression>>& exprs,
+    std::shared_ptr<pattern::MacroEnvironment> env)
 {
     std::vector<std::shared_ptr<Expression>> finalExpandedExprs;
-    pattern::MacroEnvironment env;
-
-    for (const auto& expr : exprs) {
-        if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-            if (std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
-                auto ruleExpr = de->rule;
-                env.defineMacro(de->name.token.lexeme, ruleExpr);
-            } else {
-                std::cerr << "Warning: define-syntax used without syntax-rules for macro "
-                          << de->name.token.lexeme << std::endl;
-            }
-        }
-    }
+    auto currentMacroEnv = env ? env : std::make_shared<pattern::MacroEnvironment>();
 
     for (const auto& expr : exprs) {
         if (std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
             continue;
-        } else if (std::holds_alternative<VectorExpression>(expr->as)) {
-            finalExpandedExprs.push_back(expr);
-        } else {
+        }
+
+        try {
             auto userMacroExpr = fromExpr(expr);
             if (!userMacroExpr) {
-                finalExpandedExprs.push_back(expr);
                 std::cerr << "[Warning] fromExpr failed for: " << expr->toString() << std::endl;
+                finalExpandedExprs.push_back(expr);
                 continue;
             }
-            auto expandedMacro = transformMacroRecursive(userMacroExpr, env);
+
+            auto expandedMacro = transformMacroRecursive(userMacroExpr, currentMacroEnv);
             if (!expandedMacro) {
+                finalExpandedExprs.push_back(expr);
+                std::cerr << "[Warning] transformMacroRecursive returned null for: " << expr->toString() << std::endl;
                 continue;
             }
-            auto finalExprForInterpreter = convertMacroResultToExpression(expandedMacro);
-            if (finalExprForInterpreter) {
-                finalExpandedExprs.push_back(finalExprForInterpreter);
+
+            auto finalExpr = convertMacroResultToExpression(expandedMacro);
+            if (finalExpr) {
+                finalExpandedExprs.push_back(finalExpr);
             } else {
                 finalExpandedExprs.push_back(expr);
-                std::cerr << "[Warning] Macro expansion failed for: " << expr->toString()
-                          << ", keeping original." << std::endl;
+                std::cerr << "[Warning] Macro expansion conversion failed for: " << expr->toString() << ", keeping original." << std::endl;
             }
+        } catch (const std::exception& e) {
+            std::cerr << "[Error] Macro expansion failed for expression near line " << expr->line << ": " << e.what() << std::endl;
+            finalExpandedExprs.push_back(expr);
         }
     }
     return finalExpandedExprs;
 }
-
 } // namespace macroexp

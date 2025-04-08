@@ -26,6 +26,10 @@ const std::unordered_map<std::string, Tokentype> keywords = {
 
 const std::vector<RegexInfo> regexPatterns = {
     { std::regex(R"(;.*)"), Tokentype::COMMENT },
+    { std::regex(R"(,@|(unquote-splicing))"), Tokentype::COMMA_AT },
+    { std::regex(R"(,(?!@)|(unquote))"), Tokentype::COMMA },
+    { std::regex(R"(`|(quasiquote))"), Tokentype::BACKQUOTE },
+    { std::regex(R"('|(quote))"), Tokentype::QUOTE },
     { std::regex(R"("(?:[^"\\]|\\.)*")"), Tokentype::STRING },
     { std::regex(R"(#\\(space|newline|tab|return|[a-zA-Z0-9]))"), Tokentype::CHAR },
     { std::regex(R"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:(?:[+-](?:\d+(?:\.\d*)?|\.\d+))?i|@(?:\d+(?:\.\d*)?|\.\d+))|[+-]i)"), Tokentype::COMPLEX },

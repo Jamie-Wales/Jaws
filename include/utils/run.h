@@ -1,4 +1,5 @@
 #pragma once
+#include "Import.h"
 #include "interpret.h"
 #include <string>
 #include <vector>
@@ -23,3 +24,5 @@ void runFile(Options& opts);
 void runPrompt(Options& opts);
 void evaluate(interpret::InterpreterState& state, Options& opts);
 void testMacros();
+void prepareInterpreterEnvironment(const import::ProcessedCode& code, interpret::InterpreterState& state);
+std::vector<std::shared_ptr<Expression>> prepareCompilerInput(const import::ProcessedCode& code);

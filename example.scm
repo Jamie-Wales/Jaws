@@ -1,11 +1,4 @@
-(define-syntax push!
-  (syntax-rules () ((_ item lst-var) (set! lst-var (cons item lst-var)))))
+(import (base))
 
-(define my-list '(b c))
-(let ((cons +)) 
-  (define temp 99) ; User variable, potentially relevant if 'set!' was also captured
-
-  (push! 'a my-list)) ; Tries to do (set! my-list (cons 'a my-list))
-
-(display my-list) ; What is my-list now?
-(newline)
+(display (cond ((zero? 0) "Zero") (else "Not zero"))) (newline)
+(display (let* ((x 5)) x)) (newline)

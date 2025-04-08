@@ -16,6 +16,7 @@ struct ParserState {
 
 std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token> tokens);
 
+std::shared_ptr<Expression> parseDefineLibrary(ParserState& state);
 std::shared_ptr<Expression> parseExpression(ParserState& state);
 std::shared_ptr<Expression> parseAtom(ParserState& state);
 std::shared_ptr<Expression> parseSExpression(ParserState& state);

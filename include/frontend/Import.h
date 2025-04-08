@@ -1,31 +1,46 @@
 #pragma once
 #include "Expression.h"
+#include "Syntax.h"
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 namespace import {
 
-std::vector<std::shared_ptr<Expression>> processImports(const std::vector<std::shared_ptr<Expression>>& expressions);
+// --- Data Structures ---
 
-bool isDefinition(const std::shared_ptr<Expression>& expr);
+struct ExportedBinding {
+    HygienicSyntax syntax;
+    std::shared_ptr<Expression> definition;
+    enum class Type { VALUE,
+        SYNTAX,
+        UNKNOWN } type
+        = Type::UNKNOWN;
+};
+
+struct LibraryData {
+    std::vector<std::shared_ptr<Expression>> canonicalName;
+    std::map<std::string, ExportedBinding> exportedBindings;
+};
+
+struct ProcessedCode {
+    std::vector<std::shared_ptr<Expression>> remainingExpressions;
+    std::vector<LibraryData> importedLibrariesData;
+};
+
 bool fileExists(const std::string& path);
-std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec);
+std::string readFile(const std::string& path);
+bool isDefinition(const std::shared_ptr<Expression>& expr);
+std::string libraryNameToStringPath(const std::vector<std::shared_ptr<Expression>>& nameParts);
+std::string resolveLibraryPath(const std::vector<std::shared_ptr<Expression>>& nameParts);
 
-std::vector<std::shared_ptr<Expression>> processImport(const ImportExpression& import);
-
-void importLibrary(
+LibraryData importLibrary(
     const std::string& path,
-    const ImportExpression::ImportSpec& spec,
-    std::vector<std::shared_ptr<Expression>>& expressions);
+    std::set<std::string>& visitedPaths);
 
-std::shared_ptr<Expression> transformExpression(
-    const std::shared_ptr<Expression>& expr,
-    const ImportExpression::ImportSpec& spec);
+ProcessedCode processImports(
+    const std::vector<std::shared_ptr<Expression>>& expressions);
 
-std::shared_ptr<Expression> renameDefinition(
-    const std::shared_ptr<Expression>& expr,
-    const std::string& oldName,
-    const std::string& newName);
-
-} 
+}

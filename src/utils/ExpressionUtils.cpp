@@ -17,7 +17,63 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           [&](const AtomExpression& e) -> std::shared_ptr<Expression> {
                               return expr;
                           },
+                          [&](const DefineLibraryExpression& dl) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("define-library"));
 
+                              // Library Name List
+                              std::vector<std::shared_ptr<Expression>> nameElements;
+                              for (const auto& part : dl.libraryName) {
+                                  nameElements.push_back(exprToList(part)); // Convert each part
+                              }
+                              elements.push_back(std::make_shared<Expression>(
+                                  Expression { ListExpression { nameElements, false }, expr->line }));
+
+                              // Export Clause (if exists)
+                              if (!dl.exports.empty()) {
+                                  std::vector<std::shared_ptr<Expression>> exportElements;
+                                  exportElements.push_back(makeAtom("export"));
+                                  for (const auto& exp : dl.exports) {
+                                      exportElements.push_back(std::make_shared<Expression>(
+                                          Expression { AtomExpression { exp }, expr->line }));
+                                  }
+                                  elements.push_back(std::make_shared<Expression>(
+                                      Expression { ListExpression { exportElements, false }, expr->line }));
+                              }
+
+                              if (!dl.imports.empty()) {
+                                  std::vector<std::shared_ptr<Expression>> importClauseElements;
+                                  importClauseElements.push_back(makeAtom("import"));
+                                  // TODO: Iterate through dl.imports and convert each spec back to its list form
+                                  // This requires logic similar to the ImportExpression case in reverse.
+                                  // Example for one spec (needs full logic):
+                                  // if (!dl.imports.empty()) {
+                                  //    auto firstSpecConverted = convertImportSpecToList(dl.imports[0], expr->line);
+                                  //    importClauseElements.push_back(firstSpecConverted);
+                                  // }
+                                  elements.push_back(std::make_shared<Expression>(
+                                      Expression { ListExpression { importClauseElements, false }, expr->line }));
+                              }
+
+                              // Begin Clause (if exists)
+                              if (!dl.body.empty()) {
+                                  std::vector<std::shared_ptr<Expression>> beginElements;
+                                  beginElements.push_back(makeAtom("begin"));
+                                  for (const auto& bodyExpr : dl.body) {
+                                      // Handle potential TailExpression if reversing DefineProcedure/Lambda inside body
+                                      if (auto* tail = std::get_if<TailExpression>(&bodyExpr->as)) {
+                                          beginElements.push_back(exprToList(tail->expression));
+                                      } else {
+                                          beginElements.push_back(exprToList(bodyExpr));
+                                      }
+                                  }
+                                  elements.push_back(std::make_shared<Expression>(
+                                      Expression { ListExpression { beginElements, false }, expr->line }));
+                              }
+
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
                           [&](const QuasiQuoteExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("quasiquote", Tokentype::IDENTIFIER));

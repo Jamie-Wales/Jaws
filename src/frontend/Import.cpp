@@ -1,9 +1,18 @@
 #include "Import.h"
-#include "Error.h"
 #include "parse.h"
 #include "scan.h"
+
+#include <filesystem>
 #include <fstream>
+#include <map>
+#include <memory>
 #include <set>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <vector>
 
 #ifdef WASM_BUILD
 #include <emscripten/fetch.h>
@@ -12,62 +21,30 @@
 
 namespace import {
 
-std::shared_ptr<Expression> renameDefinition(
-    const std::shared_ptr<Expression>& expr,
-    const std::string& oldName,
-    const std::string& newName)
-{
-    Token newToken(Tokentype::IDENTIFIER, newName, expr->line, expr->line);
-    // Create a HygienicSyntax with the new token and empty context
-    HygienicSyntax newSyntax { newToken, SyntaxContext {} };
-
-    if (auto* define = std::get_if<DefineExpression>(&expr->as)) {
-        return std::make_shared<Expression>(
-            Expression { DefineExpression { newSyntax, define->value }, expr->line });
-    } else if (auto* defineProc = std::get_if<DefineProcedure>(&expr->as)) {
-        return std::make_shared<Expression>(
-            Expression { DefineProcedure { newSyntax, defineProc->parameters, defineProc->body, defineProc->isVariadic },
-                expr->line });
-    } else if (auto* defineSyntax = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-        return std::make_shared<Expression>(
-            Expression { DefineSyntaxExpression { newSyntax, defineSyntax->rule }, expr->line });
-    }
-
-    return expr;
-}
-
 #ifdef WASM_BUILD
-// For WebAssembly, use emscripten's synchronous XHR to check if a file exists
 bool fileExists(const std::string& path)
 {
     emscripten::val xhr = emscripten::val::global("XMLHttpRequest").new_();
     xhr.call<void>("open", std::string("HEAD"), path, false);
     xhr.call<void>("send");
-
     return xhr["status"].as<int>() == 200;
 }
-
-// Read file content for WebAssembly using synchronous XHR
 std::string readFile(const std::string& path)
 {
     emscripten::val xhr = emscripten::val::global("XMLHttpRequest").new_();
     xhr.call<void>("open", std::string("GET"), path, false);
     xhr.call<void>("send");
-
     if (xhr["status"].as<int>() != 200) {
         throw ParseError("Failed to load file: " + path, Token(), "");
     }
-
     return xhr["responseText"].as<std::string>();
 }
 #else
-// Native filesystem operations for non-WASM builds
 bool fileExists(const std::string& path)
 {
-    std::ifstream f(path.c_str());
-    return f.good();
+    std::error_code ec;
+    return std::filesystem::exists(path, ec);
 }
-
 std::string readFile(const std::string& path)
 {
     std::ifstream file(path);
@@ -80,204 +57,171 @@ std::string readFile(const std::string& path)
 }
 #endif
 
+// --- Helper Functions Implementation ---
+
 bool isDefinition(const std::shared_ptr<Expression>& expr)
 {
     return std::holds_alternative<DefineExpression>(expr->as) || std::holds_alternative<DefineSyntaxExpression>(expr->as) || std::holds_alternative<DefineProcedure>(expr->as);
 }
 
-void importLibrary(
-    const std::string& path,
-    const ImportExpression::ImportSpec& spec,
-    std::vector<std::shared_ptr<Expression>>& expressions)
+std::string libraryNameToStringPath(const std::vector<std::shared_ptr<Expression>>& nameParts)
 {
-    if (!fileExists(path)) {
-        throw ParseError("Cannot find library file: " + path, Token(), "");
+    std::filesystem::path libPath;
+    for (const auto& partExpr : nameParts) {
+        if (auto* atom = std::get_if<AtomExpression>(&partExpr->as)) {
+            if (atom->value.token.type == Tokentype::IDENTIFIER) {
+                libPath /= atom->value.token.lexeme;
+            } else if (atom->value.token.type == Tokentype::INTEGER) {
+                try {
+                    if (std::stoi(atom->value.token.lexeme) < 0) {
+                        throw std::runtime_error("Negative version");
+                    }
+                    libPath /= atom->value.token.lexeme;
+                } catch (...) {
+                    throw std::runtime_error("Invalid integer in library name: " + atom->value.token.lexeme);
+                }
+            } else {
+                throw std::runtime_error("Invalid token type");
+            }
+        } else {
+            throw std::runtime_error("Library name component must be an atom");
+        }
     }
+    return libPath.string();
+}
 
+std::string resolveLibraryPath(const std::vector<std::shared_ptr<Expression>>& nameParts)
+{
+    std::string namePathStr = libraryNameToStringPath(nameParts);
+#ifdef WASM_BUILD
+    std::string webLibDir = "/lib/";
+    std::string resolvedPath = webLibDir + namePathStr + ".scm";
+    if (fileExists(resolvedPath))
+        return resolvedPath;
+    resolvedPath = namePathStr + ".scm";
+    if (fileExists(resolvedPath))
+        return resolvedPath;
+    throw std::runtime_error("Cannot resolve library path (WASM): " + namePathStr);
+#else
+    std::filesystem::path baseLibPath = "../lib";
+    std::filesystem::path resolvedPath = baseLibPath / (namePathStr + ".scm");
+    if (fileExists(resolvedPath.string()))
+        return resolvedPath.string();
+    std::filesystem::path relativePath = namePathStr + ".scm";
+    if (fileExists(relativePath.string()))
+        return relativePath.string();
+    throw std::runtime_error("Cannot resolve library path (Native): " + namePathStr);
+#endif
+}
+
+// --- Main Function Implementations ---
+
+LibraryData importLibrary(
+    const std::string& path,
+    std::set<std::string>& visitedPaths)
+{
+    if (visitedPaths.count(path)) {
+        throw std::runtime_error("Circular library dependency detected: " + path);
+    }
+    visitedPaths.insert(path);
+
+    LibraryData libraryData;
+
+    if (!fileExists(path)) {
+        visitedPaths.erase(path);
+        throw std::runtime_error("Library file not found: " + path);
+    }
     auto source = readFile(path);
     auto tokens = scanner::tokenize(source);
-    auto libExprs = parse::parse(std::move(tokens));
+    auto parsedExprsOpt = parse::parse(std::move(tokens));
 
-    if (!libExprs) {
-        throw ParseError("Failed to parse library: " + path, Token(), "");
+    if (!parsedExprsOpt || parsedExprsOpt->empty()) {
+        visitedPaths.erase(path);
+        return libraryData;
     }
+    auto parsedExprs = *parsedExprsOpt;
 
-    auto libraryExprs = processImports(*libExprs);
+    if (auto* libDef = std::get_if<DefineLibraryExpression>(&parsedExprs[0]->as)) {
+        libraryData.canonicalName = libDef->libraryName;
 
-    for (const auto& expr : libraryExprs) {
-        auto transformed = transformExpression(expr, spec);
-        if (transformed) {
-            expressions.push_back(transformed);
+        std::set<std::string> exportNames;
+        for (const auto& expSym : libDef->exports) {
+            exportNames.insert(expSym.token.lexeme);
         }
+
+        for (const auto& bodyExpr : libDef->body) {
+            if (!isDefinition(bodyExpr))
+                continue;
+
+            std::string defName;
+            HygienicSyntax defSyntax;
+            ExportedBinding::Type defType = ExportedBinding::Type::UNKNOWN;
+
+            if (auto* d = std::get_if<DefineExpression>(&bodyExpr->as)) {
+                defName = d->name.token.lexeme;
+                defSyntax = d->name;
+                defType = ExportedBinding::Type::VALUE;
+            } else if (auto* dp = std::get_if<DefineProcedure>(&bodyExpr->as)) {
+                defName = dp->name.token.lexeme;
+                defSyntax = dp->name;
+                defType = ExportedBinding::Type::VALUE;
+            } else if (auto* ds = std::get_if<DefineSyntaxExpression>(&bodyExpr->as)) {
+                defName = ds->name.token.lexeme;
+                defSyntax = ds->name;
+                defType = ExportedBinding::Type::SYNTAX;
+            }
+
+            if (!defName.empty() && exportNames.count(defName)) {
+                if (libraryData.exportedBindings.count(defName)) {
+                    std::cerr << "[Warning] Duplicate export '" << defName << "' in library '" << path << "'." << std::endl;
+                }
+                ExportedBinding binding;
+                binding.syntax = defSyntax;
+                binding.definition = bodyExpr;
+                binding.type = defType;
+                libraryData.exportedBindings[defName] = std::move(binding);
+            }
+        }
+
+    } else {
+        visitedPaths.erase(path);
+        throw std::runtime_error("File '" + path + "' is not a valid R7RS library (missing define-library).");
     }
+
+    visitedPaths.erase(path);
+    return libraryData;
 }
 
-#ifdef WASM_BUILD
-std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
+ProcessedCode processImports(
+    const std::vector<std::shared_ptr<Expression>>& expressions)
 {
-    if (spec.library.size() == 1) {
-        if (auto* atom = std::get_if<AtomExpression>(&spec.library[0]->as)) {
-            std::string fileName = atom->value.token.lexeme + ".scm";
-
-            // First try in /lib directory (preferred location for web)
-            std::string webPath = "/lib/" + fileName;
-            if (fileExists(webPath)) {
-                return webPath;
-            }
-
-            // Then try in current directory
-            if (fileExists(fileName)) {
-                return fileName;
-            }
-
-            // Fallback to the original paths for backward compatibility
-            std::string localPath = atom->value.token.lexeme + ".scm";
-            std::string libPath = "../lib/" + localPath;
-
-            if (fileExists(libPath)) {
-                return libPath;
-            }
-
-            // For web, also try the public/lib path
-            return "/lib/" + fileName;
-        }
-    }
-
-    std::string libPath;
-    for (const auto& part : spec.library) {
-        if (auto* atom = std::get_if<AtomExpression>(&part->as)) {
-            libPath += atom->value.token.lexeme + "/";
-        }
-    }
-
-    // First try the web-specific path
-    std::string webPath = "/lib/" + libPath.substr(0, libPath.length() - 1) + ".scm";
-    if (fileExists(webPath)) {
-        return webPath;
-    }
-
-    // Fallback to original path format
-    return "../lib/" + libPath.substr(0, libPath.length() - 1) + ".scm";
-}
-#else
-std::string resolveLibraryPath(const ImportExpression::ImportSpec& spec)
-{
-    if (spec.library.size() == 1) {
-        if (auto* atom = std::get_if<AtomExpression>(&spec.library[0]->as)) {
-            std::string localPath = atom->value.token.lexeme + ".scm";
-            if (fileExists(localPath)) {
-                return localPath;
-            }
-            return std::format("../lib/{}", localPath);
-        }
-    }
-
-    std::string libPath;
-    for (const auto& part : spec.library) {
-        if (auto* atom = std::get_if<AtomExpression>(&part->as)) {
-            libPath += atom->value.token.lexeme + "/";
-        }
-    }
-    return std::format("../lib/{}.scm", libPath.substr(0, libPath.length() - 1));
-}
-#endif
-
-std::shared_ptr<Expression> transformExpression(
-    const std::shared_ptr<Expression>& expr,
-    const ImportExpression::ImportSpec& spec)
-{
-    std::optional<std::string> defName;
-    if (auto* define = std::get_if<DefineExpression>(&expr->as)) {
-        defName = define->name.token.lexeme;
-    } else if (auto* defineProc = std::get_if<DefineProcedure>(&expr->as)) {
-        defName = defineProc->name.token.lexeme;
-    } else if (auto* defineSyntax = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-        defName = defineSyntax->name.token.lexeme;
-    }
-
-    if (!defName) {
-        return expr;
-    }
-    switch (spec.type) {
-    case ImportExpression::ImportSet::Type::DIRECT:
-        return expr;
-
-    case ImportExpression::ImportSet::Type::ONLY:
-        for (const auto& id : spec.identifiers) {
-            if (id.token.lexeme == *defName) {
-                return expr;
-            }
-        }
-        return nullptr;
-
-    case ImportExpression::ImportSet::Type::EXCEPT:
-        for (const auto& id : spec.identifiers) {
-            if (id.token.lexeme == *defName) {
-                return nullptr;
-            }
-        }
-        return expr;
-
-    case ImportExpression::ImportSet::Type::PREFIX:
-        return renameDefinition(expr, *defName, spec.prefix.token.lexeme + *defName);
-
-    case ImportExpression::ImportSet::Type::RENAME:
-        for (const auto& [oldName, newName] : spec.renames) {
-            if (oldName.token.lexeme == *defName) {
-                return renameDefinition(expr, *defName, newName.token.lexeme);
-            }
-        }
-        return expr;
-    }
-
-    return expr;
-}
-
-std::vector<std::shared_ptr<Expression>> processImport(const ImportExpression& import)
-{
-    std::vector<std::shared_ptr<Expression>> importedExprs;
-
-    for (const auto& spec : import.imports) {
-        auto path = resolveLibraryPath(spec);
-        importLibrary(path, spec, importedExprs);
-    }
-
-    return importedExprs;
-}
-
-std::vector<std::shared_ptr<Expression>> processImports(const std::vector<std::shared_ptr<Expression>>& expressions)
-{
-    std::vector<std::shared_ptr<Expression>> defines;
-    std::vector<std::shared_ptr<Expression>> others;
+    ProcessedCode result;
+    std::set<std::string> visitedPaths;
 
     for (const auto& expr : expressions) {
         if (auto* import = std::get_if<ImportExpression>(&expr->as)) {
-            auto imported = processImport(*import);
-            for (const auto& impExpr : imported) {
-                if (isDefinition(impExpr)) {
-                    defines.push_back(impExpr);
+            for (const auto& spec : import->imports) {
+                if (spec.type == ImportExpression::ImportSet::Type::DIRECT) {
+                    try {
+                        std::string path = resolveLibraryPath(spec.library);
+                        LibraryData data = importLibrary(path, visitedPaths);
+                        if (!data.exportedBindings.empty() || !data.canonicalName.empty()) {
+                            result.importedLibrariesData.push_back(std::move(data));
+                        }
+                    } catch (const std::exception& e) {
+                        throw std::runtime_error("Failed to import library '" + libraryNameToStringPath(spec.library) + "': " + e.what());
+                    }
                 } else {
-                    others.push_back(impExpr);
+                    throw std::runtime_error("Unsupported R6RS-style import set found.");
                 }
             }
+        } else if (std::holds_alternative<DefineLibraryExpression>(expr->as)) {
+            throw std::runtime_error("define-library found outside library file context.");
+        } else {
+            result.remainingExpressions.push_back(expr);
         }
     }
-
-    for (const auto& expr : expressions) {
-        if (!std::holds_alternative<ImportExpression>(expr->as)) {
-            if (isDefinition(expr)) {
-                defines.push_back(expr);
-            } else {
-                others.push_back(expr);
-            }
-        }
-    }
-
-    std::vector<std::shared_ptr<Expression>> result;
-    result.reserve(defines.size() + others.size());
-    result.insert(result.end(), defines.begin(), defines.end());
-    result.insert(result.end(), others.begin(), others.end());
-
     return result;
 }
-}
+
+} // namespace import

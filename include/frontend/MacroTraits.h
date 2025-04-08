@@ -88,12 +88,21 @@ void findVariadics(const MacroList& list, std::vector<std::string>& variadicVars
 void printMatchResult(const std::pair<MatchEnv, bool>& result);
 std::pair<MatchEnv, bool> tryMatch(std::shared_ptr<MacroExpression> pattern, std::shared_ptr<MacroExpression> expr, const std::vector<Token>& literals, const std::string& macroName);
 std::shared_ptr<MacroExpression> transformTemplate(const std::shared_ptr<MacroExpression>& template_expr, const MatchEnv& env, SyntaxContext macroContext = SyntaxContext {});
-std::shared_ptr<MacroExpression> transformMacroRecursive(const std::shared_ptr<MacroExpression>& expr, pattern::MacroEnvironment& env);
-std::shared_ptr<MacroExpression> transformMacro(const std::shared_ptr<Expression>& template_expr, const MatchEnv& env, const std::string& macroName, pattern::MacroEnvironment& macroEnv);
+std::shared_ptr<MacroExpression> transformMacroRecursive(
+    const std::shared_ptr<MacroExpression>& expr,
+    std::shared_ptr<pattern::MacroEnvironment> env);
+std::shared_ptr<MacroExpression> transformMacro(
+    const std::shared_ptr<Expression>& template_expr,
+    const MatchEnv& env,
+    const std::string& macroName,
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv // Takes shared_ptr
+);
 std::shared_ptr<Expression> convertMacroResultToExpressionInternal(const std::shared_ptr<MacroExpression>& macroResult);
 std::shared_ptr<Expression> convertMacroResultToExpression(const std::shared_ptr<MacroExpression>& macroResult);
 void wrapLastBodyExpression(std::vector<std::shared_ptr<Expression>>& body);
-std::vector<std::shared_ptr<Expression>> expandMacros(std::vector<std::shared_ptr<Expression>> exprs);
+std::vector<std::shared_ptr<Expression>> expandMacros(
+    const std::vector<std::shared_ptr<Expression>>& exprs,
+    std::shared_ptr<pattern::MacroEnvironment> env);
 
 std::string getKeyword(const MacroList& ml);
 std::shared_ptr<Expression> convertQuote(const MacroList& ml, int line);

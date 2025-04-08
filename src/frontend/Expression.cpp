@@ -25,8 +25,18 @@ QuasiQuoteExpression::QuasiQuoteExpression(std::vector<std::shared_ptr<Expressio
     : elements(std::move(elems))
 {
 }
+DefineLibraryExpression::DefineLibraryExpression(
+    std::vector<std::shared_ptr<Expression>> name,
+    std::vector<HygienicSyntax> exp,
+    std::vector<ImportExpression::ImportSpec> imp,
+    std::vector<std::shared_ptr<Expression>> b)
+    : libraryName(std::move(name))
+    , exports(std::move(exp))
+    , imports(std::move(imp))
+    , body(std::move(b))
+{
+}
 
-// AtomExpression implementation
 AtomExpression::AtomExpression(Token token)
     : value { token, SyntaxContext {} }
 {
