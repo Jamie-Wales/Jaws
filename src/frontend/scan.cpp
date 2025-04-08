@@ -1,9 +1,11 @@
 #include "scan.h"
 #include "Error.h"
+#include "Token.h"
 namespace scanner {
 
 const std::unordered_map<std::string, Tokentype> keywords = {
     { "define-syntax", Tokentype::DEFINE_SYTAX },
+    { "define-library", Tokentype::DEFINE_LIBRARY },
     { "define", Tokentype::DEFINE },
     { "lambda", Tokentype::LAMBDA },
     { "λ", Tokentype::LAMBDA },

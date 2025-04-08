@@ -12,6 +12,7 @@ class Expression;
 enum class ExprType {
     QuasiQuote,
     Atom,
+    DefineLibrary,
     SExpr,
     List,
     Define,
@@ -168,6 +169,20 @@ public:
     ListExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic = false);
 };
 
+class DefineLibraryExpression {
+public:
+    std::vector<std::shared_ptr<Expression>> libraryName;
+    std::vector<HygienicSyntax> exports;
+    std::vector<ImportExpression::ImportSpec> imports;
+    std::vector<std::shared_ptr<Expression>> body;
+
+    DefineLibraryExpression(
+        std::vector<std::shared_ptr<Expression>> name,
+        std::vector<HygienicSyntax> exp,
+        std::vector<ImportExpression::ImportSpec> imp,
+        std::vector<std::shared_ptr<Expression>> b);
+};
+
 class LambdaExpression {
 public:
     std::vector<HygienicSyntax> parameters;
@@ -252,6 +267,7 @@ public:
         ImportExpression,
         SyntaxRulesExpression,
         DefineSyntaxExpression,
+        DefineLibraryExpression,
         LetExpression,
         QuasiQuoteExpression>;
 
@@ -279,6 +295,7 @@ public:
                               [](const sExpression&) { return ExprType::SExpr; },
                               [](const ListExpression&) { return ExprType::List; },
                               [](const DefineExpression&) { return ExprType::Define; },
+                              [](const DefineLibraryExpression&) { return ExprType::DefineLibrary; },
                               [](const DefineProcedure&) { return ExprType::DefineProcedure; },
                               [](const VectorExpression&) { return ExprType::Vector; },
                               [](const LambdaExpression&) { return ExprType::Lambda; },
@@ -337,6 +354,7 @@ bool compareExpressionVectors(
     const std::vector<std::shared_ptr<Expression>>& lhs,
     const std::vector<std::shared_ptr<Expression>>& rhs);
 
+bool compareImportSpecVectors(const std::vector<ImportExpression::ImportSpec>& lhs, const std::vector<ImportExpression::ImportSpec>& rhs);
 bool compareTokenVectors(const std::vector<Token>& lhs, const std::vector<Token>& rhs);
 bool compareTokens(const Token& lhs, const Token& rhs);
 bool operator==(const Expression& lhs, const Expression& rhs);

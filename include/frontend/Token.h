@@ -45,6 +45,7 @@ enum class Tokentype {
     HASH,
     DEFINE_SYTAX,
     SYNTAX_RULE,
+    DEFINE_LIBRARY,
     ARROW,
     LET,
     LETREC,

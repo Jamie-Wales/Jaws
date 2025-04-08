@@ -353,6 +353,41 @@ void Expression::toString(std::stringstream& ss) const
             [&](const AtomExpression& e) {
                 ss << e.value.token.lexeme;
             },
+            [&](const DefineLibraryExpression& e) {
+                ss << "(define-library (";
+                // Print library name
+                for (size_t i = 0; i < e.libraryName.size(); ++i) {
+                    e.libraryName[i]->toString(ss);
+                    if (i < e.libraryName.size() - 1)
+                        ss << " ";
+                }
+                ss << ")";
+                if (!e.exports.empty()) {
+                    ss << " (export";
+                    for (const auto& exp : e.exports) {
+                        ss << " " << exp.token.lexeme;
+                    }
+                    ss << ")";
+                }
+                if (!e.imports.empty()) {
+                    ss << " (import";
+                    for (const auto& spec : e.imports) {
+                        ss << " ...import-spec..."; // Placeholder - reuse ImportExpression toString if needed
+                    }
+                    ss << ")";
+                }
+
+                // Print body if any
+                if (!e.body.empty()) {
+                    ss << " (begin";
+                    for (const auto& expr : e.body) {
+                        ss << " ";
+                        expr->toString(ss);
+                    }
+                    ss << ")";
+                }
+                ss << ")";
+            },
 
             [&](const QuasiQuoteExpression& e) {
                 ss << "'(";
@@ -564,6 +599,36 @@ std::shared_ptr<Expression> Expression::clone() const
                                       elements },
                                   line });
                           },
+                          [&](const DefineLibraryExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> clonedName;
+                              clonedName.reserve(e.libraryName.size());
+                              for (const auto& part : e.libraryName) {
+                                  clonedName.push_back(part->clone());
+                              }
+
+                              std::vector<HygienicSyntax> clonedExports = e.exports;
+
+                              std::vector<ImportExpression::ImportSpec> clonedImports;
+                              clonedImports.reserve(e.imports.size());
+                              for (const auto& spec : e.imports) {
+                                  clonedImports.push_back(ImportExpression::ImportSpec(spec));
+                              }
+
+                              std::vector<std::shared_ptr<Expression>> clonedBody;
+                              clonedBody.reserve(e.body.size());
+                              for (const auto& expr : e.body) {
+                                  clonedBody.push_back(expr->clone());
+                              }
+
+                              return std::make_shared<Expression>(
+                                  DefineLibraryExpression {
+                                      std::move(clonedName),
+                                      std::move(clonedExports),
+                                      std::move(clonedImports),
+                                      std::move(clonedBody) },
+                                  line);
+                          },
+
                           [&](const LetExpression& p) -> std::shared_ptr<Expression> {
                               LetExpression::Args output;
                               for (const auto& [syntax, second] : p.arguments) {
@@ -727,7 +792,42 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
                 }
                 ss << std::endl;
             },
+            [&](const DefineLibraryExpression& e) {
+                indent(ss, indentLevel);
+                ss << "DefineLibraryExpression:\n";
 
+                indent(ss, indentLevel + 1);
+                ss << "Library Name:\n";
+                for (const auto& part : e.libraryName) {
+                    part->ASTToString(ss, indentLevel + 2);
+                }
+
+                if (!e.exports.empty()) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Exports:\n";
+                    for (const auto& exp : e.exports) {
+                        indent(ss, indentLevel + 2);
+                        ss << exp.token.lexeme << "\n"; // Add hygiene info if needed
+                    }
+                }
+
+                if (!e.imports.empty()) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Imports:\n";
+                    for (const auto& spec : e.imports) {
+                        indent(ss, indentLevel + 2);
+                        ss << "...ImportSpec AST...\n"; // Placeholder
+                    }
+                }
+
+                if (!e.body.empty()) {
+                    indent(ss, indentLevel + 1);
+                    ss << "Body (begin):\n";
+                    for (const auto& expr : e.body) {
+                        expr->ASTToString(ss, indentLevel + 2);
+                    }
+                }
+            },
             [&](const QuasiQuoteExpression& e) {
                 indent(ss, indentLevel);
                 ss << "QuasiQuoteExpression: ";
@@ -1132,6 +1232,16 @@ bool compareHygienicSyntaxVectors(const std::vector<HygienicSyntax>& lhs, const 
     }
     return true;
 }
+bool compareImportSpecVectors(const std::vector<ImportExpression::ImportSpec>& lhs, const std::vector<ImportExpression::ImportSpec>& rhs)
+{
+    if (lhs.size() != rhs.size())
+        return false;
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        if (lhs[i].type != rhs[i].type)
+            return false;
+    }
+    return true;
+}
 
 bool operator==(const Expression& lhs, const Expression& rhs)
 {
@@ -1179,6 +1289,18 @@ bool operator==(const Expression& lhs, const Expression& rhs)
                                   if (!*lhs_v.el || !*rhs_v.el || !(**lhs_v.el == **rhs_v.el))
                                       return false;
                               }
+                              return true;
+                          },
+                          [&](const DefineLibraryExpression& lhs_v) {
+                              const auto& rhs_v = std::get<DefineLibraryExpression>(rhs.as);
+                              if (!compareExpressionVectors(lhs_v.libraryName, rhs_v.libraryName))
+                                  return false;
+                              if (!compareHygienicSyntaxVectors(lhs_v.exports, rhs_v.exports))
+                                  return false;
+                              if (!compareImportSpecVectors(lhs_v.imports, rhs_v.imports))
+                                  return false; // Needs proper implementation
+                              if (!compareExpressionVectors(lhs_v.body, rhs_v.body))
+                                  return false;
                               return true;
                           },
                           [&](const LambdaExpression& lhs_v) {
