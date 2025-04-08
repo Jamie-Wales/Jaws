@@ -22,7 +22,11 @@ void prepareInterpreterEnvironment(const import::ProcessedCode& code, interpret:
     for (const auto& libData : code.importedLibrariesData) {
         for (const auto& [name, binding] : libData.exportedBindings) {
             if (binding.type == import::ExportedBinding::Type::VALUE) {
-                interpret::interpret(state, binding.definition);
+                try {
+                    interpret::interpret(state, binding.definition);
+                } catch (const std::exception& e) {
+                    std::cerr << "[Warning] Error processing imported binding '" << name << "': " << e.what() << std::endl;
+                }
             }
         }
     }
@@ -38,6 +42,7 @@ std::vector<std::shared_ptr<Expression>> prepareCompilerInput(const import::Proc
     }
     return compilerInputList;
 }
+
 std::string formatScheme(const std::string& code)
 {
     char filename[] = "/tmp/schemefmtXXXXXX.scm";
@@ -128,8 +133,10 @@ std::string readFile(const std::string& path)
     buffer << file.rdbuf();
     return buffer.str();
 }
-
-void evaluate(interpret::InterpreterState& state, Options& opts)
+void evaluate(
+    interpret::InterpreterState& state, // No macroEnv here
+    import::LibraryRegistry& registry,
+    Options& opts)
 {
     auto tokens = scanner::tokenize(opts.input);
     auto expressionsOpt = parse::parse(std::move(tokens));
@@ -146,7 +153,7 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         for (const auto& expression : parsedExpressions) {
             ss_print_buffer << expression->toString() << "\n";
         }
-        const auto output = opts.prettyPrint ? formatScheme(ss_print_buffer.str()) : ss_print_buffer.str();
+        const auto output = ss_print_buffer.str();
         std::cout << "<| Original Code |>\n"
                   << output << std::endl;
     }
@@ -159,10 +166,9 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                   << std::endl;
     }
 
-    // 2. Process Imports (Decoupled)
     import::ProcessedCode processedCode;
     try {
-        processedCode = import::processImports(parsedExpressions);
+        processedCode = import::processImports(parsedExpressions, registry);
     } catch (const std::exception& e) {
         std::cerr << "[Import Error] " << e.what() << std::endl;
         return;
@@ -175,14 +181,13 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                 afterImportExpressions.push_back(binding.definition);
             }
         }
-
         if (opts.printCode) {
             ss_print_buffer.str("");
             ss_print_buffer.clear();
             for (const auto& expression : afterImportExpressions) {
                 ss_print_buffer << expression->toString() << "\n";
             }
-            const auto output = opts.prettyPrint ? formatScheme(ss_print_buffer.str()) : ss_print_buffer.str();
+            const auto output = ss_print_buffer.str();
             std::cout << "\n<| Code After Import Processing |>\n"
                       << output << std::endl;
         }
@@ -195,27 +200,26 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
                       << std::endl;
         }
     }
+
     std::vector<std::shared_ptr<Expression>> finalExpressions;
     try {
         auto macroEnv = std::make_shared<pattern::MacroEnvironment>();
 
-        // Populate with imported macros
         for (const auto& libData : processedCode.importedLibrariesData) {
             for (const auto& [name, binding] : libData.exportedBindings) {
                 if (binding.type == import::ExportedBinding::Type::SYNTAX) {
                     if (auto* ds = std::get_if<DefineSyntaxExpression>(&binding.definition->as)) {
-                        macroEnv->defineMacro(name, ds->rule);
+                        macroEnv->defineMacro(name, ds->rule); // Populate local env
                     }
                 }
             }
         }
 
-        // Add top-level macros from the current file/input & prepare list for expansion
         std::vector<std::shared_ptr<Expression>> expressionsToExpand;
         for (const auto& expr : processedCode.remainingExpressions) {
             if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
                 if (std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
-                    macroEnv->defineMacro(de->name.token.lexeme, de->rule);
+                    macroEnv->defineMacro(de->name.token.lexeme, de->rule); // Populate local env
                 }
             } else {
                 expressionsToExpand.push_back(expr);
@@ -235,11 +239,11 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
         for (const auto& expression : finalExpressions) {
             ss_print_buffer << expression->toString() << "\n";
         }
-        const auto output = opts.prettyPrint ? formatScheme(ss_print_buffer.str()) : ss_print_buffer.str();
+        const auto output = ss_print_buffer.str();
         std::cout << "\n<| Expanded Macro |>\n"
                   << output << std::endl;
     }
-    if (opts.printAST && (opts.printMacro || opts.prettyPrint)) { // Optionally print AST again after expansion
+    if (opts.printAST && (opts.printMacro || opts.prettyPrint)) {
         std::cout << "\n<| AST After Macro Expansion |>\n";
         for (const auto& expression : finalExpressions) {
             std::cout << expression->ASTToString() << "\n";
@@ -254,60 +258,49 @@ void evaluate(interpret::InterpreterState& state, Options& opts)
             importedDefinitions.insert(importedDefinitions.end(), finalExpressions.begin(), finalExpressions.end());
             auto anf = ir::ANFtransform(importedDefinitions);
             if (!anf.empty()) {
-                const auto* optimizedAnfPtr = &anf; // Pointer to use correct ANF list
                 std::vector<std::shared_ptr<ir::ANF>> optimizedAnfStorage;
-
-                if (opts.printANF) { // Print ANF before optimization
+                if (opts.printANF) {
                     std::cout << "\n<| ANF Before Optimization |>\n";
                     for (const auto& tl : anf) {
                         std::cout << tl->toString() << "\n";
                     }
                     std::cout << std::endl;
                 }
-
                 if (opts.optimise) {
                     auto [optResult, preGraph, postGraph] = optimise::optimise(anf);
-                    if (opts.printANF) { // Print ANF after optimization
+                    if (opts.printANF) {
                         std::cout << "\n<| ANF After Optimization |>\n";
-                        for (const auto& tl : *optimizedAnfPtr) {
+                        for (const auto& tl : anf) {
                             std::cout << tl->toString() << "\n";
                         }
                         std::cout << std::endl;
                     }
                 }
-
-                const auto _3ac = tac::anfToTac(*optimizedAnfPtr);
-
-                if (opts.print3AC) { // Print 3AC
+                const auto _3ac = tac::anfToTac(anf);
+                if (opts.print3AC) {
                     std::cout << "\n<| Three Address Code |>\n"
                               << _3ac.toString() << std::endl;
                 }
 
-                // Compilation output steps
                 std::filesystem::create_directories(opts.outputPath);
                 auto outPath = std::filesystem::path(opts.outputPath);
                 std::string qbeFile = (outPath / "output.qbe").string();
                 std::string asmFile = (outPath / "output.asm").string();
                 std::string exeFile = (outPath / "scheme_program").string();
-
                 std::cout << "Generating QBE IR to: " << qbeFile << std::endl;
                 generateQBEIr(_3ac, qbeFile);
-
                 std::cout << "Compiling QBE IR to assembly: " << asmFile << std::endl;
                 std::string qbeCmd = "qbe " + qbeFile + " > " + asmFile;
                 if (system(qbeCmd.c_str()) != 0) {
                     throw std::runtime_error("QBE compilation failed");
                 }
-
                 std::cout << "Compiling assembly to executable: " << exeFile << std::endl;
                 std::string linkCmd = "clang -o " + exeFile + " " + asmFile + " ../runtime/build/libruntime.a";
                 if (system(linkCmd.c_str()) != 0) {
                     throw std::runtime_error("Linking failed");
                 }
-
                 std::cout << "Successfully generated executable: " << exeFile << std::endl;
                 return;
-
             } else {
                 std::cerr << "ANF transformation resulted in empty output." << std::endl;
             }
@@ -331,7 +324,9 @@ void runFile(Options& opts)
 {
     try {
         auto state = interpret::createInterpreter();
-        evaluate(state, opts);
+        import::LibraryRegistry registry;
+        import::preloadLibraries("../lib", registry);
+        evaluate(state, registry, opts);
     } catch (const ParseError& e) {
         e.printFormattedError();
     } catch (const InterpreterError& e) {
@@ -343,10 +338,17 @@ void runFile(Options& opts)
 
 void runPrompt(Options& opts)
 {
-    printJawsLogo();
+    printJawsLogo(); // Removed
     std::cout << "<| Welcome to the Jaws REPL |>\n";
     std::cout << "<| Type 'exit' to quit, '(help)' for commands |>\n";
     auto state = interpret::createInterpreter();
+    import::LibraryRegistry registry;
+    try {
+        import::preloadLibraries("../lib", registry);
+    } catch (const std::exception& e) {
+        std::cerr << "[Warning] Failed during library preload: " << e.what() << std::endl;
+    }
+
     while (true) {
         std::cout << "jaws: |> ";
         std::string input;
@@ -360,7 +362,7 @@ void runPrompt(Options& opts)
             continue;
         try {
             opts.input = input;
-            evaluate(state, opts);
+            evaluate(state, registry, opts);
         } catch (const ParseError& e) {
             e.printFormattedError();
         } catch (const InterpreterError& e) {

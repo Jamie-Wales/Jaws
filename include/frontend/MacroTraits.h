@@ -1,38 +1,12 @@
 #pragma once
 #include "Expression.h"
 #include "ExpressionUtils.h"
+#include "MacroEnvironment.h"
 #include <iostream>
 #include <memory>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-
-namespace pattern {
-class MacroEnvironment {
-public:
-    void defineMacro(const std::string& name, std::shared_ptr<Expression> expr)
-    {
-        macros[name] = expr;
-    }
-
-    bool isMacro(const std::string& name) const
-    {
-        return macros.find(name) != macros.end();
-    }
-
-    std::optional<std::shared_ptr<Expression>> getMacroDefinition(const std::string& name) const
-    {
-        auto it = macros.find(name);
-        if (it != macros.end()) {
-            return it->second;
-        }
-        return std::nullopt;
-    }
-
-private:
-    std::unordered_map<std::string, std::shared_ptr<Expression>> macros;
-};
-}
 
 namespace macroexp {
 

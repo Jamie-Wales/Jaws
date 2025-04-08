@@ -93,53 +93,6 @@ FFIManager::FFIManager()
     registerDefaultWrappers();
 }
 
-// Implementation of FFI functions for jaws_ffi namespace
-namespace jaws_ffi {
-
-std::optional<SchemeValue> loadLibrary(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
-{
-    if (args.size() != 2) {
-        throw InterpreterError("load-library requires 2 arguments: library-name and path");
-    }
-
-    if (!std::holds_alternative<std::string>(args[0].value) || !std::holds_alternative<std::string>(args[1].value)) {
-        throw InterpreterError("load-library arguments must be strings");
-    }
-
-    const std::string& name = std::get<std::string>(args[0].value);
-    const std::string& path = std::get<std::string>(args[1].value);
-
-    FFIManager::instance().loadLibrary(name, path);
-    return std::nullopt;
-}
-
-std::optional<SchemeValue> registerFunction(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
-{
-    if (args.size() < 4) {
-        throw InterpreterError("register-function requires at least 4 arguments: library-name, function-name, return-type, and argument types");
-    }
-
-    if (!std::holds_alternative<std::string>(args[0].value) || !std::holds_alternative<std::string>(args[1].value) || !std::holds_alternative<std::string>(args[2].value)) {
-        throw InterpreterError("First three arguments to register-function must be strings");
-    }
-
-    const std::string& libName = std::get<std::string>(args[0].value);
-    const std::string& funcName = std::get<std::string>(args[1].value);
-    const std::string& retType = std::get<std::string>(args[2].value);
-
-    std::vector<std::string> argTypes;
-    for (size_t i = 3; i < args.size(); i++) {
-        if (!std::holds_alternative<std::string>(args[i].value)) {
-            throw InterpreterError("Argument types to register-function must be strings");
-        }
-        argTypes.push_back(std::get<std::string>(args[i].value));
-    }
-
-    return FFIManager::instance().wrapCFunction(libName, funcName, retType, argTypes);
-}
-
-} // namespace jaws_ffi
-
 void FFIManager::registerDefaultWrappers()
 {
     // void()

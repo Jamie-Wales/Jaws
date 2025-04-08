@@ -1,15 +1,17 @@
-#pragma once
+#ifndef IMPORT_H
+#define IMPORT_H
+
 #include "Expression.h"
 #include "Syntax.h"
+#include <filesystem>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
 
 namespace import {
-
-// --- Data Structures ---
 
 struct ExportedBinding {
     HygienicSyntax syntax;
@@ -30,17 +32,28 @@ struct ProcessedCode {
     std::vector<LibraryData> importedLibrariesData;
 };
 
+using LibraryRegistry = std::map<std::string, LibraryData>;
+
 bool fileExists(const std::string& path);
 std::string readFile(const std::string& path);
 bool isDefinition(const std::shared_ptr<Expression>& expr);
 std::string libraryNameToStringPath(const std::vector<std::shared_ptr<Expression>>& nameParts);
 std::string resolveLibraryPath(const std::vector<std::shared_ptr<Expression>>& nameParts);
+std::vector<std::shared_ptr<Expression>> deriveLibraryNameFromPath(
+    const std::filesystem::path& filePath,
+    const std::filesystem::path& basePath);
 
 LibraryData importLibrary(
     const std::string& path,
+    LibraryRegistry& registry,
     std::set<std::string>& visitedPaths);
 
+void preloadLibraries(const std::string& basePath, LibraryRegistry& registry);
+
 ProcessedCode processImports(
-    const std::vector<std::shared_ptr<Expression>>& expressions);
+    const std::vector<std::shared_ptr<Expression>>& expressions,
+    LibraryRegistry& registry);
 
 }
+
+#endif // IMPORT_H
