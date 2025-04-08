@@ -631,13 +631,6 @@ async function createWasm() {
       }
     }
   
-  var ___resumeException = (ptr) => {
-      if (!exceptionLast) {
-        exceptionLast = ptr;
-      }
-      throw exceptionLast;
-    };
-  
   
   var setTempRet0 = (val) => __emscripten_tempret_set(val);
   var findMatchingCatch = (args) => {
@@ -712,6 +705,12 @@ async function createWasm() {
 
   var ___cxa_uncaught_exceptions = () => uncaughtExceptionCount;
 
+  var ___resumeException = (ptr) => {
+      if (!exceptionLast) {
+        exceptionLast = ptr;
+      }
+      throw exceptionLast;
+    };
 
   var initRandomFill = () => {
   
@@ -1130,11 +1129,6 @@ async function createWasm() {
   };
   
   
-  var zeroMemory = (ptr, size) => HEAPU8.fill(0, ptr, ptr + size);
-  
-  var alignMemory = (size, alignment) => {
-      return Math.ceil(size / alignment) * alignment;
-    };
   var mmapAlloc = (size) => {
       abort();
     };
@@ -2142,7 +2136,8 @@ async function createWasm() {
         var d = '';
         for (var dir of dirs) {
           if (!dir) continue;
-          d += '/' + dir;
+          if (d || PATH.isAbs(path)) d += '/';
+          d += dir;
           try {
             FS.mkdir(d, mode);
           } catch(e) {
@@ -3721,23 +3716,6 @@ async function createWasm() {
       return socket;
     };
   
-  var Sockets = {
-  BUFFER_SIZE:10240,
-  MAX_BUFFER_SIZE:10485760,
-  nextFd:1,
-  fds:{
-  },
-  nextport:1,
-  maxport:65535,
-  peer:null,
-  connections:{
-  },
-  portmap:{
-  },
-  localAddr:4261412874,
-  addrPool:[33554442,50331658,67108874,83886090,100663306,117440522,134217738,150994954,167772170,184549386,201326602,218103818,234881034],
-  };
-  
   var inetPton4 = (str) => {
       var b = str.split('.');
       for (var i = 0; i < 4; i++) {
@@ -3804,6 +3782,7 @@ async function createWasm() {
       ];
     };
   
+  var zeroMemory = (ptr, size) => HEAPU8.fill(0, ptr, ptr + size);
   
   /** @param {number=} addrlen */
   var writeSockaddr = (sa, family, addr, port, addrlen) => {
@@ -3897,7 +3876,6 @@ async function createWasm() {
   }
   }
 
-  
   
   var inetNtop4 = (addr) =>
       (addr & 0xff) + '.' + ((addr >> 8) & 0xff) + '.' + ((addr >> 16) & 0xff) + '.' + ((addr >> 24) & 0xff);
@@ -4439,49 +4417,6 @@ async function createWasm() {
   
   var BindingError = Module['BindingError'] = class BindingError extends Error { constructor(message) { super(message); this.name = 'BindingError'; }};
   var throwBindingError = (message) => { throw new BindingError(message); };
-  
-  
-  
-  
-  var InternalError = Module['InternalError'] = class InternalError extends Error { constructor(message) { super(message); this.name = 'InternalError'; }};
-  var throwInternalError = (message) => { throw new InternalError(message); };
-  var whenDependentTypesAreResolved = (myTypes, dependentTypes, getTypeConverters) => {
-      myTypes.forEach((type) => typeDependencies[type] = dependentTypes);
-  
-      function onComplete(typeConverters) {
-        var myTypeConverters = getTypeConverters(typeConverters);
-        if (myTypeConverters.length !== myTypes.length) {
-          throwInternalError('Mismatched type converter count');
-        }
-        for (var i = 0; i < myTypes.length; ++i) {
-          registerType(myTypes[i], myTypeConverters[i]);
-        }
-      }
-  
-      var typeConverters = new Array(dependentTypes.length);
-      var unregisteredTypes = [];
-      var registered = 0;
-      dependentTypes.forEach((dt, i) => {
-        if (registeredTypes.hasOwnProperty(dt)) {
-          typeConverters[i] = registeredTypes[dt];
-        } else {
-          unregisteredTypes.push(dt);
-          if (!awaitingDependencies.hasOwnProperty(dt)) {
-            awaitingDependencies[dt] = [];
-          }
-          awaitingDependencies[dt].push(() => {
-            typeConverters[i] = registeredTypes[dt];
-            ++registered;
-            if (registered === unregisteredTypes.length) {
-              onComplete(typeConverters);
-            }
-          });
-        }
-      });
-      if (0 === unregisteredTypes.length) {
-        onComplete(typeConverters);
-      }
-    };
   /** @param {Object=} options */
   function sharedRegisterType(rawType, registeredInstance, options = {}) {
       var name = registeredInstance.name;
@@ -4621,137 +4556,6 @@ async function createWasm() {
         runDestructor($$);
       }
     };
-  
-  var downcastPointer = (ptr, ptrClass, desiredClass) => {
-      if (ptrClass === desiredClass) {
-        return ptr;
-      }
-      if (undefined === desiredClass.baseClass) {
-        return null; // no conversion
-      }
-  
-      var rv = downcastPointer(ptr, ptrClass, desiredClass.baseClass);
-      if (rv === null) {
-        return null;
-      }
-      return desiredClass.downcast(rv);
-    };
-  
-  var registeredPointers = {
-  };
-  
-  var registeredInstances = {
-  };
-  
-  var getBasestPointer = (class_, ptr) => {
-      if (ptr === undefined) {
-          throwBindingError('ptr should not be undefined');
-      }
-      while (class_.baseClass) {
-          ptr = class_.upcast(ptr);
-          class_ = class_.baseClass;
-      }
-      return ptr;
-    };
-  var getInheritedInstance = (class_, ptr) => {
-      ptr = getBasestPointer(class_, ptr);
-      return registeredInstances[ptr];
-    };
-  
-  
-  var makeClassHandle = (prototype, record) => {
-      if (!record.ptrType || !record.ptr) {
-        throwInternalError('makeClassHandle requires ptr and ptrType');
-      }
-      var hasSmartPtrType = !!record.smartPtrType;
-      var hasSmartPtr = !!record.smartPtr;
-      if (hasSmartPtrType !== hasSmartPtr) {
-        throwInternalError('Both smartPtrType and smartPtr must be specified');
-      }
-      record.count = { value: 1 };
-      return attachFinalizer(Object.create(prototype, {
-        $$: {
-          value: record,
-          writable: true,
-        },
-      }));
-    };
-  /** @suppress {globalThis} */
-  function RegisteredPointer_fromWireType(ptr) {
-      // ptr is a raw pointer (or a raw smartpointer)
-  
-      // rawPointer is a maybe-null raw pointer
-      var rawPointer = this.getPointee(ptr);
-      if (!rawPointer) {
-        this.destructor(ptr);
-        return null;
-      }
-  
-      var registeredInstance = getInheritedInstance(this.registeredClass, rawPointer);
-      if (undefined !== registeredInstance) {
-        // JS object has been neutered, time to repopulate it
-        if (0 === registeredInstance.$$.count.value) {
-          registeredInstance.$$.ptr = rawPointer;
-          registeredInstance.$$.smartPtr = ptr;
-          return registeredInstance['clone']();
-        } else {
-          // else, just increment reference count on existing object
-          // it already has a reference to the smart pointer
-          var rv = registeredInstance['clone']();
-          this.destructor(ptr);
-          return rv;
-        }
-      }
-  
-      function makeDefaultHandle() {
-        if (this.isSmartPointer) {
-          return makeClassHandle(this.registeredClass.instancePrototype, {
-            ptrType: this.pointeeType,
-            ptr: rawPointer,
-            smartPtrType: this,
-            smartPtr: ptr,
-          });
-        } else {
-          return makeClassHandle(this.registeredClass.instancePrototype, {
-            ptrType: this,
-            ptr,
-          });
-        }
-      }
-  
-      var actualType = this.registeredClass.getActualType(rawPointer);
-      var registeredPointerRecord = registeredPointers[actualType];
-      if (!registeredPointerRecord) {
-        return makeDefaultHandle.call(this);
-      }
-  
-      var toType;
-      if (this.isConst) {
-        toType = registeredPointerRecord.constPointerType;
-      } else {
-        toType = registeredPointerRecord.pointerType;
-      }
-      var dp = downcastPointer(
-          rawPointer,
-          this.registeredClass,
-          toType.registeredClass);
-      if (dp === null) {
-        return makeDefaultHandle.call(this);
-      }
-      if (this.isSmartPointer) {
-        return makeClassHandle(toType.registeredClass.instancePrototype, {
-          ptrType: toType,
-          ptr: dp,
-          smartPtrType: this,
-          smartPtr: ptr,
-        });
-      } else {
-        return makeClassHandle(toType.registeredClass.instancePrototype, {
-          ptrType: toType,
-          ptr: dp,
-        });
-      }
-    }
   var attachFinalizer = (handle) => {
       if ('undefined' === typeof FinalizationRegistry) {
         attachFinalizer = (handle) => handle;
@@ -4884,7 +4688,7 @@ async function createWasm() {
       // Support `using ...` from https://github.com/tc39/proposal-explicit-resource-management.
       const symbolDispose = Symbol.dispose;
       if (symbolDispose) {
-        proto[symbolDispose] = proto["delete"];
+        proto[symbolDispose] = proto['delete'];
       }
     };
   /** @constructor */
@@ -4893,6 +4697,8 @@ async function createWasm() {
   
   var createNamedFunction = (name, func) => Object.defineProperty(func, 'name', { value: name });
   
+  var registeredPointers = {
+  };
   
   var ensureOverloadTable = (proto, methodName, humanName) => {
       if (undefined === proto[methodName].overloadTable) {
@@ -5102,6 +4908,136 @@ async function createWasm() {
       return this['fromWireType'](HEAPU32[((pointer)>>2)]);
     }
   
+  var downcastPointer = (ptr, ptrClass, desiredClass) => {
+      if (ptrClass === desiredClass) {
+        return ptr;
+      }
+      if (undefined === desiredClass.baseClass) {
+        return null; // no conversion
+      }
+  
+      var rv = downcastPointer(ptr, ptrClass, desiredClass.baseClass);
+      if (rv === null) {
+        return null;
+      }
+      return desiredClass.downcast(rv);
+    };
+  
+  
+  var registeredInstances = {
+  };
+  
+  var getBasestPointer = (class_, ptr) => {
+      if (ptr === undefined) {
+          throwBindingError('ptr should not be undefined');
+      }
+      while (class_.baseClass) {
+          ptr = class_.upcast(ptr);
+          class_ = class_.baseClass;
+      }
+      return ptr;
+    };
+  var getInheritedInstance = (class_, ptr) => {
+      ptr = getBasestPointer(class_, ptr);
+      return registeredInstances[ptr];
+    };
+  
+  var InternalError = Module['InternalError'] = class InternalError extends Error { constructor(message) { super(message); this.name = 'InternalError'; }};
+  var throwInternalError = (message) => { throw new InternalError(message); };
+  
+  var makeClassHandle = (prototype, record) => {
+      if (!record.ptrType || !record.ptr) {
+        throwInternalError('makeClassHandle requires ptr and ptrType');
+      }
+      var hasSmartPtrType = !!record.smartPtrType;
+      var hasSmartPtr = !!record.smartPtr;
+      if (hasSmartPtrType !== hasSmartPtr) {
+        throwInternalError('Both smartPtrType and smartPtr must be specified');
+      }
+      record.count = { value: 1 };
+      return attachFinalizer(Object.create(prototype, {
+        $$: {
+          value: record,
+          writable: true,
+        },
+      }));
+    };
+  /** @suppress {globalThis} */
+  function RegisteredPointer_fromWireType(ptr) {
+      // ptr is a raw pointer (or a raw smartpointer)
+  
+      // rawPointer is a maybe-null raw pointer
+      var rawPointer = this.getPointee(ptr);
+      if (!rawPointer) {
+        this.destructor(ptr);
+        return null;
+      }
+  
+      var registeredInstance = getInheritedInstance(this.registeredClass, rawPointer);
+      if (undefined !== registeredInstance) {
+        // JS object has been neutered, time to repopulate it
+        if (0 === registeredInstance.$$.count.value) {
+          registeredInstance.$$.ptr = rawPointer;
+          registeredInstance.$$.smartPtr = ptr;
+          return registeredInstance['clone']();
+        } else {
+          // else, just increment reference count on existing object
+          // it already has a reference to the smart pointer
+          var rv = registeredInstance['clone']();
+          this.destructor(ptr);
+          return rv;
+        }
+      }
+  
+      function makeDefaultHandle() {
+        if (this.isSmartPointer) {
+          return makeClassHandle(this.registeredClass.instancePrototype, {
+            ptrType: this.pointeeType,
+            ptr: rawPointer,
+            smartPtrType: this,
+            smartPtr: ptr,
+          });
+        } else {
+          return makeClassHandle(this.registeredClass.instancePrototype, {
+            ptrType: this,
+            ptr,
+          });
+        }
+      }
+  
+      var actualType = this.registeredClass.getActualType(rawPointer);
+      var registeredPointerRecord = registeredPointers[actualType];
+      if (!registeredPointerRecord) {
+        return makeDefaultHandle.call(this);
+      }
+  
+      var toType;
+      if (this.isConst) {
+        toType = registeredPointerRecord.constPointerType;
+      } else {
+        toType = registeredPointerRecord.pointerType;
+      }
+      var dp = downcastPointer(
+          rawPointer,
+          this.registeredClass,
+          toType.registeredClass);
+      if (dp === null) {
+        return makeDefaultHandle.call(this);
+      }
+      if (this.isSmartPointer) {
+        return makeClassHandle(toType.registeredClass.instancePrototype, {
+          ptrType: toType,
+          ptr: dp,
+          smartPtrType: this,
+          smartPtr: ptr,
+        });
+      } else {
+        return makeClassHandle(toType.registeredClass.instancePrototype, {
+          ptrType: toType,
+          ptr: dp,
+        });
+      }
+    }
   
   var init_RegisteredPointer = () => {
       Object.assign(RegisteredPointer.prototype, {
@@ -5201,15 +5137,17 @@ async function createWasm() {
       }
       return func;
     };
-  var embind__requireFunction = (signature, rawFunction) => {
+  var embind__requireFunction = (signature, rawFunction, isAsync = false) => {
+  
       signature = readLatin1String(signature);
   
       function makeDynCaller() {
-        return getWasmTableEntry(rawFunction);
+        var rtn = getWasmTableEntry(rawFunction);
+        return rtn;
       }
   
       var fp = makeDynCaller();
-      if (typeof fp != "function") {
+      if (typeof fp != 'function') {
           throwBindingError(`unknown function pointer with signature ${signature}: ${rawFunction}`);
       }
       return fp;
@@ -5217,30 +5155,7 @@ async function createWasm() {
   
   
   
-  var extendError = (baseErrorType, errorName) => {
-      var errorClass = createNamedFunction(errorName, function(message) {
-        this.name = errorName;
-        this.message = message;
-  
-        var stack = (new Error(message)).stack;
-        if (stack !== undefined) {
-          this.stack = this.toString() + '\n' +
-              stack.replace(/^Error(:[^\n]*)?\n/, '');
-        }
-      });
-      errorClass.prototype = Object.create(baseErrorType.prototype);
-      errorClass.prototype.constructor = errorClass;
-      errorClass.prototype.toString = function() {
-        if (this.message === undefined) {
-          return this.name;
-        } else {
-          return `${this.name}: ${this.message}`;
-        }
-      };
-  
-      return errorClass;
-    };
-  var UnboundTypeError = Module['UnboundTypeError'] = extendError(Error, 'UnboundTypeError');
+  class UnboundTypeError extends Error {}
   
   
   
@@ -5272,6 +5187,46 @@ async function createWasm() {
       throw new UnboundTypeError(`${message}: ` + unboundTypes.map(getTypeName).join([', ']));
     };
   
+  
+  
+  
+  var whenDependentTypesAreResolved = (myTypes, dependentTypes, getTypeConverters) => {
+      myTypes.forEach((type) => typeDependencies[type] = dependentTypes);
+  
+      function onComplete(typeConverters) {
+        var myTypeConverters = getTypeConverters(typeConverters);
+        if (myTypeConverters.length !== myTypes.length) {
+          throwInternalError('Mismatched type converter count');
+        }
+        for (var i = 0; i < myTypes.length; ++i) {
+          registerType(myTypes[i], myTypeConverters[i]);
+        }
+      }
+  
+      var typeConverters = new Array(dependentTypes.length);
+      var unregisteredTypes = [];
+      var registered = 0;
+      dependentTypes.forEach((dt, i) => {
+        if (registeredTypes.hasOwnProperty(dt)) {
+          typeConverters[i] = registeredTypes[dt];
+        } else {
+          unregisteredTypes.push(dt);
+          if (!awaitingDependencies.hasOwnProperty(dt)) {
+            awaitingDependencies[dt] = [];
+          }
+          awaitingDependencies[dt].push(() => {
+            typeConverters[i] = registeredTypes[dt];
+            ++registered;
+            if (registered === unregisteredTypes.length) {
+              onComplete(typeConverters);
+            }
+          });
+        }
+      });
+      if (0 === unregisteredTypes.length) {
+        onComplete(typeConverters);
+      }
+    };
   var __embind_register_class = (rawType,
                              rawPointerType,
                              rawConstPointerType,
@@ -5314,10 +5269,10 @@ async function createWasm() {
   
           var constructor = createNamedFunction(name, function(...args) {
             if (Object.getPrototypeOf(this) !== instancePrototype) {
-              throw new BindingError("Use 'new' to construct " + name);
+              throw new BindingError(`Use 'new' to construct ${name}`);
             }
             if (undefined === registeredClass.constructor_body) {
-              throw new BindingError(name + " has no accessible constructor");
+              throw new BindingError(`${name} has no accessible constructor`);
             }
             var body = registeredClass.constructor_body[args.length];
             if (undefined === body) {
@@ -5389,6 +5344,8 @@ async function createWasm() {
     };
   
   
+  
+  
   var runDestructors = (destructors) => {
       while (destructors.length) {
         var ptr = destructors.pop();
@@ -5396,11 +5353,6 @@ async function createWasm() {
         del(ptr);
       }
     };
-  
-  
-  
-  
-  
   
   
   function usesDestructorStack(argTypes) {
@@ -5412,28 +5364,6 @@ async function createWasm() {
         }
       }
       return false;
-    }
-  
-  function newFunc(constructor, argumentList) {
-      if (!(constructor instanceof Function)) {
-        throw new TypeError(`new_ called with constructor type ${typeof(constructor)} which is not a function`);
-      }
-      /*
-       * Previously, the following line was just:
-       *   function dummy() {};
-       * Unfortunately, Chrome was preserving 'dummy' as the object's name, even
-       * though at creation, the 'dummy' has the correct constructor name.  Thus,
-       * objects created with IMVU.new would show up in the debugger as 'dummy',
-       * which isn't very helpful.  Using IMVU.createNamedFunction addresses the
-       * issue.  Doubly-unfortunately, there's no way to write a test for this
-       * behavior.  -NRD 2013.02.22
-       */
-      var dummy = createNamedFunction(constructor.name || 'unknownFunctionName', function(){});
-      dummy.prototype = constructor.prototype;
-      var obj = new dummy;
-  
-      var r = constructor.apply(obj, argumentList);
-      return (r instanceof Object) ? r : obj;
     }
   
   function createJsInvoker(argTypes, isClassMethodFunc, returns, isAsync) {
@@ -5514,35 +5444,35 @@ async function createWasm() {
       var isClassMethodFunc = (argTypes[1] !== null && classType !== null);
   
       // Free functions with signature "void function()" do not need an invoker that marshalls between wire types.
-  // TODO: This omits argument count check - enable only at -O3 or similar.
-  //    if (ENABLE_UNSAFE_OPTS && argCount == 2 && argTypes[0].name == "void" && !isClassMethodFunc) {
-  //       return FUNCTION_TABLE[fn];
-  //    }
+      // TODO: This omits argument count check - enable only at -O3 or similar.
+      //    if (ENABLE_UNSAFE_OPTS && argCount == 2 && argTypes[0].name == "void" && !isClassMethodFunc) {
+      //       return FUNCTION_TABLE[fn];
+      //    }
   
       // Determine if we need to use a dynamic stack to store the destructors for the function parameters.
       // TODO: Remove this completely once all function invokers are being dynamically generated.
       var needsDestructorStack = usesDestructorStack(argTypes);
   
-      var returns = (argTypes[0].name !== "void");
+      var returns = (argTypes[0].name !== 'void');
   
       var expectedArgCount = argCount - 2;
-    // Builld the arguments that will be passed into the closure around the invoker
-    // function.
-    var closureArgs = [humanName, throwBindingError, cppInvokerFunc, cppTargetFunc, runDestructors, argTypes[0], argTypes[1]];
-    for (var i = 0; i < argCount - 2; ++i) {
-      closureArgs.push(argTypes[i+2]);
-    }
-    if (!needsDestructorStack) {
-      for (var i = isClassMethodFunc?1:2; i < argTypes.length; ++i) { // Skip return value at index 0 - it's not deleted here. Also skip class type if not a method.
-        if (argTypes[i].destructorFunction !== null) {
-          closureArgs.push(argTypes[i].destructorFunction);
+      // Builld the arguments that will be passed into the closure around the invoker
+      // function.
+      var closureArgs = [humanName, throwBindingError, cppInvokerFunc, cppTargetFunc, runDestructors, argTypes[0], argTypes[1]];
+      for (var i = 0; i < argCount - 2; ++i) {
+        closureArgs.push(argTypes[i+2]);
+      }
+      if (!needsDestructorStack) {
+        // Skip return value at index 0 - it's not deleted here. Also skip class type if not a method.
+        for (var i = isClassMethodFunc?1:2; i < argTypes.length; ++i) {
+          if (argTypes[i].destructorFunction !== null) {
+            closureArgs.push(argTypes[i].destructorFunction);
+          }
         }
       }
-    }
   
-    let [args, invokerFnBody] = createJsInvoker(argTypes, isClassMethodFunc, returns, isAsync);
-    args.push(invokerFnBody);
-    var invokerFn = newFunc(Function, args)(...closureArgs);
+      let [args, invokerFnBody] = createJsInvoker(argTypes, isClassMethodFunc, returns, isAsync);
+      var invokerFn = new Function(...args, invokerFnBody)(...closureArgs);
       return createNamedFunction(humanName, invokerFn);
     }
   var __embind_register_class_constructor = (
@@ -5607,7 +5537,7 @@ async function createWasm() {
       var rawArgTypes = heap32VectorToArray(argCount, rawArgTypesAddr);
       methodName = readLatin1String(methodName);
       methodName = getFunctionName(methodName);
-      rawInvoker = embind__requireFunction(invokerSignature, rawInvoker);
+      rawInvoker = embind__requireFunction(invokerSignature, rawInvoker, isAsync);
   
       whenDependentTypesAreResolved([], [rawClassType], (classType) => {
         classType = classType[0];
@@ -5694,7 +5624,7 @@ async function createWasm() {
   var Emval = {
   toValue:(handle) => {
         if (!handle) {
-            throwBindingError('Cannot use deleted val. handle = ' + handle);
+            throwBindingError(`Cannot use deleted val. handle = ${handle}`);
         }
         return emval_handles[handle];
       },
@@ -5732,7 +5662,6 @@ async function createWasm() {
     };
   var __embind_register_emval = (rawType) => registerType(rawType, EmValType);
 
-  
   var floatReadValueFromPointer = (name, width) => {
       switch (width) {
           case 4: return function(pointer) {
@@ -5763,7 +5692,6 @@ async function createWasm() {
       });
     };
 
-  
   
   
   /** @suppress {globalThis} */
@@ -6225,14 +6153,11 @@ async function createWasm() {
   var emval_lookupTypes = (argCount, argTypes) => {
       var a = new Array(argCount);
       for (var i = 0; i < argCount; ++i) {
-        a[i] = requireRegisteredType(HEAPU32[(((argTypes)+(i * 4))>>2)],
-                                     "parameter " + i);
+        a[i] = requireRegisteredType(HEAPU32[(((argTypes)+(i*4))>>2)],
+                                     `parameter ${i}`);
       }
       return a;
     };
-  
-  
-  var reflectConstruct = Reflect.construct;
   
   
   var __emval_get_method_caller = (argCount, argTypes, kind) => {
@@ -6246,32 +6171,31 @@ async function createWasm() {
       var offset = 0;
       var argsList = []; // 'obj?, arg0, arg1, arg2, ... , argN'
       if (kind === /* FUNCTION */ 0) {
-        argsList.push("obj");
+        argsList.push('obj');
       }
-      var params = ["retType"];
+      var params = ['retType'];
       var args = [retType];
       for (var i = 0; i < argCount; ++i) {
-        argsList.push("arg" + i);
-        params.push("argType" + i);
+        argsList.push(`arg${i}`);
+        params.push(`argType${i}`);
         args.push(types[i]);
         functionBody +=
-          `  var arg${i} = argType${i}.readValueFromPointer(args${offset ? "+" + offset : ""});\n`;
+          `  var arg${i} = argType${i}.readValueFromPointer(args${offset ? '+' + offset : ''});\n`;
         offset += types[i].argPackAdvance;
       }
       var invoker = kind === /* CONSTRUCTOR */ 1 ? 'new func' : 'func.call';
       functionBody +=
-        `  var rv = ${invoker}(${argsList.join(", ")});\n`;
+        `  var rv = ${invoker}(${argsList.join(', ')});\n`;
       if (!retType.isVoid) {
-        params.push("emval_returnValue");
+        params.push('emval_returnValue');
         args.push(emval_returnValue);
         functionBody +=
-          "  return emval_returnValue(retType, destructorsRef, rv);\n";
+          '  return emval_returnValue(retType, destructorsRef, rv);\n';
       }
       functionBody +=
         "};\n";
   
-      params.push(functionBody);
-      var invokerFunction = newFunc(Function, params)(...args);
+      var invokerFunction = new Function(...params, functionBody)(...args);
       var functionName = `methodCaller<(${types.map(t => t.name).join(', ')}) => ${retType.name}>`;
       return emval_addMethodCaller(createNamedFunction(functionName, invokerFunction));
     };
@@ -6401,6 +6325,9 @@ async function createWasm() {
       // casing all heap size related code to treat 0 specially.
       2147483648;
   
+  var alignMemory = (size, alignment) => {
+      return Math.ceil(size / alignment) * alignment;
+    };
   
   var growMemory = (size) => {
       var b = wasmMemory.buffer;
@@ -6872,6 +6799,8 @@ var wasmImports = {
   /** @export */
   invoke_iiiiiiiiiiiii,
   /** @export */
+  invoke_iiiiij,
+  /** @export */
   invoke_j,
   /** @export */
   invoke_ji,
@@ -7065,6 +6994,17 @@ function invoke_iiiiiii(index,a1,a2,a3,a4,a5,a6) {
 }
 
 function invoke_iiiiii(index,a1,a2,a3,a4,a5) {
+  var sp = stackSave();
+  try {
+    return getWasmTableEntry(index)(a1,a2,a3,a4,a5);
+  } catch(e) {
+    stackRestore(sp);
+    if (e !== e+0) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_iiiiij(index,a1,a2,a3,a4,a5) {
   var sp = stackSave();
   try {
     return getWasmTableEntry(index)(a1,a2,a3,a4,a5);
