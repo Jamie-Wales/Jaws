@@ -2,6 +2,7 @@
 #include "DynamicLibrary.h"
 #include "Error.h"
 #include "Procedure.h"
+#include "Syntax.h"
 #include "Value.h"
 #include <dlfcn.h>
 #include <functional>
@@ -28,14 +29,21 @@ public:
     static double schemeToDouble(const SchemeValue& value);
     static const char* schemeToString(const SchemeValue& value);
 
+    // Helper method to create HygienicSyntax identifiers
+    static HygienicSyntax createIdentifier(const std::string& name);
+
 private:
     std::unordered_map<std::string, std::unique_ptr<DynamicLibrary>> libraries;
     std::unordered_map<std::string, std::function<FFIFunction(void*)>> wrappers;
-
     FFIManager();
     FFIManager(const FFIManager&) = delete;
     FFIManager& operator=(const FFIManager&) = delete;
-
-    // Register default function wrappers for common signatures
     void registerDefaultWrappers();
 };
+
+inline void checkArgCount(const std::vector<SchemeValue>& args, size_t expected, const std::string& funcName)
+{
+    if (args.size() != expected) {
+        throw InterpreterError(funcName + " expects " + std::to_string(expected) + " arguments, got " + std::to_string(args.size()));
+    }
+}

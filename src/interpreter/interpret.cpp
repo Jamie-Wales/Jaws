@@ -26,93 +26,102 @@ InterpreterState createInterpreter()
 {
     InterpreterState state;
 
-    auto define = [&state](const std::string& name, BuiltInProcedure::Func func) {
-        state.env->define(name, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
+    auto define = [&state](const HygienicSyntax& syntax, BuiltInProcedure::Func func) {
+        state.env->define(syntax, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
     };
-    define("+", jaws_math::plus);
-    define("-", jaws_math::minus);
-    define("*", jaws_math::mult);
-    define("/", jaws_math::div);
-    define("<=", jaws_math::lessOrEqual);
-    define(">=", jaws_math::greaterOrEqual);
-    define("<", jaws_math::less);
-    define(">", jaws_math::greater);
-    define("=", jaws_eq::equal);
-    define("eq?", jaws_eq::equal);
-    define("equal?", jaws_eq::equal);
-    define("boolean?", jaws_eq::isBooleanProc);
-    define("procedure?", jaws_eq::isProcedure);
-    define("char?", jaws_eq::isChar);
-    define("pair?", jaws_eq::isPair);
-    define("null?", jaws_eq::isNull);
-    define("port?", jaws_eq::isPort);
-    define("eqv?", jaws_eq::isEqv);
-    define("socket-server", jaws_io::socketServer);
-    define("socket-connect", jaws_io::socketConnect);
-    define("socket-accept", jaws_io::socketAccept);
-    define("socket-read", jaws_io::socketRead);
-    define("socket-write", jaws_io::socketWrite);
-    define("socket-close", jaws_io::socketClose);
-    define("socket-set-nonblocking!", jaws_io::socketSetNonBlocking);
-    define("error", jaws_io::error);
-    define("symbol?", jaws_eq::isSymbol);
-    define("number?", jaws_eq::isNumber);
-    define("string?", jaws_eq::isString);
-    define("open-input-file", jaws_io::openInputFile);
-    define("open-output-file", jaws_io::openOutputFile);
-    define("close-port", jaws_io::closePort);
-    define("read", jaws_io::read);
-    define("write", jaws_io::write);
-    define("display", jaws_io::display);
-    define("newline", jaws_io::newline);
-    define("map", jaws_hof::map);
-    define("list?", jaws_eq::isList);
-    define("list", jaws_list::listProcedure);
-    define("car", jaws_list::carProcudure);
-    define("cdr", jaws_list::cdrProcedure);
-    define("cons", jaws_list::cons);
-    define("append", jaws_list::append);
-    define("load-library", jaws_ffi::loadLibrary);
-    define("register-function", jaws_ffi::registerFunction);
-    define("list-ref", jaws_list::listRef);
-    define("list-set!", jaws_list::listSet);
-    define("make-vector", jaws_vec::makeVector);
-    define("vector", jaws_vec::vectorProcedure);
-    define("vector-ref", jaws_vec::vectorRef);
-    define("vector-set!", jaws_vec::vectorSet);
-    define("vector-length", jaws_vec::vectorLength);
-    define("vector-copy", jaws_vec::vectorCopy);
-    define("vector-copy!", jaws_vec::vectorCopyTo);
-    define("vector-fill!", jaws_vec::vectorFill);
-    define("eval", jaws_hof::eval);
-    define("apply", jaws_hof::apply);
-    define("call/cc", jaws_hof::callCC);
-    define("call-with-current-continuation", jaws_hof::callCC);
-    define("number->string", jaws_string::numberToString);
-    define("string=?", jaws_string::stringEqual);
-    define("string<?", jaws_string::stringLess);
-    define("string>?", jaws_string::stringGreater);
-    define("string-ci=?", jaws_string::stringCiEqual);
-    define("string-length", jaws_string::stringLength);
-    define("string-append", jaws_string::stringAppend);
-    define("substring", jaws_string::substring);
-    define("string-ref", jaws_string::stringRef);
-    define("string->list", jaws_string::stringToList);
-    define("list->string", jaws_string::listToString);
-    define("string-copy", jaws_string::stringCopy);
-    define("string-upcase", jaws_string::stringUpcase);
-    define("string-downcase", jaws_string::stringDowncase);
-    define("thread-spawn", jaws_thread::threadSpawn);
-    define("thread-join", jaws_thread::threadJoin);
-    define("thread-sleep!", jaws_thread::threadSleep);
-    define("thread-current-id", jaws_thread::threadCurrentId);
-    define("mutex-create", jaws_thread::mutexCreate);
-    define("mutex-lock!", jaws_thread::mutexLock);
-    define("mutex-unlock!", jaws_thread::mutexUnlock);
-    define("condition-variable-create", jaws_thread::conditionCreate);
-    define("condition-variable-wait", jaws_thread::conditionWait);
-    define("condition-variable-signal!", jaws_thread::conditionSignal);
-    define("condition-variable-broadcast!", jaws_thread::conditionBroadcast);
+
+    // Create a helper for creating identifier syntax objects
+    auto identifier = [](const std::string& name) -> HygienicSyntax {
+        Token token;
+        token.type = Tokentype::IDENTIFIER;
+        token.lexeme = name;
+        return HygienicSyntax { token, SyntaxContext() };
+    };
+
+    define(identifier("+"), jaws_math::plus);
+    define(identifier("-"), jaws_math::minus);
+    define(identifier("*"), jaws_math::mult);
+    define(identifier("/"), jaws_math::div);
+    define(identifier("<="), jaws_math::lessOrEqual);
+    define(identifier(">="), jaws_math::greaterOrEqual);
+    define(identifier("<"), jaws_math::less);
+    define(identifier(">"), jaws_math::greater);
+    define(identifier("="), jaws_eq::equal);
+    define(identifier("eq?"), jaws_eq::equal);
+    define(identifier("equal?"), jaws_eq::equal);
+    define(identifier("boolean?"), jaws_eq::isBooleanProc);
+    define(identifier("procedure?"), jaws_eq::isProcedure);
+    define(identifier("char?"), jaws_eq::isChar);
+    define(identifier("pair?"), jaws_eq::isPair);
+    define(identifier("null?"), jaws_eq::isNull);
+    define(identifier("port?"), jaws_eq::isPort);
+    define(identifier("eqv?"), jaws_eq::isEqv);
+    define(identifier("socket-server"), jaws_io::socketServer);
+    define(identifier("socket-connect"), jaws_io::socketConnect);
+    define(identifier("socket-accept"), jaws_io::socketAccept);
+    define(identifier("socket-read"), jaws_io::socketRead);
+    define(identifier("socket-write"), jaws_io::socketWrite);
+    define(identifier("socket-close"), jaws_io::socketClose);
+    define(identifier("socket-set-nonblocking!"), jaws_io::socketSetNonBlocking);
+    define(identifier("error"), jaws_io::error);
+    define(identifier("symbol?"), jaws_eq::isSymbol);
+    define(identifier("number?"), jaws_eq::isNumber);
+    define(identifier("string?"), jaws_eq::isString);
+    define(identifier("open-input-file"), jaws_io::openInputFile);
+    define(identifier("open-output-file"), jaws_io::openOutputFile);
+    define(identifier("close-port"), jaws_io::closePort);
+    define(identifier("read"), jaws_io::read);
+    define(identifier("write"), jaws_io::write);
+    define(identifier("display"), jaws_io::display);
+    define(identifier("newline"), jaws_io::newline);
+    define(identifier("map"), jaws_hof::map);
+    define(identifier("list?"), jaws_eq::isList);
+    define(identifier("list"), jaws_list::listProcedure);
+    define(identifier("car"), jaws_list::carProcudure);
+    define(identifier("cdr"), jaws_list::cdrProcedure);
+    define(identifier("cons"), jaws_list::cons);
+    define(identifier("append"), jaws_list::append);
+    define(identifier("load-library"), jaws_ffi::loadLibrary);
+    define(identifier("register-function"), jaws_ffi::registerFunction);
+    define(identifier("list-ref"), jaws_list::listRef);
+    define(identifier("list-set!"), jaws_list::listSet);
+    define(identifier("make-vector"), jaws_vec::makeVector);
+    define(identifier("vector"), jaws_vec::vectorProcedure);
+    define(identifier("vector-ref"), jaws_vec::vectorRef);
+    define(identifier("vector-set!"), jaws_vec::vectorSet);
+    define(identifier("vector-length"), jaws_vec::vectorLength);
+    define(identifier("vector-copy"), jaws_vec::vectorCopy);
+    define(identifier("vector-copy!"), jaws_vec::vectorCopyTo);
+    define(identifier("vector-fill!"), jaws_vec::vectorFill);
+    define(identifier("eval"), jaws_hof::eval);
+    define(identifier("apply"), jaws_hof::apply);
+    define(identifier("call/cc"), jaws_hof::callCC);
+    define(identifier("call-with-current-continuation"), jaws_hof::callCC);
+    define(identifier("number->string"), jaws_string::numberToString);
+    define(identifier("string=?"), jaws_string::stringEqual);
+    define(identifier("string<?"), jaws_string::stringLess);
+    define(identifier("string>?"), jaws_string::stringGreater);
+    define(identifier("string-ci=?"), jaws_string::stringCiEqual);
+    define(identifier("string-length"), jaws_string::stringLength);
+    define(identifier("string-append"), jaws_string::stringAppend);
+    define(identifier("substring"), jaws_string::substring);
+    define(identifier("string-ref"), jaws_string::stringRef);
+    define(identifier("string->list"), jaws_string::stringToList);
+    define(identifier("list->string"), jaws_string::listToString);
+    define(identifier("string-copy"), jaws_string::stringCopy);
+    define(identifier("string-upcase"), jaws_string::stringUpcase);
+    define(identifier("string-downcase"), jaws_string::stringDowncase);
+    define(identifier("thread-spawn"), jaws_thread::threadSpawn);
+    define(identifier("thread-join"), jaws_thread::threadJoin);
+    define(identifier("thread-sleep!"), jaws_thread::threadSleep);
+    define(identifier("thread-current-id"), jaws_thread::threadCurrentId);
+    define(identifier("mutex-create"), jaws_thread::mutexCreate);
+    define(identifier("mutex-lock!"), jaws_thread::mutexLock);
+    define(identifier("mutex-unlock!"), jaws_thread::mutexUnlock);
+    define(identifier("condition-variable-create"), jaws_thread::conditionCreate);
+    define(identifier("condition-variable-wait"), jaws_thread::conditionWait);
+    define(identifier("condition-variable-signal!"), jaws_thread::conditionSignal);
+    define(identifier("condition-variable-broadcast!"), jaws_thread::conditionBroadcast);
 
     return state;
 }
@@ -243,7 +252,7 @@ std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpr
             }
         }
         case Tokentype::IDENTIFIER:
-            if (auto value = state.env->get(token.lexeme)) {
+            if (auto value = state.env->get(atom.value)) {
                 return value;
             }
             throw InterpreterError("Undefined variable: " + token.lexeme);
@@ -295,38 +304,36 @@ std::optional<SchemeValue> interpretDefine(InterpreterState& state, const Define
     if (value->isProc() && !value->asProc()->isBuiltin()) {
         auto proc = value->asProc();
         if (auto userProc = std::dynamic_pointer_cast<UserProcedure>(proc)) {
-            userProc->closure->define(def.name.token.lexeme, *value);
+            userProc->closure->define(def.name, *value);
         }
     }
-    state.env->define(def.name.token.lexeme, *value);
+    state.env->define(def.name, *value);
     return std::nullopt;
 }
 
 std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, const DefineProcedure& proc)
 {
-    std::vector<Token> paramTokens;
-    paramTokens.reserve(proc.parameters.size());
+    std::vector<HygienicSyntax> params;
+    params.reserve(proc.parameters.size());
     for (const auto& param : proc.parameters) {
-        paramTokens.push_back(param.token);
+        params.push_back(param); // Now param is already a HygienicSyntax
     }
-    auto procedure = std::make_shared<UserProcedure>(paramTokens, proc.body, state.env, proc.isVariadic);
-    state.env->define(proc.name.token.lexeme, SchemeValue(std::move(procedure)));
+    auto procedure = std::make_shared<UserProcedure>(params, proc.body, state.env, proc.isVariadic);
+    state.env->define(proc.name, SchemeValue(std::move(procedure)));
     return std::nullopt;
 }
-
 std::optional<SchemeValue> interpretLambda(InterpreterState& state, const LambdaExpression& lambda)
 {
-    std::vector<Token> paramTokens;
-    paramTokens.reserve(lambda.parameters.size());
+    std::vector<HygienicSyntax> params;
+    params.reserve(lambda.parameters.size());
     for (const auto& param : lambda.parameters) {
-        paramTokens.push_back(param.token);
+        params.push_back(param); // Now param is already a HygienicSyntax
     }
     auto closureEnv = state.env;
     auto proc = std::make_shared<UserProcedure>(
-        paramTokens, lambda.body, closureEnv, lambda.isVariadic);
+        params, lambda.body, closureEnv, lambda.isVariadic);
     return SchemeValue(std::move(proc));
 }
-
 std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpression& ifexpr)
 {
     auto condition = interpret(state, ifexpr.condition);
@@ -344,7 +351,7 @@ std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpressi
 std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpression& let)
 {
     auto closureEnv = state.env;
-    std::vector<Token> paramTokens = let.getParameterTokens();
+    std::vector<HygienicSyntax> paramTokens = let.getParameterSyntax();
     auto lambdaProc = std::make_shared<UserProcedure>(
         paramTokens, let.body, closureEnv, false);
 
@@ -360,10 +367,10 @@ std::optional<SchemeValue> interpretLet(InterpreterState& state, const LetExpres
     if (let.name) {
         auto letExecEnv = std::make_shared<Environment>(closureEnv);
         for (size_t k = 0; k < let.arguments.size(); ++k) {
-            letExecEnv->define(let.arguments[k].first.token.lexeme, args[k]);
+            letExecEnv->define(let.arguments[k].first, args[k]);
         }
         lambdaProc->closure = letExecEnv;
-        letExecEnv->define(let.name->token.lexeme, SchemeValue(lambdaProc));
+        letExecEnv->define(*let.name, SchemeValue(lambdaProc));
     }
 
     return executeProcedure(state, SchemeValue(lambdaProc), std::move(args));
@@ -425,7 +432,7 @@ std::optional<SchemeValue> interpretSet(InterpreterState& state, const SetExpres
     if (!val) {
         throw InterpreterError("Cannot set undefined value");
     }
-    state.env->set(set.identifier.token.lexeme, *val);
+    state.env->set(set.identifier, *val);
     return std::nullopt;
 }
 

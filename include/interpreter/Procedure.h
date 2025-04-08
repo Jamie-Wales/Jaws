@@ -1,6 +1,7 @@
 #pragma once
 #include "Environment.h"
 #include "Expression.h"
+#include "Syntax.h"
 #include "Token.h"
 #include "Value.h"
 #include <functional>
@@ -47,12 +48,12 @@ private:
 
 class UserProcedure : public Procedure {
 public:
-    std::vector<Token> parameters;
+    std::vector<HygienicSyntax> parameters;
     std::vector<std::shared_ptr<Expression>> body;
     std::shared_ptr<Environment> closure;
     bool isVariadic = false;
 
-    UserProcedure(std::vector<Token> params,
+    UserProcedure(std::vector<HygienicSyntax> params,
         std::vector<std::shared_ptr<Expression>> b,
         std::shared_ptr<Environment> env = nullptr,
         bool variadic = false)

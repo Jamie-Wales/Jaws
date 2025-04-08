@@ -1,7 +1,9 @@
 #include "Procedure.h"
 #include "Error.h"
+#include "Syntax.h"
 #include "Value.h"
 #include "interpret.h"
+#include <algorithm>
 #include <optional>
 // #define DEBUG_LOGGING
 
@@ -41,12 +43,14 @@ std::optional<SchemeValue> UserProcedure::executeBody(
 
     DEBUG_LOG("UserProc::executeBody: Created newEnv@ " << newEnv.get() << " with parent " << closure.get());
     size_t i = 0;
+    ScopeID scid = generateFreshScopeID();
     for (; i < parameters.size() - (isVariadic ? 1 : 0); i++) {
-        newEnv->define(parameters[i].lexeme, args[i]);
+        parameters[i].context.addMark(scid);
+        newEnv->define(parameters[i], args[i]);
     }
     if (isVariadic) {
         std::list<SchemeValue> remainingArgs(args.begin() + i, args.end());
-        newEnv->define(parameters.back().lexeme, SchemeValue(remainingArgs));
+        newEnv->define(parameters.back(), SchemeValue(remainingArgs));
     }
 
     auto oldEnv = state.env;

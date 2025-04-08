@@ -9,4 +9,3 @@
 
 (display my-list) ; What is my-list now?
 (newline)
-(display temp) ; Was temp affected? (Checks if set! was captured)

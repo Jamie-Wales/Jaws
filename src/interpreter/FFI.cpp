@@ -1,4 +1,3 @@
-
 #include "FFI.h"
 
 FFIManager& FFIManager::instance()
@@ -81,10 +80,65 @@ const char* FFIManager::schemeToString(const SchemeValue& value)
     return storage.c_str();
 }
 
+HygienicSyntax FFIManager::createIdentifier(const std::string& name)
+{
+    Token token;
+    token.type = Tokentype::IDENTIFIER;
+    token.lexeme = name;
+    return HygienicSyntax { token, SyntaxContext() };
+}
+
 FFIManager::FFIManager()
 {
     registerDefaultWrappers();
 }
+
+// Implementation of FFI functions for jaws_ffi namespace
+namespace jaws_ffi {
+
+std::optional<SchemeValue> loadLibrary(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("load-library requires 2 arguments: library-name and path");
+    }
+
+    if (!std::holds_alternative<std::string>(args[0].value) || !std::holds_alternative<std::string>(args[1].value)) {
+        throw InterpreterError("load-library arguments must be strings");
+    }
+
+    const std::string& name = std::get<std::string>(args[0].value);
+    const std::string& path = std::get<std::string>(args[1].value);
+
+    FFIManager::instance().loadLibrary(name, path);
+    return std::nullopt;
+}
+
+std::optional<SchemeValue> registerFunction(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
+{
+    if (args.size() < 4) {
+        throw InterpreterError("register-function requires at least 4 arguments: library-name, function-name, return-type, and argument types");
+    }
+
+    if (!std::holds_alternative<std::string>(args[0].value) || !std::holds_alternative<std::string>(args[1].value) || !std::holds_alternative<std::string>(args[2].value)) {
+        throw InterpreterError("First three arguments to register-function must be strings");
+    }
+
+    const std::string& libName = std::get<std::string>(args[0].value);
+    const std::string& funcName = std::get<std::string>(args[1].value);
+    const std::string& retType = std::get<std::string>(args[2].value);
+
+    std::vector<std::string> argTypes;
+    for (size_t i = 3; i < args.size(); i++) {
+        if (!std::holds_alternative<std::string>(args[i].value)) {
+            throw InterpreterError("Argument types to register-function must be strings");
+        }
+        argTypes.push_back(std::get<std::string>(args[i].value));
+    }
+
+    return FFIManager::instance().wrapCFunction(libName, funcName, retType, argTypes);
+}
+
+} // namespace jaws_ffi
 
 void FFIManager::registerDefaultWrappers()
 {
@@ -331,6 +385,7 @@ void FFIManager::registerDefaultWrappers()
             return SchemeValue(Number(result));
         };
     });
+
     registerWrapper("void(int,string)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<void (*)(int, const char*)>(ptr);
         return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
@@ -339,6 +394,7 @@ void FFIManager::registerDefaultWrappers()
             return std::nullopt;
         };
     });
+
     registerWrapper("string(int)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<const char* (*)(int)>(ptr);
         return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
@@ -347,6 +403,7 @@ void FFIManager::registerDefaultWrappers()
             return SchemeValue(std::string(result ? result : ""));
         };
     });
+
     registerWrapper("string(int,int)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<const char* (*)(int, int)>(ptr);
         return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
@@ -417,7 +474,8 @@ void FFIManager::registerDefaultWrappers()
             return std::nullopt;
         };
     });
-    // Additional wrapper for void(int,int,string)
+
+    // void(int,int,string)
     registerWrapper("void(int,int,string)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<void (*)(int, int, const char*)>(ptr);
         return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
@@ -427,7 +485,7 @@ void FFIManager::registerDefaultWrappers()
         };
     });
 
-    // Additional wrapper for void(int,int,int,int,int)
+    // void(int,int,int,int,int)
     registerWrapper("void(int,int,int,int,int)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<void (*)(int, int, int, int, int)>(ptr);
         return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
@@ -448,6 +506,7 @@ void FFIManager::registerDefaultWrappers()
             return SchemeValue(Number(result));
         };
     });
+
     registerWrapper("void(int,int,int,int,int,int)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<void (*)(int, int, int, int, int, int)>(ptr);
         return [func](interpret::InterpreterState&, const std::vector<SchemeValue>& args) -> std::optional<SchemeValue> {
@@ -458,6 +517,7 @@ void FFIManager::registerDefaultWrappers()
             return std::nullopt;
         };
     });
+
     // int(int,int,string)
     registerWrapper("int(int,int,string)", [](void* ptr) -> FFIFunction {
         auto func = reinterpret_cast<int (*)(int, int, const char*)>(ptr);

@@ -11,14 +11,11 @@ std::optional<SchemeValue> loadLibrary(
     if (args.size() != 2) {
         throw InterpreterError("load-library requires exactly 2 arguments");
     }
-
     if (!std::holds_alternative<std::string>(args[0].value) || !std::holds_alternative<std::string>(args[1].value)) {
         throw InterpreterError("load-library expects two string arguments: library-name and library-path");
     }
-
     const std::string& name = std::get<std::string>(args[0].value);
     const std::string& path = std::get<std::string>(args[1].value);
-
     try {
         FFIManager::instance().loadLibrary(name, path);
         return std::nullopt;
@@ -55,15 +52,14 @@ std::optional<SchemeValue> registerFunction(
                 throw InterpreterError("Invalid argument type: " + argType + ". Supported types are: int, double, string");
             }
         }
-
         argTypes.push_back(argType);
     }
-
     try {
         SchemeValue wrappedFunc = FFIManager::instance().wrapCFunction(
             libName, funcName, retType, argTypes);
 
-        state.env->define(schemeName, wrappedFunc);
+        HygienicSyntax identifier = FFIManager::createIdentifier(schemeName);
+        state.env->define(identifier, wrappedFunc);
 
         return std::nullopt;
     } catch (const std::exception& e) {
@@ -78,19 +74,15 @@ std::optional<SchemeValue> registerWrapper(
     if (args.size() != 2) {
         throw InterpreterError("register-wrapper requires exactly 2 arguments: signature and wrapper-procedure");
     }
-
     if (!std::holds_alternative<std::string>(args[0].value)) {
         throw InterpreterError("First argument to register-wrapper must be a signature string");
     }
     const std::string& signature = std::get<std::string>(args[0].value);
-
     if (!args[1].isProc()) {
         throw InterpreterError("Second argument to register-wrapper must be a procedure");
     }
-
     throw InterpreterError("register-wrapper is not fully implemented yet");
-
     return std::nullopt;
 }
 
-}
+} // namespace jaws_ffi
