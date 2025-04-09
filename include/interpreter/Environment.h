@@ -24,4 +24,13 @@ public:
     std::shared_ptr<Environment> copy() const;
     void printEnv() const;
     std::shared_ptr<Environment> getParent() const { return parent; }
+
+    std::shared_ptr<Environment> getRootEnvironment()
+    {
+        std::shared_ptr<Environment> current = shared_from_this();
+        while (current->getParent() != nullptr) {
+            current = current->getParent();
+        }
+        return current;
+    }
 };

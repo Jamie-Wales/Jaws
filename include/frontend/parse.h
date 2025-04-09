@@ -35,7 +35,7 @@ std::shared_ptr<Expression> parseList(ParserState& state);
 std::shared_ptr<Expression> parseMacroExpression(ParserState& state);
 std::shared_ptr<Expression> parseMacroSExpression(ParserState& state);
 
-std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state);
+std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state, bool t = true);
 std::shared_ptr<Expression> parseCond(ParserState& state);
 std::shared_ptr<Expression> parseTailExpression(ParserState& state);
 

@@ -4,6 +4,8 @@
 namespace scanner {
 
 const std::unordered_map<std::string, Tokentype> keywords = {
+    { "export", Tokentype::EXPORT },
+    { "begin", Tokentype::IDENTIFIER },
     { "define-syntax", Tokentype::DEFINE_SYTAX },
     { "define-library", Tokentype::DEFINE_LIBRARY },
     { "define", Tokentype::DEFINE },

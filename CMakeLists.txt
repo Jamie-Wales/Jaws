@@ -49,6 +49,8 @@ file(GLOB_RECURSE COMPILER_SOURCES
         "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/frontend/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/frontend/MacroEnvironment.cpp"
+
+        "${PROJECT_SOURCE_DIR}/src/frontend/Imort.cpp"
         "${PROJECT_SOURCE_DIR}/src/interpreter/*.cpp"
         "${PROJECT_SOURCE_DIR}/src/utils/*.cpp"
 )
@@ -66,6 +68,7 @@ add_library(app_lib STATIC
         ${PROJECT_SOURCE_DIR}/src/frontend/scan.cpp
         ${PROJECT_SOURCE_DIR}/src/frontend/parse.cpp
         ${PROJECT_SOURCE_DIR}/src/frontend/Expression.cpp
+        ${PROJECT_SOURCE_DIR}/src/frontend/Import.cpp # NOTE: Ensure correct path if it differs
         ${PROJECT_SOURCE_DIR}/src/frontend/Environment.cpp # NOTE: Ensure correct path if it differs
         ${PROJECT_SOURCE_DIR}/src/utils/run.cpp
         ${PROJECT_SOURCE_DIR}/src/utils/ExpressionUtils.cpp
@@ -86,6 +89,8 @@ add_library(app_lib STATIC
 target_include_directories(app_lib PUBLIC
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/include/frontend
+
+        ${PROJECT_SOURCE_DIR}/include/frontend/Import.h
         # These specific headers might be redundant if include/frontend is already listed
         # ${PROJECT_SOURCE_DIR}/include/frontend/Expression.h
         # ${PROJECT_SOURCE_DIR}/include/frontend/Token.h

@@ -22,6 +22,8 @@ using namespace emscripten;
 class JawsWrapper {
 private:
     interpret::InterpreterState state;
+    std::shared_ptr<pattern::MacroEnvironment> mainMacroEnv;
+    import::LibraryRegistry registry;
     std::stringstream ss;
     std::stringstream outputCapture;
 
@@ -59,11 +61,24 @@ private:
         }
         stages.parsed = *expressions;
 
-        // Process imports
-        stages.withImports = import::processImports(stages.parsed);
+        // Process imports - Now using registry
+        import::ProcessedCode processedCode = import::processImports(stages.parsed, registry);
+        stages.withImports = processedCode.remainingExpressions;
 
-        // Expand macros
-        stages.expanded = macroexp::expandMacros(stages.withImports);
+        // Extract macros before macro expansion
+        std::vector<std::shared_ptr<Expression>> expressionsToExpand;
+        for (const auto& expr : stages.withImports) {
+            if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+                if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
+                    mainMacroEnv->defineMacro(de->name.token.lexeme, de->rule);
+                }
+            } else {
+                expressionsToExpand.push_back(expr);
+            }
+        }
+
+        // Expand macros with macro environment
+        stages.expanded = macroexp::expandMacros(expressionsToExpand, mainMacroEnv);
 
         // Generate ANF - store the result directly
         stages.anf = ir::ANFtransform(stages.expanded);
@@ -91,7 +106,17 @@ private:
 public:
     JawsWrapper()
         : state(interpret::createInterpreter())
+        , mainMacroEnv(std::make_shared<pattern::MacroEnvironment>())
     {
+        // Initialize library registry similar to run.cpp
+        try {
+            import::preloadLibraries("/lib", registry);
+            import::populateInterpreterStateFromRegistry(registry, state);
+            import::populateMacroEnvironmentFromRegistry(registry, *mainMacroEnv);
+            std::cout << "[Info] Preloaded libraries populated into WASM environment." << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "[Warning] Error setting up WASM environment: " << e.what() << std::endl;
+        }
     }
 
     emscripten::val evaluate(const std::string& input)
@@ -99,16 +124,45 @@ public:
         try {
             auto oldBuf = redirectStdout();
 
-            auto stages = compileStages(input);
-            std::string result;
+            // Parse code
+            auto tokens = scanner::tokenize(input);
+            auto expressionsOpt = parse::parse(std::move(tokens));
+            if (!expressionsOpt) {
+                throw std::runtime_error("Parsing failed");
+            }
+            auto parsedExpressions = *expressionsOpt;
 
-            // Evaluate using expanded form
-            for (const auto& expr : stages.expanded) {
-                std::vector<std::shared_ptr<Expression>> single_expr = { expr };
-                auto val = interpret::interpret(state, single_expr);
-                if (val) {
-                    result = val->toString();
+            // Process imports
+            import::ProcessedCode processedCode;
+            try {
+                processedCode = import::processImports(parsedExpressions, registry);
+            } catch (const std::exception& e) {
+                throw std::runtime_error(std::string("[Import Error] ") + e.what());
+            }
+
+            // Handle macro definitions
+            std::vector<std::shared_ptr<Expression>> expressionsToExpand;
+            for (const auto& expr : processedCode.remainingExpressions) {
+                if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
+                    if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
+                        mainMacroEnv->defineMacro(de->name.token.lexeme, de->rule);
+                    }
+                } else {
+                    expressionsToExpand.push_back(expr);
                 }
+            }
+
+            // Prepare interpreter environment with imported values
+            prepareInterpreterEnvironment(processedCode, state);
+
+            // Expand macros
+            auto finalExpressions = macroexp::expandMacros(expressionsToExpand, mainMacroEnv);
+
+            // Evaluate
+            std::string result;
+            auto val = interpret::interpret(state, finalExpressions);
+            if (val) {
+                result = val->toString();
             }
 
             std::string stdoutCapture = outputCapture.str();

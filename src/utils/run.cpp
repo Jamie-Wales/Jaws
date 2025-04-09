@@ -133,10 +133,12 @@ std::string readFile(const std::string& path)
     buffer << file.rdbuf();
     return buffer.str();
 }
+
 void evaluate(
-    interpret::InterpreterState& state, // No macroEnv here
+    interpret::InterpreterState& state,
     import::LibraryRegistry& registry,
-    Options& opts)
+    Options& opts,
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv)
 {
     auto tokens = scanner::tokenize(opts.input);
     auto expressionsOpt = parse::parse(std::move(tokens));
@@ -178,14 +180,18 @@ void evaluate(
         std::vector<std::shared_ptr<Expression>> afterImportExpressions = processedCode.remainingExpressions;
         for (const auto& libData : processedCode.importedLibrariesData) {
             for (const auto& [name, binding] : libData.exportedBindings) {
-                afterImportExpressions.push_back(binding.definition);
+                if (binding.definition) { // Add null check
+                    afterImportExpressions.push_back(binding.definition);
+                }
             }
         }
         if (opts.printCode) {
             ss_print_buffer.str("");
             ss_print_buffer.clear();
             for (const auto& expression : afterImportExpressions) {
-                ss_print_buffer << expression->toString() << "\n";
+                if (expression) { // Add null check
+                    ss_print_buffer << expression->toString() << "\n";
+                }
             }
             const auto output = ss_print_buffer.str();
             std::cout << "\n<| Code After Import Processing |>\n"
@@ -194,7 +200,9 @@ void evaluate(
         if (opts.printAST) {
             std::cout << "\n<| AST After Import Processing |>\n";
             for (const auto& expression : afterImportExpressions) {
-                std::cout << expression->ASTToString() << "\n";
+                if (expression) { // Add null check
+                    std::cout << expression->ASTToString() << "\n";
+                }
             }
             std::cout << "\n"
                       << std::endl;
@@ -203,23 +211,12 @@ void evaluate(
 
     std::vector<std::shared_ptr<Expression>> finalExpressions;
     try {
-        auto macroEnv = std::make_shared<pattern::MacroEnvironment>();
-
-        for (const auto& libData : processedCode.importedLibrariesData) {
-            for (const auto& [name, binding] : libData.exportedBindings) {
-                if (binding.type == import::ExportedBinding::Type::SYNTAX) {
-                    if (auto* ds = std::get_if<DefineSyntaxExpression>(&binding.definition->as)) {
-                        macroEnv->defineMacro(name, ds->rule); // Populate local env
-                    }
-                }
-            }
-        }
 
         std::vector<std::shared_ptr<Expression>> expressionsToExpand;
         for (const auto& expr : processedCode.remainingExpressions) {
             if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-                if (std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
-                    macroEnv->defineMacro(de->name.token.lexeme, de->rule); // Populate local env
+                if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
+                    macroEnv->defineMacro(de->name.token.lexeme, de->rule);
                 }
             } else {
                 expressionsToExpand.push_back(expr);
@@ -237,7 +234,9 @@ void evaluate(
         ss_print_buffer.str("");
         ss_print_buffer.clear();
         for (const auto& expression : finalExpressions) {
-            ss_print_buffer << expression->toString() << "\n";
+            if (expression) { // Add null check
+                ss_print_buffer << expression->toString() << "\n";
+            }
         }
         const auto output = ss_print_buffer.str();
         std::cout << "\n<| Expanded Macro |>\n"
@@ -246,7 +245,9 @@ void evaluate(
     if (opts.printAST && (opts.printMacro || opts.prettyPrint)) {
         std::cout << "\n<| AST After Macro Expansion |>\n";
         for (const auto& expression : finalExpressions) {
-            std::cout << expression->ASTToString() << "\n";
+            if (expression) { // Add null check
+                std::cout << expression->ASTToString() << "\n";
+            }
         }
         std::cout << "\n"
                   << std::endl;
@@ -256,13 +257,18 @@ void evaluate(
         if (opts.compile) {
             auto importedDefinitions = prepareCompilerInput(processedCode);
             importedDefinitions.insert(importedDefinitions.end(), finalExpressions.begin(), finalExpressions.end());
+
+            // Add null check before ANF transform if needed
+            importedDefinitions.erase(std::remove(importedDefinitions.begin(), importedDefinitions.end(), nullptr), importedDefinitions.end());
+
             auto anf = ir::ANFtransform(importedDefinitions);
             if (!anf.empty()) {
                 std::vector<std::shared_ptr<ir::ANF>> optimizedAnfStorage;
                 if (opts.printANF) {
                     std::cout << "\n<| ANF Before Optimization |>\n";
                     for (const auto& tl : anf) {
-                        std::cout << tl->toString() << "\n";
+                        if (tl)
+                            std::cout << tl->toString() << "\n";
                     }
                     std::cout << std::endl;
                 }
@@ -271,7 +277,8 @@ void evaluate(
                     if (opts.printANF) {
                         std::cout << "\n<| ANF After Optimization |>\n";
                         for (const auto& tl : anf) {
-                            std::cout << tl->toString() << "\n";
+                            if (tl)
+                                std::cout << tl->toString() << "\n";
                         }
                         std::cout << std::endl;
                     }
@@ -288,7 +295,7 @@ void evaluate(
                 std::string asmFile = (outPath / "output.asm").string();
                 std::string exeFile = (outPath / "scheme_program").string();
                 std::cout << "Generating QBE IR to: " << qbeFile << std::endl;
-                generateQBEIr(_3ac, qbeFile);
+                generateQBEIr(_3ac, qbeFile); // Assuming exists
                 std::cout << "Compiling QBE IR to assembly: " << asmFile << std::endl;
                 std::string qbeCmd = "qbe " + qbeFile + " > " + asmFile;
                 if (system(qbeCmd.c_str()) != 0) {
@@ -324,9 +331,13 @@ void runFile(Options& opts)
 {
     try {
         auto state = interpret::createInterpreter();
+        auto mainMacroEnv = std::make_shared<pattern::MacroEnvironment>();
         import::LibraryRegistry registry;
         import::preloadLibraries("../lib", registry);
-        evaluate(state, registry, opts);
+        import::populateInterpreterStateFromRegistry(registry, state);
+        import::populateMacroEnvironmentFromRegistry(registry, *mainMacroEnv);
+        evaluate(state, registry, opts, mainMacroEnv);
+
     } catch (const ParseError& e) {
         e.printFormattedError();
     } catch (const InterpreterError& e) {
@@ -338,15 +349,26 @@ void runFile(Options& opts)
 
 void runPrompt(Options& opts)
 {
-    printJawsLogo(); // Removed
+    printJawsLogo();
     std::cout << "<| Welcome to the Jaws REPL |>\n";
     std::cout << "<| Type 'exit' to quit, '(help)' for commands |>\n";
+
     auto state = interpret::createInterpreter();
+    auto mainMacroEnv = std::make_shared<pattern::MacroEnvironment>();
     import::LibraryRegistry registry;
+
     try {
         import::preloadLibraries("../lib", registry);
     } catch (const std::exception& e) {
         std::cerr << "[Warning] Failed during library preload: " << e.what() << std::endl;
+    }
+
+    try {
+        import::populateInterpreterStateFromRegistry(registry, state);
+        import::populateMacroEnvironmentFromRegistry(registry, *mainMacroEnv);
+        std::cout << "[Info] Preloaded libraries populated into REPL environment." << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "[Warning] Error populating initial environments: " << e.what() << std::endl;
     }
 
     while (true) {
@@ -362,7 +384,7 @@ void runPrompt(Options& opts)
             continue;
         try {
             opts.input = input;
-            evaluate(state, registry, opts);
+            evaluate(state, registry, opts, mainMacroEnv);
         } catch (const ParseError& e) {
             e.printFormattedError();
         } catch (const InterpreterError& e) {

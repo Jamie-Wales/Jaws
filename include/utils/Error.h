@@ -23,10 +23,10 @@ public:
         std::cerr << generateErrorIndicator() << "\n";
     }
 
-private:
     Token token;
     std::string line;
 
+private:
     static std::string formatError(const std::string& message, const Token& token)
     {
         std::ostringstream oss;

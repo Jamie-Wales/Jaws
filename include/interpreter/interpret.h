@@ -27,6 +27,10 @@ struct InterpreterState {
         state.env = rootEnv->extend();
         return state;
     }
+    InterpreterState(const InterpreterState&) = delete;
+    InterpreterState& operator=(const InterpreterState&) = delete;
+    InterpreterState(InterpreterState&&) = default;
+    InterpreterState& operator=(InterpreterState&&) = default;
 };
 
 InterpreterState createInterpreter();
@@ -66,7 +70,7 @@ std::optional<SchemeValue> interpretSet(InterpreterState& state, const SetExpres
 
 std::optional<ProcedureCall> evaluateProcedureCall(
     InterpreterState& state,
-    const sExpression& sexpr);
+    sExpression sexpr);
 
 std::optional<SchemeValue> executeProcedure(
     InterpreterState& state,

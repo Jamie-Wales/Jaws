@@ -766,11 +766,13 @@ std::shared_ptr<Expression> convertIf(const MacroList& ml, int line)
 
     if (!condition || !thenBranch)
         throw std::runtime_error("Invalid if parts during conversion");
+    thenBranch = std::make_shared<Expression>(TailExpression { thenBranch }, thenBranch->line);
 
     if (ml.elements.size() == 4) {
         auto elseConv = convertMacroResultToExpressionInternal(ml.elements[3]);
         if (!elseConv)
             throw std::runtime_error("Invalid if else part during conversion");
+        elseBranchOpt = std::make_shared<Expression>(TailExpression { elseConv }, elseConv->line);
     }
     return std::make_shared<Expression>(IfExpression { condition, thenBranch, elseBranchOpt }, line);
 }

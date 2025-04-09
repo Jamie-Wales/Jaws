@@ -346,6 +346,8 @@ static std::string typeToString(ExprType type)
         return "DefineSyntax";
     case ExprType::Let:
         return "Let";
+    case ExprType::DefineLibrary:
+        return "DefineLibrary";
     }
     return "Unknown";
 }

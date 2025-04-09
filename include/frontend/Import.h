@@ -2,7 +2,9 @@
 #define IMPORT_H
 
 #include "Expression.h"
+#include "MacroEnvironment.h"
 #include "Syntax.h"
+#include "interpret.h"
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -50,6 +52,8 @@ LibraryData importLibrary(
 
 void preloadLibraries(const std::string& basePath, LibraryRegistry& registry);
 
+void populateInterpreterStateFromRegistry(const LibraryRegistry& registry, interpret::InterpreterState& state);
+void populateMacroEnvironmentFromRegistry(const LibraryRegistry& registry, pattern::MacroEnvironment& macroEnv);
 ProcessedCode processImports(
     const std::vector<std::shared_ptr<Expression>>& expressions,
     LibraryRegistry& registry);

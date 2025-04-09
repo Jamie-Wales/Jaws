@@ -1,6 +1,12 @@
 #include "parse.h"
+#include <iterator> // For std::make_move_iterator
+#include <memory>
+#include <optional>
+#include <utility> // For std::move, std::pair
+#include <vector>
 
 namespace parse {
+
 Token peek(const ParserState& state)
 {
     return state.tokens[state.current];
@@ -66,6 +72,16 @@ Token consume(ParserState& state, Tokentype type, const std::string& message)
     throw ParseError(message + " Token: " + previousToken(state).lexeme, peek(state), "");
 }
 
+template <typename... Types>
+Token consume(ParserState& state, const std::string& message, Types... types)
+{
+    bool matches = (... || check(state, types));
+    if (matches) {
+        return advance(state);
+    }
+    throw ParseError(message + " Token: " + previousToken(state).lexeme, peek(state), "");
+}
+
 std::shared_ptr<Expression> parseSet(ParserState& state)
 {
     auto name = consume(state, Tokentype::IDENTIFIER, "Expect Identifier for set!");
@@ -97,7 +113,7 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
 
         if (match(state, Tokentype::DEFINE_SYTAX))
             return parseDefineSyntax(state);
-        if (match(state, Tokentype::DEFINE_LIBRARY)) { // Check *before* consuming
+        if (match(state, Tokentype::DEFINE_LIBRARY)) {
             return parseDefineLibrary(state);
         }
         if (match(state, Tokentype::LET))
@@ -151,27 +167,25 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     }
 }
 
-// In parse.cpp
 std::shared_ptr<Expression> parseSExpression(ParserState& state)
 {
-    int line = peek(state).line; // Assuming peek doesn't advance
+    int line = peek(state).line;
 
     std::vector<std::shared_ptr<Expression>> elements;
-    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) { // Use check before consuming ')'
+    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         elements.push_back(parseExpression(state));
     }
-    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' to close S-Expression"); // Consume the ')'
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' to close S-Expression");
 
-    // NO TAIL EXPRESSION WRAPPING HERE!
     return std::make_shared<Expression>(
-        Expression { sExpression { std::move(elements) }, line }); // Use line of opening paren maybe? Or prev token?
+        Expression { sExpression { std::move(elements) }, line });
 }
 
 std::shared_ptr<Expression> parseDefine(ParserState& state)
 {
     if (match(state, Tokentype::LEFT_PAREN)) {
         Token name = consume(state, Tokentype::IDENTIFIER, "Expected function name");
-        int line = name.line; // Use function name's line for the node
+        int line = name.line;
         std::vector<Token> parameters;
         bool isVariadic = false;
         while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
@@ -184,13 +198,13 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
         }
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameter list");
         std::vector<std::shared_ptr<Expression>> body;
-        while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) { // Use check before consuming ')'
+        while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
             body.push_back(parseExpression(state));
         }
         if (!body.empty()) {
             auto lastBodyExpr = body.back();
             body.back() = std::make_shared<Expression>(
-                Expression { TailExpression { lastBodyExpr }, lastBodyExpr->line }); // Wrap last body expr
+                Expression { TailExpression { lastBodyExpr }, lastBodyExpr->line });
         }
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after function body");
         return std::make_shared<Expression>(Expression {
@@ -279,14 +293,13 @@ std::shared_ptr<Expression> parseLet(ParserState& state)
         while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
             consume(state, Tokentype::LEFT_PAREN, "Expected '(' to start binding pair in 'let'");
             Token name = consume(state, Tokentype::IDENTIFIER, "Expected identifier for binding variable in 'let'");
-            auto value = parseExpression(state); // Parse the value expression
+            auto value = parseExpression(state);
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' to end binding pair in 'let'");
             bindings.push_back({ name, value });
         }
     }
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after 'let' bindings");
 
-    // Parse the body expressions
     std::vector<std::shared_ptr<Expression>> body;
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         body.emplace_back(parseExpression(state));
@@ -322,10 +335,10 @@ std::shared_ptr<Expression> parseVector(ParserState& state)
 std::shared_ptr<Expression> parseList(ParserState& state)
 {
     std::vector<std::shared_ptr<Expression>> elements;
-    bool isVariadic = false;
+    bool isVariadic = false; // This seems unused based on the code, might need revisiting
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         if (match(state, Tokentype::LEFT_PAREN)) {
-            elements.push_back(parseList(state));
+            elements.push_back(parseList(state)); // Assuming parseList is meant for general list structures
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after nested list");
         } else {
             Token token = advance(state);
@@ -333,35 +346,31 @@ std::shared_ptr<Expression> parseList(ParserState& state)
                 Expression { AtomExpression { token }, token.line }));
         }
     }
+    // Missing consumption of RIGHT_PAREN here? If called from LEFT_PAREN match
     return std::make_shared<Expression>(
-        ListExpression { std::move(elements), isVariadic },
+        ListExpression { std::move(elements), isVariadic }, // Changed to ListExpression based on name
         previousToken(state).line);
 }
 
-template <typename... Types>
-Token consume(ParserState& state, const std::string& message, Types... types)
-{
-    bool matches = (... || check(state, types));
-    if (matches) {
-        return advance(state);
-    }
-    throw ParseError(message + " Token: " + previousToken(state).lexeme, peek(state), "");
-}
-
-std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state)
+std::vector<std::shared_ptr<Expression>> parseLibraryName(ParserState& state, bool expectOpeningParen)
 {
     std::vector<std::shared_ptr<Expression>> parts;
 
-    consume(state, Tokentype::LEFT_PAREN, "Expected '(' in library name");
-    while (!check(state, Tokentype::RIGHT_PAREN)) {
-        if (match(state, Tokentype::IDENTIFIER) || match(state, Tokentype::INTEGER)) {
+    if (expectOpeningParen) {
+        consume(state, Tokentype::LEFT_PAREN, "Expected '(' to start library name");
+    }
+
+    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+        if (check(state, Tokentype::IDENTIFIER) || check(state, Tokentype::INTEGER)) {
+            advance(state);
             parts.push_back(std::make_shared<Expression>(
                 Expression { AtomExpression { previousToken(state) }, previousToken(state).line }));
         } else {
-            error(state, "Expected identifier or version number in library name");
+            errorAt(state, peek(state), "Expected identifier or integer in library name part");
+            break;
         }
     }
-    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after library name");
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' to end library name");
 
     return parts;
 }
@@ -401,6 +410,7 @@ std::optional<std::vector<std::shared_ptr<Expression>>> parse(std::vector<Token>
 
     return hadError ? std::nullopt : std::make_optional(output);
 }
+
 std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
 {
     consume(state, Tokentype::LEFT_PAREN, "Expected '(' before literals in 'syntax-rules'");
@@ -459,6 +469,7 @@ std::shared_ptr<Expression> parseMacroSExpression(ParserState& state)
     return std::make_shared<Expression>(
         Expression { ListExpression { std::move(elements) }, previousToken(state).line });
 }
+
 std::vector<ImportExpression::ImportSpec> parseImportSpecifications(ParserState& state)
 {
     std::vector<ImportExpression::ImportSpec> specs;
@@ -466,13 +477,14 @@ std::vector<ImportExpression::ImportSpec> parseImportSpecifications(ParserState&
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         if (!check(state, Tokentype::LEFT_PAREN)) {
             errorAt(state, peek(state), "Expected '(' to start import set or library name");
-            advance(state);
+            if (!isAtEnd(state))
+                advance(state);
             continue;
         }
         advance(state); // Consume '(' of the import set
 
         if (match(state, Tokentype::ONLY)) {
-            auto lib = parseLibraryName(state);
+            auto lib = parseLibraryName(state, false);
             std::vector<Token> identifiers;
             while (!check(state, Tokentype::RIGHT_PAREN)) {
                 identifiers.push_back(consume(state, Tokentype::IDENTIFIER, "Expected identifier in only import"));
@@ -481,7 +493,7 @@ std::vector<ImportExpression::ImportSpec> parseImportSpecifications(ParserState&
             specs.push_back(makeOnlyImport(lib, std::move(identifiers)));
 
         } else if (match(state, Tokentype::EXCEPT)) {
-            auto lib = parseLibraryName(state);
+            auto lib = parseLibraryName(state, false);
             std::vector<Token> identifiers;
             while (!check(state, Tokentype::RIGHT_PAREN)) {
                 identifiers.push_back(consume(state, Tokentype::IDENTIFIER, "Expected identifier in except import"));
@@ -490,13 +502,13 @@ std::vector<ImportExpression::ImportSpec> parseImportSpecifications(ParserState&
             specs.push_back(makeExceptImport(lib, std::move(identifiers)));
 
         } else if (match(state, Tokentype::PREFIX)) {
-            auto lib = parseLibraryName(state);
+            auto lib = parseLibraryName(state, false);
             Token prefix = consume(state, Tokentype::IDENTIFIER, "Expected prefix identifier");
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after prefix identifier");
             specs.push_back(makePrefixImport(lib, prefix));
 
         } else if (match(state, Tokentype::RENAME)) {
-            auto lib = parseLibraryName(state);
+            auto lib = parseLibraryName(state, false);
             std::vector<std::pair<Token, Token>> renames;
             while (!check(state, Tokentype::RIGHT_PAREN)) {
                 consume(state, Tokentype::LEFT_PAREN, "Expected '(' for rename pair");
@@ -509,13 +521,62 @@ std::vector<ImportExpression::ImportSpec> parseImportSpecifications(ParserState&
             specs.push_back(makeRenameImport(lib, std::move(renames)));
 
         } else {
-            state.current--;
-            auto lib = parseLibraryName(state); // parseLibraryName consumes its own parens
+            auto lib = parseLibraryName(state, false);
             specs.push_back(makeDirectImport(lib));
         }
     }
     return specs;
 }
+
+bool isExportableNameToken(Tokentype type)
+{
+    switch (type) {
+    case Tokentype::IDENTIFIER:
+    case Tokentype::EXPORT:
+    case Tokentype::BEGIN:
+    case Tokentype::COND:
+    case Tokentype::SET:
+    case Tokentype::IMPORT:
+    case Tokentype::DEFINE:
+    case Tokentype::LAMBDA:
+    case Tokentype::IF:
+    case Tokentype::DEFINE_SYTAX:
+    case Tokentype::DEFINE_LIBRARY:
+    case Tokentype::LET:
+    case Tokentype::SYNTAX_RULE:
+    case Tokentype::ARROW:
+    case Tokentype::ELLIPSIS:
+    case Tokentype::ONLY:
+    case Tokentype::EXCEPT:
+    case Tokentype::PREFIX:
+    case Tokentype::RENAME:
+        return true;
+
+    case Tokentype::LEFT_PAREN:
+    case Tokentype::RIGHT_PAREN:
+    case Tokentype::DOT:
+    case Tokentype::QUOTE:
+    case Tokentype::BACKQUOTE:
+    case Tokentype::COMMA:
+    case Tokentype::COMMA_AT:
+    case Tokentype::HASH:
+    case Tokentype::INTEGER:
+    case Tokentype::FLOAT:
+    case Tokentype::STRING:
+    case Tokentype::CHAR:
+    case Tokentype::RATIONAL:
+    case Tokentype::COMPLEX:
+    case Tokentype::TRUE:
+    case Tokentype::FALSE:
+    case Tokentype::WHITESPACE:
+    case Tokentype::COMMENT:
+    case Tokentype::EOF_TOKEN:
+    case Tokentype::ERROR:
+    default:
+        return false;
+    }
+}
+
 std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
 {
     int line = previousToken(state).line;
@@ -527,46 +588,69 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
 
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         if (!check(state, Tokentype::LEFT_PAREN)) {
-            errorAt(state, peek(state), "Expected '(' for library declaration");
-            advance(state);
-            continue;
-        }
-        advance(state);
-
-        if (match(state, Tokentype::IDENTIFIER)) {
-            Token keyword = previousToken(state);
-            if (keyword.lexeme == "export") {
-                while (!check(state, Tokentype::RIGHT_PAREN)) {
-                    Token id = consume(state, Tokentype::IDENTIFIER, "Expected identifier in export");
-                    exports.push_back(HygienicSyntax { id, {} });
-                }
-                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after export list");
-
-            } else if (keyword.lexeme == "import") {
-                std::vector<ImportExpression::ImportSpec> clauseImports = parseImportSpecifications(state);
-                imports.insert(imports.end(),
-                    std::make_move_iterator(clauseImports.begin()),
-                    std::make_move_iterator(clauseImports.end()));
-                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after import declaration clause");
-
-            } else if (keyword.lexeme == "begin") {
-                while (!check(state, Tokentype::RIGHT_PAREN)) {
-                    body.push_back(parseExpression(state));
-                }
-                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin block");
-            } else {
-                errorAt(state, keyword, "Unexpected keyword in define-library");
-                while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state))
-                    advance(state);
-                if (!isAtEnd(state))
-                    advance(state); // Consume the ')'
-            }
-        } else {
-            errorAt(state, peek(state), "Expected keyword (export, import, begin)");
-            while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state))
-                advance(state);
+            errorAt(state, peek(state), "Expected '(' to start library declaration clause (export, import, or begin)");
             if (!isAtEnd(state))
                 advance(state);
+            continue;
+        }
+        advance(state); // Consume the '('
+
+        if (match(state, Tokentype::EXPORT)) {
+            // **** MODIFIED EXPORT LOOP ****
+            while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+                // Check if the next token is an allowable export name type
+                if (isExportableNameToken(peek(state).type)) {
+                    Token id = advance(state); // Consume the valid name token
+                    exports.push_back(HygienicSyntax { id, {} });
+                } else {
+                    // Throw error if it's not an expected name type
+                    errorAt(state, peek(state), "Expected an identifier or exportable keyword name in export list");
+                    // Recovery: Skip until we find the closing parenthesis
+                    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state))
+                        advance(state);
+                    break; // Exit inner loop after error
+                }
+            }
+            // **** END MODIFIED EXPORT LOOP ****
+
+            if (isAtEnd(state) && !check(state, Tokentype::RIGHT_PAREN)) {
+                errorAt(state, previousToken(state), "Unexpected end of input in export list, expected ')'");
+            } else {
+                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after export list");
+            }
+
+        } else if (match(state, Tokentype::IMPORT)) {
+            std::vector<ImportExpression::ImportSpec> clauseImports = parseImportSpecifications(state);
+            imports.insert(imports.end(),
+                std::make_move_iterator(clauseImports.begin()),
+                std::make_move_iterator(clauseImports.end()));
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after import declaration clause");
+
+        } else if (match(state, Tokentype::IDENTIFIER) && previousToken(state).lexeme == "begin") {
+            while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+                auto currentPosBeforeParse = state.current;
+                body.push_back(parseExpression(state));
+                if (state.current == currentPosBeforeParse && !check(state, Tokentype::RIGHT_PAREN)) {
+                    errorAt(state, peek(state), "Parser did not advance in begin block, potential infinite loop");
+                    if (!isAtEnd(state))
+                        advance(state);
+                }
+            }
+            if (isAtEnd(state) && !check(state, Tokentype::RIGHT_PAREN)) {
+                errorAt(state, previousToken(state), "Unexpected end of input in begin block, expected ')'");
+            } else {
+                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin block");
+            }
+        } else {
+            errorAt(state, peek(state), "Expected keyword 'export', 'import', or 'begin' after '(' in define-library");
+            int parenLevel = 1;
+            while (!isAtEnd(state) && parenLevel > 0) {
+                if (peek(state).type == Tokentype::LEFT_PAREN)
+                    parenLevel++;
+                else if (peek(state).type == Tokentype::RIGHT_PAREN)
+                    parenLevel--;
+                advance(state);
+            }
         }
     }
 
@@ -592,4 +676,4 @@ std::shared_ptr<Expression> parseImport(ParserState& state)
         Expression { ImportExpression { std::move(specs) }, line });
 }
 
-}
+} // namespace parse
