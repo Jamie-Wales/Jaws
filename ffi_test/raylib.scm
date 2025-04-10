@@ -1,4 +1,3 @@
-(import base)
 (load-library "snake_bridge" "../ffi_test/libraylib_bridge.so")
 
 (register-function "snake_bridge" "bridge_init_game" "init-game" "int" "int" "int" "string")
