@@ -228,7 +228,7 @@ std::optional<SchemeValue> stringToList(
         result.push_back(SchemeValue(c));
     }
 
-    return SchemeValue(std::move(result));
+    return SchemeValue(std::make_shared<std::list<SchemeValue>>(std::move(result)));
 }
 
 std::optional<SchemeValue> listToString(
@@ -246,7 +246,7 @@ std::optional<SchemeValue> listToString(
     const auto& lst = args[0].asList();
     std::string result;
 
-    for (const auto& item : lst) {
+    for (const auto& item : *lst) {
         if (!std::holds_alternative<char>(item.value)) {
             throw InterpreterError("list->string: list must contain only characters");
         }

@@ -1,6 +1,11 @@
 #include "builtins/JawsVector.h"
 #include "Error.h"
 #include "Number.h"
+#include "Value.h"
+#include <algorithm> // For std::fill, std::copy
+#include <memory>
+#include <optional>
+#include <vector>
 
 namespace jaws_vec {
 
@@ -12,35 +17,36 @@ std::optional<SchemeValue> makeVector(
         throw InterpreterError("make-vector requires 1 or 2 arguments");
     }
 
-    auto size = args[0].ensureValue();
-    if (!size.isNumber()) {
+    auto size_sv = args[0].ensureValue();
+    if (!size_sv.isNumber()) {
         throw InterpreterError("make-vector: first argument must be a number");
     }
 
-    int k = size.asNumber().toInt();
+    int k = size_sv.asNumber().toInt();
     if (k < 0) {
         throw InterpreterError("make-vector: length must be non-negative");
     }
 
-    SchemeValue fill = (args.size() == 2)
+    SchemeValue fill_val = (args.size() == 2)
         ? args[1].ensureValue()
         : SchemeValue(Number(0));
 
-    return SchemeValue(std::vector<SchemeValue>(k, fill));
+    auto vector_data_ptr = std::make_shared<std::vector<SchemeValue>>(k, fill_val);
+    return SchemeValue(vector_data_ptr);
 }
 
 std::optional<SchemeValue> vectorProcedure(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
-    std::vector<SchemeValue> result;
-    result.reserve(args.size());
+    auto result_ptr = std::make_shared<std::vector<SchemeValue>>();
+    result_ptr->reserve(args.size());
 
     for (const auto& arg : args) {
-        result.push_back(arg.ensureValue());
+        result_ptr->push_back(arg.ensureValue());
     }
 
-    return SchemeValue(std::move(result));
+    return SchemeValue(result_ptr);
 }
 
 std::optional<SchemeValue> vectorRef(
@@ -51,66 +57,81 @@ std::optional<SchemeValue> vectorRef(
         throw InterpreterError("vector-ref requires exactly 2 arguments");
     }
 
-    auto vec = args[0].ensureValue();
-    if (!vec.isVector()) {
+    auto vec_sv = args[0].ensureValue();
+    if (!vec_sv.isVector()) {
         throw InterpreterError("vector-ref: first argument must be a vector");
     }
+    auto vec_ptr = vec_sv.asSharedVector();
+    if (!vec_ptr) {
+        throw InterpreterError("vector-ref: operation on null vector");
+    }
 
-    auto index = args[1].ensureValue();
-    if (!index.isNumber()) {
+    auto index_sv = args[1].ensureValue();
+    if (!index_sv.isNumber()) {
         throw InterpreterError("vector-ref: second argument must be a number");
     }
 
-    int idx = index.asNumber().toInt();
-    const auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
+    int idx = index_sv.asNumber().toInt();
 
-    if (idx < 0 || static_cast<size_t>(idx) >= vector.size()) {
+    if (idx < 0 || static_cast<size_t>(idx) >= vec_ptr->size()) {
         throw InterpreterError("vector-ref: index out of bounds");
     }
 
-    return vector[idx];
+    return (*vec_ptr)[idx];
 }
 
 std::optional<SchemeValue> vectorSet(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args)
+    const std::vector<SchemeValue>& args) // Assuming const args okay due to shared_ptr
 {
     if (args.size() != 3) {
         throw InterpreterError("vector-set! requires exactly 3 arguments");
     }
-    auto vec = args[0].ensureValue();
-    if (!vec.isVector()) {
+    auto vec_sv = args[0].ensureValue();
+    if (!vec_sv.isVector()) {
         throw InterpreterError("vector-set!: first argument must be a vector");
     }
-    auto index = args[1].ensureValue();
-    if (!index.isNumber()) {
+    auto vec_ptr = vec_sv.asSharedVector();
+    if (!vec_ptr) {
+        throw InterpreterError("vector-set!: operation on null vector");
+    }
+
+    auto index_sv = args[1].ensureValue();
+    if (!index_sv.isNumber()) {
         throw InterpreterError("vector-set!: second argument must be a number");
     }
-    int idx = index.asNumber().toInt();
-    auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
-    if (idx < 0 || static_cast<size_t>(idx) >= vector.size()) {
+    int idx = index_sv.asNumber().toInt();
+
+    if (idx < 0 || static_cast<size_t>(idx) >= vec_ptr->size()) {
         throw InterpreterError("vector-set!: index out of bounds");
     }
 
-    vector[idx] = args[2].ensureValue();
+    auto new_element = args[2].ensureValue();
+    (*vec_ptr)[idx] = new_element;
+
     return std::nullopt;
 }
 
 std::optional<SchemeValue> vectorFill(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args)
+    const std::vector<SchemeValue>& args) // Assuming const args okay due to shared_ptr
 {
     if (args.size() != 2) {
         throw InterpreterError("vector-fill! requires exactly 2 arguments");
     }
-    auto vec = args[0].ensureValue();
-    if (!vec.isVector()) {
+    auto vec_sv = args[0].ensureValue();
+    if (!vec_sv.isVector()) {
         throw InterpreterError("vector-fill!: first argument must be a vector");
     }
-    auto fill = args[1].ensureValue();
-    auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
+    auto vec_ptr = vec_sv.asSharedVector();
+    if (!vec_ptr) {
+        throw InterpreterError("vector-fill!: operation on null vector");
+    }
 
-    std::fill(vector.begin(), vector.end(), fill);
+    auto fill_val = args[1].ensureValue();
+
+    std::fill(vec_ptr->begin(), vec_ptr->end(), fill_val);
+
     return std::nullopt;
 }
 
@@ -122,13 +143,16 @@ std::optional<SchemeValue> vectorLength(
         throw InterpreterError("vector-length requires exactly 1 argument");
     }
 
-    auto vec = args[0].ensureValue();
-    if (!vec.isVector()) {
+    auto vec_sv = args[0].ensureValue();
+    if (!vec_sv.isVector()) {
         throw InterpreterError("vector-length: argument must be a vector");
     }
+    auto vec_ptr = vec_sv.asSharedVector();
+    if (!vec_ptr) {
+        throw InterpreterError("vector-length: operation on null vector");
+    }
 
-    return SchemeValue(Number(static_cast<int>(
-        std::get<std::vector<SchemeValue>>(vec.value).size())));
+    return SchemeValue(Number(static_cast<int>(vec_ptr->size())));
 }
 
 std::optional<SchemeValue> vectorCopy(
@@ -138,100 +162,112 @@ std::optional<SchemeValue> vectorCopy(
     if (args.size() < 1 || args.size() > 3) {
         throw InterpreterError("vector-copy requires 1 to 3 arguments");
     }
-    auto vec = args[0].ensureValue();
-    if (!vec.isVector()) {
+    auto source_sv = args[0].ensureValue();
+    if (!source_sv.isVector()) {
         throw InterpreterError("vector-copy: first argument must be a vector");
     }
-    const auto& vector = std::get<std::vector<SchemeValue>>(vec.value);
+    auto source_ptr = source_sv.asSharedVector();
+    if (!source_ptr) {
+        throw InterpreterError("vector-copy: operation on null vector");
+    }
 
     int start = 0;
-    int end = vector.size();
+    int end = static_cast<int>(source_ptr->size());
 
     if (args.size() >= 2) {
-        auto startArg = args[1].ensureValue();
-        if (!startArg.isNumber()) {
+        auto startArg_sv = args[1].ensureValue();
+        if (!startArg_sv.isNumber()) {
             throw InterpreterError("vector-copy: start index must be a number");
         }
-        start = startArg.asNumber().toInt();
-        if (start < 0 || static_cast<size_t>(start) > vector.size()) {
+        start = startArg_sv.asNumber().toInt();
+        if (start < 0 || static_cast<size_t>(start) > source_ptr->size()) {
             throw InterpreterError("vector-copy: start index out of bounds");
         }
     }
 
     if (args.size() >= 3) {
-        auto endArg = args[2].ensureValue();
-        if (!endArg.isNumber()) {
+        auto endArg_sv = args[2].ensureValue();
+        if (!endArg_sv.isNumber()) {
             throw InterpreterError("vector-copy: end index must be a number");
         }
-        end = endArg.asNumber().toInt();
-        if (end < start || static_cast<size_t>(end) > vector.size()) {
+        end = endArg_sv.asNumber().toInt();
+        if (end < start || static_cast<size_t>(end) > source_ptr->size()) {
             throw InterpreterError("vector-copy: end index out of bounds");
         }
     }
 
-    std::vector<SchemeValue> result(vector.begin() + start, vector.begin() + end);
-    return SchemeValue(std::move(result));
+    auto result_ptr = std::make_shared<std::vector<SchemeValue>>(
+        source_ptr->begin() + start,
+        source_ptr->begin() + end);
+    return SchemeValue(result_ptr);
 }
 
 std::optional<SchemeValue> vectorCopyTo(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args)
+    const std::vector<SchemeValue>& args) // Assuming const args okay due to shared_ptr
 {
     if (args.size() < 3 || args.size() > 5) {
         throw InterpreterError("vector-copy! requires 3 to 5 arguments");
     }
 
-    auto target = args[0].ensureValue();
-    if (!target.isVector()) {
+    auto target_sv = args[0].ensureValue();
+    if (!target_sv.isVector()) {
         throw InterpreterError("vector-copy!: first argument must be a vector");
     }
+    auto target_ptr = target_sv.asSharedVector();
+    if (!target_ptr) {
+        throw InterpreterError("vector-copy!: operation on null target vector");
+    }
 
-    auto at = args[1].ensureValue();
-    if (!at.isNumber()) {
+    auto at_sv = args[1].ensureValue();
+    if (!at_sv.isNumber()) {
         throw InterpreterError("vector-copy!: second argument must be a number");
     }
-    int targetStart = at.asNumber().toInt();
+    int targetStart = at_sv.asNumber().toInt();
 
-    auto source = args[2].ensureValue();
-    if (!source.isVector()) {
+    auto source_sv = args[2].ensureValue();
+    if (!source_sv.isVector()) {
         throw InterpreterError("vector-copy!: third argument must be a vector");
     }
-
-    auto& targetVector = std::get<std::vector<SchemeValue>>(target.value);
-    const auto& sourceVector = std::get<std::vector<SchemeValue>>(source.value);
+    auto source_ptr = source_sv.asSharedVector();
+    if (!source_ptr) {
+        throw InterpreterError("vector-copy!: operation on null source vector");
+    }
 
     int sourceStart = 0;
-    int sourceEnd = sourceVector.size();
+    int sourceEnd = static_cast<int>(source_ptr->size());
 
     if (args.size() >= 4) {
-        auto startArg = args[3].ensureValue();
-        if (!startArg.isNumber()) {
+        auto startArg_sv = args[3].ensureValue();
+        if (!startArg_sv.isNumber()) {
             throw InterpreterError("vector-copy!: source start index must be a number");
         }
-        sourceStart = startArg.asNumber().toInt();
+        sourceStart = startArg_sv.asNumber().toInt();
     }
 
     if (args.size() >= 5) {
-        auto endArg = args[4].ensureValue();
-        if (!endArg.isNumber()) {
+        auto endArg_sv = args[4].ensureValue();
+        if (!endArg_sv.isNumber()) {
             throw InterpreterError("vector-copy!: source end index must be a number");
         }
-        sourceEnd = endArg.asNumber().toInt();
+        sourceEnd = endArg_sv.asNumber().toInt();
     }
 
-    if (sourceStart < 0 || static_cast<size_t>(sourceStart) > sourceVector.size() || sourceEnd < sourceStart || static_cast<size_t>(sourceEnd) > sourceVector.size()) {
+    if (sourceStart < 0 || static_cast<size_t>(sourceStart) > source_ptr->size() || sourceEnd < sourceStart || static_cast<size_t>(sourceEnd) > source_ptr->size()) {
         throw InterpreterError("vector-copy!: source indices out of bounds");
     }
 
-    if (targetStart < 0 || static_cast<size_t>(targetStart + (sourceEnd - sourceStart)) > targetVector.size()) {
+    int count = sourceEnd - sourceStart;
+    if (targetStart < 0 || static_cast<size_t>(targetStart + count) > target_ptr->size()) {
         throw InterpreterError("vector-copy!: target index out of bounds");
     }
 
-    std::copy(sourceVector.begin() + sourceStart,
-        sourceVector.begin() + sourceEnd,
-        targetVector.begin() + targetStart);
+    std::copy(
+        source_ptr->begin() + sourceStart,
+        source_ptr->begin() + sourceEnd,
+        target_ptr->begin() + targetStart);
 
     return std::nullopt;
 }
 
-}
+} // namespace jaws_vec

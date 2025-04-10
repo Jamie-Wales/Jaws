@@ -1,9 +1,10 @@
 #include "Environment.h"
 #include "Error.h"
 #include "Syntax.h"
+
 // #define DEBUG_LOGGING
 #ifdef DEBUG_LOGGING
-#define DEBUG_LOG(x) std::cerr << "[DEBUG] " << x << "\n"
+#define DEBUG_LOG(x) std::cerr << "(ENV) " << x << "\n"
 #else
 #define DEBUG_LOG(x)
 #endif
@@ -65,7 +66,6 @@ void Environment::set(const HygienicSyntax& name, const SchemeValue& value)
         }
     }
 
-    // If not found, check parent environment
     if (parent) {
         DEBUG_LOG("  No compatible match in current Env, trying parent @ " << parent.get());
         parent->set(name, value);

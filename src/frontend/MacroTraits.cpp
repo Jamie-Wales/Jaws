@@ -12,6 +12,12 @@
 #include <variant>
 #include <vector>
 
+// #define DEBUG_LOGGING
+#ifdef DEBUG_LOGGING
+#define DEBUG_LOG(x) std::cerr << "(MACRO) " << x << "\n"
+#else
+#define DEBUG_LOG(x)
+#endif
 namespace macroexp {
 
 MacroExpression::MacroExpression(const MacroAtom& atom, bool variadic, int lineNum)

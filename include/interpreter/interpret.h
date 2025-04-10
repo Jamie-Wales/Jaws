@@ -27,18 +27,9 @@ struct InterpreterState {
         state.env = rootEnv->extend();
         return state;
     }
-    InterpreterState(const InterpreterState&) = delete;
-    InterpreterState& operator=(const InterpreterState&) = delete;
-    InterpreterState(InterpreterState&&) = default;
-    InterpreterState& operator=(InterpreterState&&) = default;
 };
 
 InterpreterState createInterpreter();
-
-std::optional<std::shared_ptr<Expression>> expandMacro(
-    InterpreterState& state,
-    const std::string& macroName,
-    const sExpression& sexpr);
 
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
@@ -70,7 +61,7 @@ std::optional<SchemeValue> interpretSet(InterpreterState& state, const SetExpres
 
 std::optional<ProcedureCall> evaluateProcedureCall(
     InterpreterState& state,
-    sExpression sexpr);
+    const sExpression& sexpr);
 
 std::optional<SchemeValue> executeProcedure(
     InterpreterState& state,

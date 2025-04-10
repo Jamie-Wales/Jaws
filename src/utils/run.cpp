@@ -17,15 +17,27 @@
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>
-void prepareInterpreterEnvironment(const import::ProcessedCode& code, interpret::InterpreterState& state)
+
+void prepareInterpreterEnvironment(
+    const import::ProcessedCode& code,
+    interpret::InterpreterState& state,
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv)
 {
+    // Process value bindings from imported libraries with macro expansion
     for (const auto& libData : code.importedLibrariesData) {
         for (const auto& [name, binding] : libData.exportedBindings) {
-            if (binding.type == import::ExportedBinding::Type::VALUE) {
+            if (binding.type == import::ExportedBinding::Type::VALUE && binding.definition) {
                 try {
-                    interpret::interpret(state, binding.definition);
+                    // Expand macros in the binding definition
+                    std::vector<std::shared_ptr<Expression>> toExpand = { binding.definition };
+                    auto expanded = macroexp::expandMacros(toExpand, macroEnv);
+
+                    // Interpret the expanded definition
+                    if (!expanded.empty() && expanded[0]) {
+                        interpret::interpret(state, expanded[0]);
+                    }
                 } catch (const std::exception& e) {
-                    std::cerr << "[Warning] Error processing imported binding '" << name << "': " << e.what() << std::endl;
+                    std::cerr << "[Warning] Error processing expanded binding '" << name << "': " << e.what() << std::endl;
                 }
             }
         }
@@ -37,7 +49,9 @@ std::vector<std::shared_ptr<Expression>> prepareCompilerInput(const import::Proc
     std::vector<std::shared_ptr<Expression>> compilerInputList;
     for (const auto& libData : code.importedLibrariesData) {
         for (const auto& [name, binding] : libData.exportedBindings) {
-            compilerInputList.push_back(binding.definition);
+            if (binding.definition) { // Add null check
+                compilerInputList.push_back(binding.definition);
+            }
         }
     }
     return compilerInputList;
@@ -209,22 +223,31 @@ void evaluate(
         }
     }
 
-    std::vector<std::shared_ptr<Expression>> finalExpressions;
-    try {
-
-        std::vector<std::shared_ptr<Expression>> expressionsToExpand;
-        for (const auto& expr : processedCode.remainingExpressions) {
-            if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
-                if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
-                    macroEnv->defineMacro(de->name.token.lexeme, de->rule);
-                }
-            } else {
-                expressionsToExpand.push_back(expr);
+    // Register all syntax definitions from the current code in the macro environment
+    for (const auto& expr : processedCode.remainingExpressions) {
+        if (expr && std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
+            const auto& de = std::get<DefineSyntaxExpression>(expr->as);
+            if (de.rule && std::holds_alternative<SyntaxRulesExpression>(de.rule->as)) {
+                macroEnv->defineMacro(de.name.token.lexeme, de.rule);
             }
         }
+    }
 
+    // Prepare the interpreter environment with expanded values
+    prepareInterpreterEnvironment(processedCode, state, macroEnv);
+
+    // Collect non-syntax expressions for expansion
+    std::vector<std::shared_ptr<Expression>> expressionsToExpand;
+    for (const auto& expr : processedCode.remainingExpressions) {
+        if (expr && !std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
+            expressionsToExpand.push_back(expr);
+        }
+    }
+
+    // Expand macros in the user code
+    std::vector<std::shared_ptr<Expression>> finalExpressions;
+    try {
         finalExpressions = macroexp::expandMacros(expressionsToExpand, macroEnv);
-
     } catch (const std::exception& e) {
         std::cerr << "[Macro Expansion Error] " << e.what() << std::endl;
         return;
@@ -257,8 +280,6 @@ void evaluate(
         if (opts.compile) {
             auto importedDefinitions = prepareCompilerInput(processedCode);
             importedDefinitions.insert(importedDefinitions.end(), finalExpressions.begin(), finalExpressions.end());
-
-            // Add null check before ANF transform if needed
             importedDefinitions.erase(std::remove(importedDefinitions.begin(), importedDefinitions.end(), nullptr), importedDefinitions.end());
 
             auto anf = ir::ANFtransform(importedDefinitions);
@@ -312,7 +333,7 @@ void evaluate(
                 std::cerr << "ANF transformation resulted in empty output." << std::endl;
             }
         } else {
-            prepareInterpreterEnvironment(processedCode, state);
+            // Interpret the expanded user code
             auto val = interpret::interpret(state, finalExpressions);
             if (val) {
                 std::cout << val->toString() << std::endl;
@@ -334,8 +355,8 @@ void runFile(Options& opts)
         auto mainMacroEnv = std::make_shared<pattern::MacroEnvironment>();
         import::LibraryRegistry registry;
         import::preloadLibraries("../lib", registry);
-        import::populateInterpreterStateFromRegistry(registry, state);
         import::populateMacroEnvironmentFromRegistry(registry, *mainMacroEnv);
+        import::populateInterpreterStateFromRegistry(registry, state, mainMacroEnv);
         evaluate(state, registry, opts, mainMacroEnv);
 
     } catch (const ParseError& e) {
@@ -364,8 +385,9 @@ void runPrompt(Options& opts)
     }
 
     try {
-        import::populateInterpreterStateFromRegistry(registry, state);
         import::populateMacroEnvironmentFromRegistry(registry, *mainMacroEnv);
+        import::populateInterpreterStateFromRegistry(registry, state, mainMacroEnv);
+
         std::cout << "[Info] Preloaded libraries populated into REPL environment." << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "[Warning] Error populating initial environments: " << e.what() << std::endl;

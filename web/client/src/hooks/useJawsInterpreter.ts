@@ -118,7 +118,7 @@ const useJawsInterpreter = (): JawsInterpreter => {
             }
             return result.result || '';
         } catch (err) {
-            console.error(`evaluate error:`, err);
+            console.error(`evaluate error:` + err);
             return `Error: ${err instanceof Error ? err.message : 'Unknown error'}`;
         }
     };

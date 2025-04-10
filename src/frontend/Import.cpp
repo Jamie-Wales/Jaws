@@ -4,6 +4,7 @@
 #include "parse.h"
 #include "scan.h"
 
+#include <MacroTraits.h>
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -25,21 +26,29 @@
 
 namespace import {
 
-void populateInterpreterStateFromRegistry(const LibraryRegistry& registry, interpret::InterpreterState& state)
+void populateInterpreterStateFromRegistry(
+    const LibraryRegistry& registry,
+    interpret::InterpreterState& state,
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv)
 {
+    // Process all value bindings, but expand any macros in them first
     for (const auto& [libNameStr, libData] : registry) {
         for (const auto& [name, binding] : libData.exportedBindings) {
-            if (binding.type == ExportedBinding::Type::VALUE) {
+            if (binding.type == ExportedBinding::Type::VALUE && binding.definition) {
                 try {
-                    interpret::interpret(state, binding.definition);
+                    std::vector<std::shared_ptr<Expression>> toExpand = { binding.definition };
+                    auto expanded = macroexp::expandMacros(toExpand, macroEnv);
+                    if (!expanded.empty() && expanded[0]) {
+                        interpret::interpret(state, expanded[0]);
+                    }
                 } catch (const std::exception& e) {
-                    std::cerr << "[Warning] Error defining imported value '" << name << "' from library '" << libNameStr << "': " << e.what() << std::endl;
+                    std::cerr << "[Warning] Error defining expanded value '" << name
+                              << "' from library '" << libNameStr << "': " << e.what() << std::endl;
                 }
             }
         }
     }
 }
-
 void populateMacroEnvironmentFromRegistry(const LibraryRegistry& registry, pattern::MacroEnvironment& macroEnv)
 {
     for (const auto& [libNameStr, libData] : registry) {
@@ -213,7 +222,6 @@ LibraryData importLibrary(
             throw std::runtime_error("Library empty/parse failed: " + path);
         }
         auto parsedExprs = *parsedExprsOpt;
-
         if (auto* libDef = std::get_if<DefineLibraryExpression>(&parsedExprs[0]->as)) {
             libraryData.canonicalName = libDef->libraryName;
             std::set<std::string> exportNames;

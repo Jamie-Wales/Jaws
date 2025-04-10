@@ -7,6 +7,7 @@
 #include <compare>
 #include <list>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <variant>
 #include <vector>
@@ -22,8 +23,8 @@ public:
         bool,
         std::string,
         Symbol,
-        std::list<SchemeValue>,
-        std::vector<SchemeValue>,
+        std::shared_ptr<std::list<SchemeValue>>,
+        std::shared_ptr<std::vector<SchemeValue>>,
         std::shared_ptr<Procedure>,
         Port,
         std::shared_ptr<ThreadHandle>,
@@ -35,6 +36,8 @@ public:
         : value(std::move(other.value))
     {
     }
+
+    std::shared_ptr<std::vector<SchemeValue>> asSharedVector() const;
     SchemeValue ensureValue() const
     {
         return std::visit([](const auto& val) -> SchemeValue {
@@ -62,6 +65,20 @@ public:
     SchemeValue();
     explicit SchemeValue(Value v);
 
+    bool isChar() const
+    {
+
+        return std::holds_alternative<char>(value);
+    }
+
+    bool asChar() const
+    {
+
+        if (isChar())
+            return std::get<char>(value);
+
+        throw std::runtime_error("Invalid call to convert char");
+    }
     bool isPort() const;
     bool isNumber() const;
     Number asNumber() const;
@@ -72,9 +89,9 @@ public:
     std::shared_ptr<Expression> asExpr() const;
     std::shared_ptr<Procedure> asProc() const;
     bool isList() const;
-    const std::list<SchemeValue>& asList() const;
-    std::list<SchemeValue>& asList();
+    std::shared_ptr<std::list<SchemeValue>> asList() const;
 
+    std::shared_ptr<std::list<SchemeValue>> asSharedList() const;
     bool isThread() const
     {
         return std::holds_alternative<std::shared_ptr<ThreadHandle>>(value);

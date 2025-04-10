@@ -52,7 +52,10 @@ LibraryData importLibrary(
 
 void preloadLibraries(const std::string& basePath, LibraryRegistry& registry);
 
-void populateInterpreterStateFromRegistry(const LibraryRegistry& registry, interpret::InterpreterState& state);
+void populateInterpreterStateFromRegistry(
+    const LibraryRegistry& registry,
+    interpret::InterpreterState& state,
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv);
 void populateMacroEnvironmentFromRegistry(const LibraryRegistry& registry, pattern::MacroEnvironment& macroEnv);
 ProcessedCode processImports(
     const std::vector<std::shared_ptr<Expression>>& expressions,

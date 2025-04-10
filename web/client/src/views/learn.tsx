@@ -59,12 +59,19 @@ export function LearnScheme() {
             return `Interpreter error: ${jawsInterpreter.error}`;
         }
 
-        try {
-            return jawsInterpreter.evaluate(command);
-        } catch (error) {
-            console.error('Evaluation error:', error);
-            return `Error: ${error instanceof Error ? error.message : String(error)}`;
+        // Use a direct call without try-catch here since you're already handling errors in handleRunExample
+        const result = jawsInterpreter.evaluate(command);
+
+        // If the result looks like an error, log it for debugging
+        if (typeof result === 'string' &&
+            (result.startsWith("Error:") ||
+                result.startsWith("Parse Error:") ||
+                result.startsWith("Interpreter Error:") ||
+                result.startsWith("[Import Error]"))) {
+            console.warn("Interpreter returned error:", result);
         }
+
+        return result;
     };
 
     return (

@@ -1,5 +1,12 @@
 #include "MacroEnvironment.h"
-// No need for #include <mutex> anymore
+#include <iostream>
+
+// #define DEBUG_LOGGING
+#ifdef DEBUG_LOGGING
+#define DEBUG_LOG(x) std::cerr << "[DEBUG] " << x << std::endl
+#else
+#define DEBUG_LOG(x)
+#endif
 
 namespace pattern {
 
@@ -20,13 +27,17 @@ void MacroEnvironment::defineMacro(const std::string& name, std::shared_ptr<Expr
 
 std::optional<std::shared_ptr<Expression>> MacroEnvironment::getMacroDefinition(const std::string& name) const
 {
+    DEBUG_LOG("Looking for macro: " << name << " in environment " << this)
     auto it = macros.find(name);
     if (it != macros.end()) {
+        DEBUG_LOG("Found macro: " << name << " in environment " << this)
         return it->second;
     }
     if (parent) {
+        DEBUG_LOG("Checking parent environment " << parent.get() << " for macro: " << name)
         return parent->getMacroDefinition(name);
     }
+    DEBUG_LOG("Macro not found: " << name)
     return std::nullopt;
 }
 

@@ -1,9 +1,15 @@
-// JawsValues.cpp
 #include "builtins/jaws_values.h"
 #include "Error.h"
+#include "Value.h"
 #include "interpret.h"
+#include <list>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace jaws_values {
+
 std::optional<SchemeValue> symbolToString(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
@@ -11,15 +17,13 @@ std::optional<SchemeValue> symbolToString(
     if (args.size() != 1) {
         throw InterpreterError("symbol->string requires exactly 1 argument");
     }
-
     const SchemeValue& value = args[0].ensureValue();
-
-    if (!args[0].isSymbol()) {
+    if (!value.isSymbol()) {
         throw InterpreterError("symbol->string argument must be a symbol");
     }
-
-    return SchemeValue(args[0].asSymbol());
+    return SchemeValue(value.asSymbol());
 }
+
 std::optional<SchemeValue> schemeToString(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
@@ -27,7 +31,6 @@ std::optional<SchemeValue> schemeToString(
     if (args.size() != 1) {
         throw InterpreterError("scheme->string requires exactly 1 argument");
     }
-
     return SchemeValue(args[0].toString());
 }
 
@@ -35,39 +38,59 @@ std::optional<SchemeValue> valuesToList(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
-    std::list<SchemeValue> result;
-    if (!args.empty() && !args.back().isList()) {
-        for (const auto& arg : args) {
-            result.push_back(arg);
-        }
-    } else if (args.size() >= 2) {
-        for (size_t i = 0; i < args.size() - 1; i++) {
-            result.push_back(args[i]);
-        }
-        const auto& rest = args.back().asList();
-        result.insert(result.end(), rest.begin(), rest.end());
+    auto result_ptr = std::make_shared<std::list<SchemeValue>>();
+    if (args.empty()) {
+        return SchemeValue(result_ptr);
     }
 
-    return SchemeValue(std::move(result));
+    bool lastIsList = args.back().isList();
+    size_t limit = lastIsList ? args.size() - 1 : args.size();
+
+    for (size_t i = 0; i < limit; ++i) {
+        result_ptr->push_back(args[i].ensureValue());
+    }
+
+    if (lastIsList) {
+        auto last_list_ptr = args.back().asList();
+        if (last_list_ptr) {
+            result_ptr->insert(result_ptr->end(), last_list_ptr->begin(), last_list_ptr->end());
+        }
+    }
+
+    return SchemeValue(result_ptr);
 }
 
 std::optional<SchemeValue> valuesToVector(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
-    std::vector<SchemeValue> result;
-    if (!args.empty() && !args.back().isList()) {
-        result = args;
-    } else if (args.size() >= 2) {
-        result.reserve(args.size() - 1 + args.back().asList().size());
-        for (size_t i = 0; i < args.size() - 1; i++) {
-            result.push_back(args[i]);
-        }
-        const auto& rest = args.back().asList();
-        result.insert(result.end(), rest.begin(), rest.end());
+    auto result_ptr = std::make_shared<std::vector<SchemeValue>>();
+    if (args.empty()) {
+        return SchemeValue(result_ptr);
     }
 
-    return SchemeValue(std::move(result));
+    bool lastIsList = args.back().isList();
+    size_t limit = lastIsList ? args.size() - 1 : args.size();
+    size_t estimated_size = limit;
+
+    if (lastIsList) {
+        auto last_list_ptr = args.back().asList();
+        if (last_list_ptr)
+            estimated_size += last_list_ptr->size();
+    }
+    result_ptr->reserve(estimated_size);
+
+    for (size_t i = 0; i < limit; ++i) {
+        result_ptr->push_back(args[i].ensureValue());
+    }
+
+    if (lastIsList) {
+        auto last_list_ptr = args.back().asList();
+        if (last_list_ptr) {
+            result_ptr->insert(result_ptr->end(), last_list_ptr->begin(), last_list_ptr->end());
+        }
+    }
+    return SchemeValue(result_ptr);
 }
 
 std::optional<SchemeValue> listToVector(
@@ -77,14 +100,17 @@ std::optional<SchemeValue> listToVector(
     if (args.size() != 1) {
         throw InterpreterError("list->vector requires exactly 1 argument");
     }
-
-    if (!args[0].isList()) {
+    const auto& list_sv = args[0].ensureValue();
+    if (!list_sv.isList()) {
         throw InterpreterError("list->vector argument must be a list");
     }
+    auto list_ptr = list_sv.asList();
+    if (!list_ptr) {
+        throw InterpreterError("list->vector: operation on null list");
+    }
 
-    const auto& list = args[0].asList();
-    std::vector<SchemeValue> result(list.begin(), list.end());
-    return SchemeValue(std::move(result));
+    auto result_ptr = std::make_shared<std::vector<SchemeValue>>(list_ptr->begin(), list_ptr->end());
+    return SchemeValue(result_ptr);
 }
 
 std::optional<SchemeValue> vectorToList(
@@ -94,14 +120,17 @@ std::optional<SchemeValue> vectorToList(
     if (args.size() != 1) {
         throw InterpreterError("vector->list requires exactly 1 argument");
     }
-
-    if (!args[0].isVector()) {
+    const auto& vec_sv = args[0].ensureValue();
+    if (!vec_sv.isVector()) {
         throw InterpreterError("vector->list argument must be a vector");
     }
+    auto vec_ptr = vec_sv.asList();
+    if (!vec_ptr) {
+        throw InterpreterError("vector->list: operation on null vector");
+    }
 
-    const auto& vec = std::get<std::vector<SchemeValue>>(args[0].value);
-    std::list<SchemeValue> result(vec.begin(), vec.end());
-    return SchemeValue(std::move(result));
+    auto result_ptr = std::make_shared<std::list<SchemeValue>>(vec_ptr->begin(), vec_ptr->end());
+    return SchemeValue(result_ptr);
 }
 
 std::optional<SchemeValue> charToString(interpret::InterpreterState&, const std::vector<SchemeValue>& args)
@@ -109,22 +138,29 @@ std::optional<SchemeValue> charToString(interpret::InterpreterState&, const std:
     if (args.size() != 1) {
         throw InterpreterError("char->string requires exactly 1 argument");
     }
+    const auto& arg0 = args[0].ensureValue();
 
-    if (args[0].isValue<std::list<SchemeValue>>()) {
-        auto list = args[0].as<std::list<SchemeValue>>();
+    if (arg0.isList()) {
+        auto list_ptr = arg0.asList();
+        if (!list_ptr) {
+            throw InterpreterError("char->string: operation on null list");
+        }
         std::string to_return;
-        for (const auto& item : list) {
-            if (!item.isValue<char>()) {
+        to_return.reserve(list_ptr->size());
+        for (const auto& item : *list_ptr) {
+            if (!item.isChar()) {
                 throw InterpreterError("char->string argument must be a list of characters");
             } else {
-                to_return += item.as<char>();
+                to_return += item.asChar();
             }
         }
-
         return SchemeValue(to_return);
     }
 
-    return SchemeValue(std::string(1, args[0].as<char>()));
+    if (!arg0.isChar()) {
+        throw InterpreterError("char->string argument must be a char or list of char");
+    }
+    return SchemeValue(std::string(1, arg0.asChar()));
 }
 
-}
+} // namespace jaws_values

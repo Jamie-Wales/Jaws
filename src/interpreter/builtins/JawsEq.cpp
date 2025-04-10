@@ -83,7 +83,7 @@ std::optional<SchemeValue> isPair(
     if (args.size() != 1) {
         throw InterpreterError("pair?: expected 1 argument");
     }
-    return SchemeValue(args[0].ensureValue().isList() && !args[0].ensureValue().asList().empty());
+    return SchemeValue(args[0].ensureValue().isList() && !args[0].ensureValue().asList()->empty());
 }
 
 std::optional<SchemeValue> isList(
@@ -103,7 +103,7 @@ std::optional<SchemeValue> isVector(
     if (args.size() != 1) {
         throw InterpreterError("vector?: expected 1 argument");
     }
-    return SchemeValue(std::holds_alternative<std::vector<SchemeValue>>(args[0].value));
+    return SchemeValue(std::holds_alternative<std::shared_ptr<std::vector<SchemeValue>>>(args[0].value));
 }
 
 std::optional<SchemeValue> isSymbol(
@@ -154,7 +154,7 @@ std::optional<SchemeValue> isNull(
     if (args.size() != 1) {
         throw InterpreterError("null?: expected 1 argument");
     }
-    return SchemeValue(args[0].ensureValue().isList() && args[0].ensureValue().asList().empty());
+    return SchemeValue(args[0].ensureValue().isList() && args[0].ensureValue().asList()->empty());
 }
 
 std::optional<SchemeValue> isEq(

@@ -1,34 +1,39 @@
-(import list)
-
 (define test-list '(a b c d c e))
 (define test-alist '((a . 1) (b . 2) (c . 3) (b . 4)))
 (define test-symbols '(#\a "a" 'a 1 1.0))
 (define bad-alist '((a . 1) b (c . 3)))
 
 (display "=== memq tests ===")
+(newline)
 (display (memq 'c test-list)) ; Should return (c d c e)
 (display "memq 'c test-list: ")
 (newline)
 
 (display "memq 'x test-list: ")
+(newline)
 (display (memq 'x test-list)) ; Should return #f
 (newline)
 
 (display "memq 'a '(): ")
+(newline)
 (display (memq 'a '())) ; Should return #f
 (newline)
 
 ;; memv tests
 (display "=== memv tests ===")
+(newline)
 (display "memv 'c test-list: ")
+(newline)
 (display (memv 'c test-list)) ; Should return (c d c e)
 (newline)
 
 (display "memv 1 '(0 1 2): ")
+(newline)
 (display (memv 1 '(0 1 2))) ; Should return (1 2)
 (newline)
 
 (display "memv 1.0 '(0 1 2): ")
+(newline)
 (display (memv 1.0 '(0 1 2))) ; Should return (1 2) - eqv? treats 1 and 1.0 as equivalent
 (newline)
 
@@ -40,10 +45,12 @@
 (newline)
 
 (display "assoc 'x test-alist: ")
+(newline)
 (display (assoc 'x test-alist)) ; Should return #f
 (newline)
 
 (display "assoc 'a '(): ")
+(newline)
 (display (assoc 'a '())) ; Should return #f
 (newline)
 
@@ -55,14 +62,11 @@
 (newline)
 
 (display "assv 'x test-alist: ")
+(newline)
 (display (assv 'x test-alist)) ; Should return #f
 (newline)
 
 ;; Error test (uncomment to test)
-(display "Error test (comment out after testing):")
-;; (display "assoc 'a bad-alist: ")
-;; (display (assoc 'a bad-alist)) ; Should error: "assoc: elements must be pairs"
-(newline)
 
 ;; Difference between equal? and eqv?
 (display "=== Equal vs Eqv Tests ===")

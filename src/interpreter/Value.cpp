@@ -32,9 +32,10 @@ SchemeValue expressionToValue(const Expression& expr)
 {
     return std::visit(overloaded {
                           [&](const QuoteExpression& a) -> SchemeValue {
+                              if (!a.expression)
+                                  return SchemeValue(); // Handle '()
                               return SchemeValue(a.expression);
                           },
-
                           [&](const AtomExpression& a) -> SchemeValue {
                               switch (a.value.token.type) {
                               case Tokentype::IDENTIFIER:
@@ -56,36 +57,27 @@ SchemeValue expressionToValue(const Expression& expr)
                               }
                               case Tokentype::COMPLEX: {
                                   std::string complexStr = a.value.token.lexeme;
-                                  size_t plusPos = complexStr.rfind('+');
-                                  size_t minusPos = complexStr.rfind('-');
                                   size_t iPos = complexStr.find('i');
-
                                   if (iPos == std::string::npos) {
                                       return SchemeValue(Number(std::stod(complexStr)));
                                   }
+                                  complexStr = complexStr.substr(0, iPos); // Remove 'i'
+                                  size_t plusPos = complexStr.rfind('+');
+                                  size_t minusPos = complexStr.rfind('-'); // Find last sign
+                                  double real = 0.0;
+                                  double imag = 0.0;
 
-                                  double real;
-                                  double imag;
-
-                                  if (plusPos == std::string::npos && minusPos == std::string::npos) {
-                                      real = 0.0;
-                                      imag = std::stod(complexStr.substr(0, iPos));
-                                  } else {
+                                  if (complexStr.empty()) { // Just "i"
+                                      imag = 1.0;
+                                  } else if (plusPos == std::string::npos && (minusPos == std::string::npos || minusPos == 0)) { // Pure imaginary like "2i" or "-2i"
+                                      imag = std::stod(complexStr);
+                                  } else { // Has real and imaginary part like "1+2" or "1-2" or "-1-2" etc.
                                       size_t signPos = (plusPos != std::string::npos) ? plusPos : minusPos;
-
-                                      if (signPos == 0) {
-                                          real = 0.0;
-                                          imag = std::stod(complexStr.substr(0, iPos));
-                                      } else {
-                                          // Both real and imaginary parts
-                                          real = std::stod(complexStr.substr(0, signPos));
-                                          imag = std::stod(complexStr.substr(signPos, iPos - signPos));
-                                      }
+                                      real = std::stod(complexStr.substr(0, signPos));
+                                      imag = std::stod(complexStr.substr(signPos));
                                   }
-
                                   return SchemeValue(Number(Number::ComplexType(real, imag)));
                               }
-
                               case Tokentype::STRING:
                                   return SchemeValue(a.value.token.lexeme.substr(1, a.value.token.lexeme.length() - 2));
                               case Tokentype::TRUE:
@@ -126,226 +118,47 @@ SchemeValue expressionToValue(const Expression& expr)
                                   throw std::runtime_error("Unexpected token type in expressionToValue: " + a.value.token.lexeme);
                               }
                           },
-
                           [&](const sExpression& s) -> SchemeValue {
-                              std::list<SchemeValue> values;
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
                               for (const auto& elem : s.elements) {
-                                  values.push_back(expressionToValue(*elem));
+                                  values_list_ptr->push_back(expressionToValue(*elem));
                               }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const VectorExpression& v) -> SchemeValue {
-                              std::vector<SchemeValue> values;
-                              values.reserve(v.elements.size());
-                              for (const auto& elem : v.elements) {
-                                  values.push_back(expressionToValue(*elem));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const LetExpression& l) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "let" }));
-
-                              if (l.name.has_value()) {
-                                  values.push_back(SchemeValue(Symbol { l.name.value().token.lexeme }));
-                              }
-
-                              std::list<SchemeValue> bindings;
-                              for (const auto& [param, val] : l.arguments) {
-                                  std::list<SchemeValue> binding;
-                                  binding.push_back(SchemeValue(Symbol { param.token.lexeme }));
-                                  binding.push_back(expressionToValue(*val));
-                                  bindings.push_back(SchemeValue(std::move(binding)));
-                              }
-                              values.push_back(SchemeValue(std::move(bindings)));
-                              for (const auto& expr : l.body) {
-                                  values.push_back(expressionToValue(*expr));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const ImportExpression& i) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "import" }));
-
-                              for (const auto& spec : i.imports) {
-                                  switch (spec.type) {
-                                  case ImportExpression::ImportSet::Type::DIRECT: {
-                                      std::list<SchemeValue> libRef;
-                                      for (const auto& part : spec.library) {
-                                          libRef.push_back(expressionToValue(*part));
-                                      }
-                                      values.push_back(SchemeValue(std::move(libRef)));
-                                      break;
-                                  }
-
-                                  case ImportExpression::ImportSet::Type::ONLY: {
-                                      std::list<SchemeValue> onlySpec;
-                                      onlySpec.push_back(SchemeValue(Symbol { "only" }));
-                                      std::list<SchemeValue> libRef;
-                                      for (const auto& part : spec.library) {
-                                          libRef.push_back(expressionToValue(*part));
-                                      }
-                                      onlySpec.push_back(SchemeValue(std::move(libRef)));
-                                      for (const auto& id : spec.identifiers) {
-                                          onlySpec.push_back(SchemeValue(Symbol { id.token.lexeme }));
-                                      }
-                                      values.push_back(SchemeValue(std::move(onlySpec)));
-                                      break;
-                                  }
-
-                                  case ImportExpression::ImportSet::Type::EXCEPT: {
-                                      std::list<SchemeValue> exceptSpec;
-                                      exceptSpec.push_back(SchemeValue(Symbol { "except" }));
-                                      std::list<SchemeValue> libRef;
-                                      for (const auto& part : spec.library) {
-                                          libRef.push_back(expressionToValue(*part));
-                                      }
-                                      exceptSpec.push_back(SchemeValue(std::move(libRef)));
-                                      for (const auto& id : spec.identifiers) {
-                                          exceptSpec.push_back(SchemeValue(Symbol { id.token.lexeme }));
-                                      }
-                                      values.push_back(SchemeValue(std::move(exceptSpec)));
-                                      break;
-                                  }
-
-                                  case ImportExpression::ImportSet::Type::PREFIX: {
-                                      std::list<SchemeValue> prefixSpec;
-                                      prefixSpec.push_back(SchemeValue(Symbol { "prefix" }));
-                                      std::list<SchemeValue> libRef;
-                                      for (const auto& part : spec.library) {
-                                          libRef.push_back(expressionToValue(*part));
-                                      }
-                                      prefixSpec.push_back(SchemeValue(std::move(libRef)));
-                                      prefixSpec.push_back(SchemeValue(Symbol { spec.prefix.token.lexeme }));
-                                      values.push_back(SchemeValue(std::move(prefixSpec)));
-                                      break;
-                                  }
-
-                                  case ImportExpression::ImportSet::Type::RENAME: {
-                                      std::list<SchemeValue> renameSpec;
-                                      renameSpec.push_back(SchemeValue(Symbol { "rename" }));
-                                      std::list<SchemeValue> libRef;
-                                      for (const auto& part : spec.library) {
-                                          libRef.push_back(expressionToValue(*part));
-                                      }
-                                      renameSpec.push_back(SchemeValue(std::move(libRef)));
-                                      for (const auto& [old_name, new_name] : spec.renames) {
-                                          std::list<SchemeValue> renamePair;
-                                          renamePair.push_back(SchemeValue(Symbol { old_name.token.lexeme }));
-                                          renamePair.push_back(SchemeValue(Symbol { new_name.token.lexeme }));
-                                          renameSpec.push_back(SchemeValue(std::move(renamePair)));
-                                      }
-                                      values.push_back(SchemeValue(std::move(renameSpec)));
-                                      break;
-                                  }
-                                  }
-                              }
-
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const SyntaxRulesExpression& s) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "syntax-rules" }));
-                              std::list<SchemeValue> literals;
-                              for (const auto& lit : s.literals) {
-                                  literals.push_back(SchemeValue(Symbol { lit.lexeme }));
-                              }
-                              values.push_back(SchemeValue(std::move(literals)));
-                              for (const auto& rule : s.rules) {
-                                  std::list<SchemeValue> ruleValues;
-                                  ruleValues.push_back(expressionToValue(*rule.pattern));
-                                  ruleValues.push_back(expressionToValue(*rule.template_expr));
-                                  values.push_back(SchemeValue(std::move(ruleValues)));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const SetExpression& s) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "set!" }));
-                              values.push_back(SchemeValue(Symbol { s.identifier.token.lexeme }));
-                              values.push_back(expressionToValue(*s.value));
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const DefineExpression& d) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "define" }));
-                              values.push_back(SchemeValue(Symbol { d.name.token.lexeme }));
-                              values.push_back(expressionToValue(*d.value));
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const DefineProcedure& d) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "define" }));
-                              std::list<SchemeValue> params;
-                              params.push_back(SchemeValue(Symbol { d.name.token.lexeme }));
-                              for (const auto& param : d.parameters) {
-                                  params.push_back(SchemeValue(Symbol { param.token.lexeme }));
-                              }
-                              values.push_back(SchemeValue(std::move(params)));
-                              for (auto p : d.body) {
-                                  values.push_back(SchemeValue(expressionToValue(*p)));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const DefineSyntaxExpression& ds) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "define-syntax" }));
-                              values.push_back(SchemeValue(Symbol { ds.name.token.lexeme }));
-                              values.push_back(expressionToValue(*ds.rule));
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const LambdaExpression& l) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "lambda" }));
-                              std::list<SchemeValue> params;
-                              for (const auto& param : l.parameters) {
-                                  params.push_back(SchemeValue(Symbol { param.token.lexeme }));
-                              }
-                              values.push_back(SchemeValue(std::move(params)));
-                              for (auto p : l.body) {
-                                  values.push_back(expressionToValue(*p));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const IfExpression& i) -> SchemeValue {
-                              std::list<SchemeValue> values;
-                              values.push_back(SchemeValue(Symbol { "if" }));
-                              values.push_back(expressionToValue(*i.condition));
-                              values.push_back(expressionToValue(*i.then));
-                              if (i.el) {
-                                  values.push_back(expressionToValue(**i.el));
-                              }
-                              return SchemeValue(std::move(values));
-                          },
-
-                          [&](const TailExpression& e) -> SchemeValue {
-                              return SchemeValue(expressionToValue(*e.expression));
+                              return SchemeValue(values_list_ptr);
                           },
                           [&](const ListExpression& l) -> SchemeValue {
-                              std::list<SchemeValue> values;
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
                               for (const auto& elem : l.elements) {
-                                  values.push_back(expressionToValue(*elem));
+                                  values_list_ptr->push_back(expressionToValue(*elem));
                               }
-                              return SchemeValue(std::move(values));
+                              // How to handle improper lists? This assumes proper list.
+                              // If l.isImproper, maybe the last element should be cdr directly? Needs ListExpression support.
+                              return SchemeValue(values_list_ptr);
                           },
-
+                          [&](const VectorExpression& v) -> SchemeValue {
+                              auto values_vec_ptr = std::make_shared<std::vector<SchemeValue>>();
+                              values_vec_ptr->reserve(v.elements.size());
+                              for (const auto& elem : v.elements) {
+                                  values_vec_ptr->push_back(expressionToValue(*elem));
+                              }
+                              return SchemeValue(std::move(values_vec_ptr));
+                          },
+                          [&](const LetExpression& l) -> SchemeValue { throw std::runtime_error("Cannot convert LetExpression directly to SchemeValue data"); },
+                          [&](const ImportExpression& i) -> SchemeValue { throw std::runtime_error("Cannot convert ImportExpression directly to SchemeValue data"); },
+                          [&](const SyntaxRulesExpression& s) -> SchemeValue { throw std::runtime_error("Cannot convert SyntaxRulesExpression directly to SchemeValue data"); },
+                          [&](const SetExpression& s) -> SchemeValue { throw std::runtime_error("Cannot convert SetExpression directly to SchemeValue data"); },
+                          [&](const DefineExpression& d) -> SchemeValue { throw std::runtime_error("Cannot convert DefineExpression directly to SchemeValue data"); },
+                          [&](const DefineProcedure& d) -> SchemeValue { throw std::runtime_error("Cannot convert DefineProcedure directly to SchemeValue data"); },
+                          [&](const DefineSyntaxExpression& ds) -> SchemeValue { throw std::runtime_error("Cannot convert DefineSyntaxExpression directly to SchemeValue data"); },
+                          [&](const LambdaExpression& l) -> SchemeValue { throw std::runtime_error("Cannot convert LambdaExpression directly to SchemeValue data"); },
+                          [&](const IfExpression& i) -> SchemeValue { throw std::runtime_error("Cannot convert IfExpression directly to SchemeValue data"); },
+                          [&](const TailExpression& e) -> SchemeValue { throw std::runtime_error("Cannot convert TailExpression directly to SchemeValue data"); },
                           [&](const auto& a) -> SchemeValue {
-                              throw std::runtime_error("Invalid Expression");
+                              throw std::runtime_error("Invalid Expression type in expressionToValue");
                           } },
         expr.as);
 }
 SchemeValue::SchemeValue()
-    : value(std::list<SchemeValue>())
+    : value(std::make_shared<std::list<SchemeValue>>())
 {
 }
 
@@ -353,7 +166,6 @@ SchemeValue::SchemeValue(Value v)
     : value(std::move(v))
 {
 }
-
 bool SchemeValue::isPort() const
 {
     return std::holds_alternative<Port>(value);
@@ -380,7 +192,7 @@ bool SchemeValue::isNumber() const
 
 Number SchemeValue::asNumber() const
 {
-    if (!std::holds_alternative<Number>(value)) {
+    if (!isNumber()) {
         throw std::runtime_error("Value is not Number");
     }
     return std::get<Number>(value);
@@ -397,47 +209,41 @@ std::shared_ptr<Procedure> SchemeValue::asProc() const
 std::shared_ptr<Expression> SchemeValue::asExpr() const
 {
     if (!isExpr()) {
-        throw std::runtime_error("Value is not procedure");
+        throw std::runtime_error("Value is not Expression pointer");
     }
     return std::get<std::shared_ptr<Expression>>(value);
 }
 
 bool SchemeValue::isList() const
 {
-    return std::holds_alternative<std::list<SchemeValue>>(value);
+    return std::holds_alternative<std::shared_ptr<std::list<SchemeValue>>>(value);
 }
 
-const std::list<SchemeValue>& SchemeValue::asList() const
+std::shared_ptr<std::list<SchemeValue>> SchemeValue::asList() const
 {
     if (!isList()) {
-        throw std::runtime_error("Value is not a list");
+        throw std::runtime_error("Value is not a list representation");
     }
-    return std::get<std::list<SchemeValue>>(value);
-}
-
-std::list<SchemeValue>& SchemeValue::asList()
-{
-    if (!isList()) {
-        throw std::runtime_error("Value is not a list");
-    }
-    return std::get<std::list<SchemeValue>>(value);
+    return std::get<std::shared_ptr<std::list<SchemeValue>>>(value);
 }
 
 bool SchemeValue::isTrue() const
 {
     return std::visit(overloaded {
                           [](const Number& arg) { return !arg.isZero(); },
-                          [](const std::shared_ptr<Expression> e) { return true; },
+                          [](const std::shared_ptr<Expression>& e) { return true; },
                           [](const std::string& arg) { return !arg.empty(); },
                           [](bool arg) { return arg; },
                           [](const Symbol&) { return true; },
-                          [](const std::list<SchemeValue>& l) { return l.size() != 0; },
-                          [](const std::vector<SchemeValue>& arg) { return !arg.empty(); },
+                          [](const std::shared_ptr<std::list<SchemeValue>>& l) { return l && !l->empty(); },
+                          [](const std::shared_ptr<std::vector<SchemeValue>>& v) { return v && !v->empty(); },
                           [](const std::shared_ptr<Procedure>&) { return true; },
                           [](const std::shared_ptr<ThreadHandle>&) { return true; },
                           [](const std::shared_ptr<MutexHandle>&) { return true; },
                           [](const std::shared_ptr<ConditionVarHandle>&) { return true; },
-                          [](const Port& p) { return p.isOpen(); } },
+                          [](const Port& p) { return p.isOpen(); },
+                          [](char c) { return true; }, // All chars are true
+                      },
         value);
 }
 
@@ -448,25 +254,34 @@ std::string SchemeValue::toString() const
                           [](const std::string& arg) { return std::format("\"{}\"", arg); },
                           [](bool arg) { return arg ? std::string("#t") : "#f"; },
                           [](const Symbol& arg) { return arg.name; },
-                          [](const std::vector<SchemeValue>& arg) {
+                          [](const std::shared_ptr<std::vector<SchemeValue>>& vec_ptr) {
+                              if (!vec_ptr)
+                                  return std::string("#(<null-vector>)");
                               std::string result = "#(";
-                              for (size_t i = 0; i < arg.size(); i++) {
-                                  if (i > 0)
+                              bool first = true;
+                              for (const auto& val : *vec_ptr) {
+                                  if (!first)
                                       result += " ";
-                                  result += arg[i].toString();
+                                  result += val.toString();
+                                  first = false;
                               }
                               result += ")";
                               return result;
                           },
-                          [](const std::list<SchemeValue>& arg) {
+                          [](const std::shared_ptr<std::list<SchemeValue>>& list_ptr) {
+                              if (!list_ptr)
+                                  return std::string("(<null-list>)");
+                              if (list_ptr->empty())
+                                  return std::string("()");
                               std::string result = "(";
-                              int i = 0;
-                              for (auto& val : arg) {
-                                  if (i > 0)
+                              bool first = true;
+                              for (const auto& val : *list_ptr) {
+                                  if (!first)
                                       result += " ";
                                   result += val.toString();
-                                  i++;
+                                  first = false;
                               }
+                              // This basic version doesn't handle improper lists / dotted pairs properly
                               result += ")";
                               return result;
                           },
@@ -474,7 +289,7 @@ std::string SchemeValue::toString() const
                           [](const Port& p) {
                               return std::string(p.type == PortType::Input ? "<input-port>" : "<output-port>");
                           },
-                          [](const char& c) {
+                          [](char c) {
                               if (c == ' ')
                                   return std::string("#\\space");
                               if (c == '\n')
@@ -482,12 +297,11 @@ std::string SchemeValue::toString() const
                               return std::string("#\\") + c;
                           },
                           [](const std::shared_ptr<Expression>& e) {
-                              return e->toString();
+                              return e ? e->toString() : "<null-expression>";
                           },
-
                           [](const std::shared_ptr<ThreadHandle>&) { return std::string("<thread>"); },
                           [](const std::shared_ptr<MutexHandle>&) { return std::string("<mutex>"); },
-                          [](const std::shared_ptr<ConditionVarHandle>&) { return std::string("<condtion>"); },
+                          [](const std::shared_ptr<ConditionVarHandle>&) { return std::string("<condition-variable>"); },
                       },
         value);
 }
@@ -520,7 +334,15 @@ SchemeValue SchemeValue::operator-(const SchemeValue& other) const
 
 bool SchemeValue::isVector() const
 {
-    return std::holds_alternative<std::vector<SchemeValue>>(value);
+    return std::holds_alternative<std::shared_ptr<std::vector<SchemeValue>>>(value);
+}
+
+std::shared_ptr<std::vector<SchemeValue>> SchemeValue::asSharedVector() const
+{
+    if (!isVector()) {
+        throw std::runtime_error("Value is not a vector representation");
+    }
+    return std::get<std::shared_ptr<std::vector<SchemeValue>>>(value);
 }
 
 SchemeValue SchemeValue::operator*(const SchemeValue& other) const
@@ -552,8 +374,8 @@ SchemeValue SchemeValue::operator/(const SchemeValue& other) const
 
 std::string SchemeValue::asSymbol() const
 {
-    if (const auto* sym = std::get_if<Symbol>(&value)) {
-        return sym->name;
+    if (isSymbol()) {
+        return std::get<Symbol>(value).name;
     }
     throw std::runtime_error("Value is not a symbol");
 }
@@ -570,113 +392,120 @@ SchemeValue SchemeValue::operator-() const
 
 std::partial_ordering SchemeValue::operator<=>(const SchemeValue& other) const
 {
+    if (value.index() != other.value.index()) {
+        return value.index() <=> other.value.index();
+    }
+
     return std::visit(overloaded {
                           [](const Number& a, const Number& b) -> std::partial_ordering {
                               try {
                                   return a <=> b;
-                              } catch (const std::runtime_error&) {
+                              } catch (...) {
                                   return std::partial_ordering::unordered;
                               }
                           },
-
-                          [](const std::string& a, const std::string& b) -> std::partial_ordering {
-                              if (auto cmp = a <=> b; cmp != 0) {
-                                  return cmp < 0 ? std::partial_ordering::less : cmp > 0 ? std::partial_ordering::greater
-                                                                                         : std::partial_ordering::equivalent;
-                              }
-                              return std::partial_ordering::equivalent;
-                          },
-
-                          [](bool a, bool b) -> std::partial_ordering {
-                              if (a == b)
+                          [](const std::string& a, const std::string& b) -> std::partial_ordering { return a <=> b; },
+                          [](bool a, bool b) -> std::partial_ordering { return a <=> b; },
+                          [](const Symbol& a, const Symbol& b) -> std::partial_ordering { return a.name <=> b.name; },
+                          [](const std::shared_ptr<std::vector<SchemeValue>>& a_ptr, const std::shared_ptr<std::vector<SchemeValue>>& b_ptr) -> std::partial_ordering {
+                              if (!a_ptr && !b_ptr)
                                   return std::partial_ordering::equivalent;
-                              return a < b ? std::partial_ordering::less : std::partial_ordering::greater;
-                          },
+                              if (!a_ptr)
+                                  return std::partial_ordering::less; // null < non-null
+                              if (!b_ptr)
+                                  return std::partial_ordering::greater; // non-null > null
 
-                          [](const Symbol& a, const Symbol& b) -> std::partial_ordering {
-                              if (auto cmp = a.name <=> b.name; cmp != 0) {
-                                  return cmp < 0 ? std::partial_ordering::less : cmp > 0 ? std::partial_ordering::greater
-                                                                                         : std::partial_ordering::equivalent;
-                              }
-                              return std::partial_ordering::equivalent;
-                          },
-
-                          [](const std::vector<SchemeValue>& a, const std::vector<SchemeValue>& b) -> std::partial_ordering {
+                              const auto& a = *a_ptr;
+                              const auto& b = *b_ptr;
                               auto minSize = std::min(a.size(), b.size());
                               for (size_t i = 0; i < minSize; ++i) {
                                   if (auto cmp = a[i] <=> b[i]; cmp != std::partial_ordering::equivalent) {
                                       return cmp;
                                   }
                               }
-                              if (a.size() < b.size())
-                                  return std::partial_ordering::less;
-                              if (a.size() > b.size())
-                                  return std::partial_ordering::greater;
-                              return std::partial_ordering::equivalent;
+                              return a.size() <=> b.size();
                           },
-                          [](const std::shared_ptr<Procedure>&, const std::shared_ptr<Procedure>&) -> std::partial_ordering {
+                          [](const std::shared_ptr<std::list<SchemeValue>>& a_ptr, const std::shared_ptr<std::list<SchemeValue>>& b_ptr) -> std::partial_ordering {
+                              if (!a_ptr && !b_ptr)
+                                  return std::partial_ordering::equivalent;
+                              if (!a_ptr)
+                                  return std::partial_ordering::less;
+                              if (!b_ptr)
+                                  return std::partial_ordering::greater;
+
+                              auto it_a = a_ptr->begin();
+                              auto it_b = b_ptr->begin();
+                              while (it_a != a_ptr->end() && it_b != b_ptr->end()) {
+                                  if (auto cmp = (*it_a) <=> (*it_b); cmp != std::partial_ordering::equivalent) {
+                                      return cmp;
+                                  }
+                                  ++it_a;
+                                  ++it_b;
+                              }
+                              if (it_a == a_ptr->end() && it_b == b_ptr->end())
+                                  return std::partial_ordering::equivalent;
+                              if (it_a == a_ptr->end())
+                                  return std::partial_ordering::less; // a is shorter
+                              return std::partial_ordering::greater; // b is shorter
+                          },
+                          [](const std::shared_ptr<Procedure>& a, const std::shared_ptr<Procedure>& b) -> std::partial_ordering {
+                              if (a == b)
+                                  return std::partial_ordering::equivalent;
+                              return std::partial_ordering::unordered; // Procedures generally unordered unless identical
+                          },
+                          [](const Port&, const Port&) -> std::partial_ordering { return std::partial_ordering::unordered; }, // Ports generally unordered
+                          [](char a, char b) -> std::partial_ordering { return a <=> b; },
+                          [](const std::shared_ptr<Expression>& a, const std::shared_ptr<Expression>& b) -> std::partial_ordering {
+                              if (a == b)
+                                  return std::partial_ordering::equivalent;
+                              // Deep comparison might be possible but complex, treat as unordered for now
                               return std::partial_ordering::unordered;
                           },
-                          [](const Port&, const Port&) -> std::partial_ordering {
+                          [](const std::shared_ptr<ThreadHandle>& a, const std::shared_ptr<ThreadHandle>& b) -> std::partial_ordering {
+                              if (a == b)
+                                  return std::partial_ordering::equivalent;
                               return std::partial_ordering::unordered;
                           },
-
-                          [](const auto& a, const auto& b) -> std::partial_ordering {
-                              auto typeOrder = [](const auto& val) -> int {
-                                  using T = std::decay_t<decltype(val)>;
-                                  if constexpr (std::is_same_v<T, bool>)
-                                      return 0;
-                                  else if constexpr (std::is_same_v<T, Number>)
-                                      return 1;
-                                  else if constexpr (std::is_same_v<T, Symbol>)
-                                      return 2;
-                                  else if constexpr (std::is_same_v<T, std::string>)
-                                      return 3;
-                                  else if constexpr (std::is_same_v<T, std::vector<SchemeValue>>)
-                                      return 4;
-                                  else if constexpr (std::is_same_v<T, std::shared_ptr<Procedure>>)
-                                      return 5;
-                                  else if constexpr (std::is_same_v<T, Port>)
-                                      return 6;
-                                  else
-                                      return 7;
-                              };
-
-                              int orderA = typeOrder(a);
-                              int orderB = typeOrder(b);
-                              if (orderA < orderB)
-                                  return std::partial_ordering::less;
-                              if (orderA > orderB)
-                                  return std::partial_ordering::greater;
-                              return std::partial_ordering::equivalent;
+                          [](const std::shared_ptr<MutexHandle>& a, const std::shared_ptr<MutexHandle>& b) -> std::partial_ordering {
+                              if (a == b)
+                                  return std::partial_ordering::equivalent;
+                              return std::partial_ordering::unordered;
+                          },
+                          [](const std::shared_ptr<ConditionVarHandle>& a, const std::shared_ptr<ConditionVarHandle>& b) -> std::partial_ordering {
+                              if (a == b)
+                                  return std::partial_ordering::equivalent;
+                              return std::partial_ordering::unordered;
+                          },
+                          [](const auto&, const auto&) -> std::partial_ordering {
+                              return std::partial_ordering::unordered; // Default for unhandled or cross-type
                           } },
         value, other.value);
 }
 
 bool SchemeValue::operator==(const SchemeValue& other) const
 {
+    if (value.index() != other.value.index()) {
+        return false;
+    }
+
     return std::visit(overloaded {
                           [](const Number& a, const Number& b) -> bool {
                               try {
                                   return (a <=> b) == std::partial_ordering::equivalent;
-                              } catch (const std::runtime_error&) {
+                              } catch (...) {
                                   return false;
                               }
                           },
-
-                          [](const std::string& a, const std::string& b) -> bool {
-                              return a == b;
-                          },
-
-                          [](bool a, bool b) -> bool {
-                              return a == b;
-                          },
-
-                          [](const Symbol& a, const Symbol& b) -> bool {
-                              return a.name == b.name;
-                          },
-
-                          [](const std::vector<SchemeValue>& a, const std::vector<SchemeValue>& b) -> bool {
+                          [](const std::string& a, const std::string& b) -> bool { return a == b; },
+                          [](bool a, bool b) -> bool { return a == b; },
+                          [](const Symbol& a, const Symbol& b) -> bool { return a.name == b.name; },
+                          [](const std::shared_ptr<std::vector<SchemeValue>>& a_ptr, const std::shared_ptr<std::vector<SchemeValue>>& b_ptr) -> bool {
+                              if (a_ptr == b_ptr)
+                                  return true;
+                              if (!a_ptr || !b_ptr)
+                                  return false;
+                              const auto& a = *a_ptr;
+                              const auto& b = *b_ptr;
                               if (a.size() != b.size())
                                   return false;
                               for (size_t i = 0; i < a.size(); ++i) {
@@ -685,13 +514,36 @@ bool SchemeValue::operator==(const SchemeValue& other) const
                               }
                               return true;
                           },
-
-                          [](const std::shared_ptr<Procedure>& a, const std::shared_ptr<Procedure>& b) -> bool {
-                              return a == b;
+                          [](const std::shared_ptr<std::list<SchemeValue>>& a_ptr, const std::shared_ptr<std::list<SchemeValue>>& b_ptr) -> bool {
+                              if (a_ptr == b_ptr)
+                                  return true;
+                              if (!a_ptr || !b_ptr)
+                                  return false;
+                              if (a_ptr->size() != b_ptr->size())
+                                  return false;
+                              auto it_a = a_ptr->begin();
+                              auto it_b = b_ptr->begin();
+                              while (it_a != a_ptr->end()) {
+                                  if (!(*it_a == *it_b))
+                                      return false;
+                                  ++it_a;
+                                  ++it_b;
+                              }
+                              return true;
                           },
-
-                          [](const auto&, const auto&) -> bool {
-                              return false;
-                          } },
+                          [](const std::shared_ptr<Procedure>& a, const std::shared_ptr<Procedure>& b) -> bool { return a == b; },
+                          [](const Port& a, const Port& b) -> bool { return &a == &b; },
+                          [](char a, char b) -> bool { return a == b; },
+                          [](const std::shared_ptr<Expression>& a, const std::shared_ptr<Expression>& b) -> bool {
+                              if (a == b)
+                                  return true;
+                              if (!a || !b)
+                                  return false;
+                              return a->toString() == b->toString();
+                          },
+                          [](const std::shared_ptr<ThreadHandle>& a, const std::shared_ptr<ThreadHandle>& b) -> bool { return a == b; },
+                          [](const std::shared_ptr<MutexHandle>& a, const std::shared_ptr<MutexHandle>& b) -> bool { return a == b; },
+                          [](const std::shared_ptr<ConditionVarHandle>& a, const std::shared_ptr<ConditionVarHandle>& b) -> bool { return a == b; },
+                          [](const auto&, const auto&) -> bool { return false; } },
         value, other.value);
 }

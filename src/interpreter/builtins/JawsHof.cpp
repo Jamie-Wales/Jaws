@@ -1,8 +1,19 @@
 #include "builtins/JawsHof.h"
 #include "Error.h"
 #include "Procedure.h"
+#include "Value.h"
+#include "interpret.h"
 #include "parse.h"
 #include "scan.h"
+#include <algorithm>
+#include <functional>
+#include <iostream>
+#include <limits>
+#include <list>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace jaws_hof {
 
@@ -14,20 +25,27 @@ std::optional<SchemeValue> eval(
         throw InterpreterError("eval: expects exactly one argument");
     }
 
-    const SchemeValue& arg = args[0];
+    const SchemeValue& arg = args[0].ensureValue();
+
     if (arg.isExpr()) {
         return interpret::interpret(state, arg.asExpr());
     }
 
     try {
         std::string valueStr = arg.toString();
-
         std::vector<Token> tokens = scanner::tokenize(valueStr);
         auto expressions = parse::parse(std::move(tokens));
+
         if (!expressions || expressions->empty()) {
             throw InterpreterError("eval: failed to parse value: " + valueStr);
         }
-        return interpret::interpret(state, (*expressions)[0]);
+
+        std::optional<SchemeValue> eval_result;
+        for (const auto& expr : *expressions) {
+            eval_result = interpret::interpret(state, expr);
+        }
+        return eval_result;
+
     } catch (const std::exception& e) {
         throw InterpreterError("eval: error evaluating expression: " + std::string(e.what()));
     }
@@ -38,17 +56,17 @@ std::optional<SchemeValue> printHelp(
     const std::vector<SchemeValue>& args)
 {
     std::cout << "Available commands:\n"
-              << "  exit       - Exit the Jaws REPL\n"
-              << "  help       - Display this help message\n"
+              << "  exit        - Exit the Jaws REPL\n"
+              << "  help        - Display this help message\n"
               << "\nBasic Jaws syntax:\n"
-              << "  Numbers    - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
-              << "  Strings    - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
-              << "  Lists      - Enclosed in parentheses (e.g., (+ 1 2))\n"
-              << "  Symbols    - Identifiers for variables and functions\n"
+              << "  Numbers     - Integers (e.g., 42) or floating-point (e.g., 3.14)\n"
+              << "  Strings     - Enclosed in double quotes (e.g., \"Hello, Jaws!\")\n"
+              << "  Lists       - Enclosed in parentheses (e.g., (+ 1 2))\n"
+              << "  Symbols     - Identifiers for variables and functions\n"
               << "\nBuilt-in functions:\n"
-              << "  +          - Addition (e.g., (+ 1 2 3))\n"
-              << "  define     - Define variables (e.g., (define x 10))\n"
-              << "  if         - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
+              << "  +           - Addition (e.g., (+ 1 2 3))\n"
+              << "  define      - Define variables (e.g., (define x 10))\n"
+              << "  if          - Conditional execution (e.g., (if (> x 0) \"positive\" \"non-positive\"))\n"
               << "\nEnter Scheme expressions to evaluate them\n";
 
     return std::nullopt;
@@ -62,63 +80,61 @@ std::optional<SchemeValue> apply(
         throw InterpreterError("apply: expected at least 2 arguments");
     }
 
-    if (!args[0].isProc()) {
+    const auto& proc_sv = args[0].ensureValue();
+    if (!proc_sv.isProc()) {
         throw InterpreterError("apply: first argument must be a procedure");
     }
 
     std::vector<SchemeValue> procArgs;
+    procArgs.reserve(args.size());
+
     for (size_t i = 1; i < args.size() - 1; i++) {
-        procArgs.push_back(args[i]);
+        procArgs.push_back(args[i].ensureValue());
     }
-    const auto& lastArg = args.back();
-    if (!lastArg.isList()) {
+
+    const auto& lastArg_sv = args.back().ensureValue();
+    if (!lastArg_sv.isList()) {
         throw InterpreterError("apply: last argument must be a list");
     }
 
-    // Add list elements to arguments
-    for (const auto& elem : lastArg.asList()) {
-        procArgs.push_back(elem);
+    auto last_list_ptr = lastArg_sv.asList();
+    if (!last_list_ptr) {
+        throw InterpreterError("apply: operation on null list for last argument");
     }
 
-    return interpret::executeProcedure(state, args[0], procArgs);
+    procArgs.insert(procArgs.end(), last_list_ptr->begin(), last_list_ptr->end());
+
+    return interpret::executeProcedure(state, proc_sv, procArgs);
 }
 
 std::optional<SchemeValue> callCC(
-    interpret::InterpreterState& state,
+    interpret::InterpreterState& state, // Passed by reference
     const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {
         throw InterpreterError("call/cc: expects exactly one argument");
     }
-    const auto& proc = args[0];
-    if (!proc.isProc()) {
+    const auto& proc_sv = args[0].ensureValue();
+    if (!proc_sv.isProc()) {
         throw InterpreterError("call/cc: argument must be a procedure");
     }
-    auto cont = std::make_shared<BuiltInProcedure>(
-        [](interpret::InterpreterState& state,
-            const std::vector<SchemeValue>& values) -> std::optional<SchemeValue> {
-            // Return values as a list if multiple values
-            if (values.size() > 1) {
-                std::list<SchemeValue> result;
-                for (const auto& val : values) {
-                    result.push_back(val);
-                }
-                return SchemeValue(std::move(result));
-            }
-            // Return single value directly
-            else if (values.size() == 1) {
-                return values[0];
-            }
-            // Return void/nil for no values
-            else {
-                return SchemeValue(std::list<SchemeValue>());
-            }
-        });
 
-    std::vector<SchemeValue> contArgs = { SchemeValue(cont) };
-    return interpret::executeProcedure(state, proc, contArgs);
+    auto cont_proc_ptr = std::make_shared<Continuation>(state); // 'state' is copied here
+    DEBUG_LOG("call/cc: Created continuation object.");
+    std::vector<SchemeValue> contArgs = { SchemeValue(cont_proc_ptr) };
+    try {
+        DEBUG_LOG("call/cc: Calling user procedure with continuation.");
+        std::optional<SchemeValue> normal_result = interpret::executeProcedure(state, proc_sv, contArgs);
+        DEBUG_LOG("call/cc: User procedure returned normally.");
+        return normal_result;
+    } catch (const ContinuationInvocationException& e) {
+        DEBUG_LOG("call/cc: Caught ContinuationInvocationException. Restoring state and returning value.");
+
+        state = e.state;
+        DEBUG_LOG("call/cc: State restored. Returning value: " << e.value.toString());
+        return e.value;
+    }
 }
-
 std::optional<SchemeValue> map(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
@@ -127,42 +143,50 @@ std::optional<SchemeValue> map(
         throw InterpreterError("map: requires procedure and at least one list");
     }
 
-    auto proc = args[0].ensureValue();
-    if (!proc.isProc()) {
+    auto proc_sv = args[0].ensureValue();
+    if (!proc_sv.isProc()) {
         throw InterpreterError("map: first argument must be a procedure");
     }
 
-    std::vector<std::list<SchemeValue>> lists;
-    size_t minLength = SIZE_MAX;
+    std::vector<std::shared_ptr<std::list<SchemeValue>>> list_ptrs;
+    size_t minLength = std::numeric_limits<size_t>::max();
 
     for (size_t i = 1; i < args.size(); i++) {
-        auto val = args[i].ensureValue();
-        if (!val.isList()) {
+        auto list_sv = args[i].ensureValue();
+        if (!list_sv.isList()) {
             throw InterpreterError("map: all arguments after procedure must be lists");
         }
-        lists.push_back(val.asList());
-        minLength = std::min(minLength, lists.back().size());
+        auto list_ptr = list_sv.asList();
+        if (!list_ptr) {
+            throw InterpreterError("map: operation on null list");
+        }
+        list_ptrs.push_back(list_ptr);
+        minLength = std::min(minLength, list_ptr->size());
     }
 
-    std::list<SchemeValue> result;
+    auto result_list_data = std::make_shared<std::list<SchemeValue>>();
     std::vector<std::list<SchemeValue>::const_iterator> iters;
-    for (const auto& list : lists) {
-        iters.push_back(list.begin());
+    iters.reserve(list_ptrs.size());
+    for (const auto& lp : list_ptrs) {
+        iters.push_back(lp->begin());
     }
 
     for (size_t i = 0; i < minLength; i++) {
         std::vector<SchemeValue> procArgs;
+        procArgs.reserve(iters.size());
         for (auto& it : iters) {
             procArgs.push_back(*it++);
         }
 
-        auto procResult = interpret::executeProcedure(state, proc, procArgs);
+        auto procResult = interpret::executeProcedure(state, proc_sv, procArgs);
         if (procResult) {
-            result.push_back(*procResult);
+            result_list_data->push_back(*procResult);
+        } else {
+            throw InterpreterError("map: procedure call did not return a value");
         }
     }
-    std::optional<SchemeValue> item = std::nullopt;
-    return result.empty() ? item : SchemeValue(std::move(result));
+
+    return SchemeValue(result_list_data);
 }
 
 } // namespace jaws_hof
