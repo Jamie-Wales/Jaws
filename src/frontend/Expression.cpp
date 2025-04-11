@@ -21,10 +21,21 @@ sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems, bool va
 {
 }
 
-QuasiQuoteExpression::QuasiQuoteExpression(std::vector<std::shared_ptr<Expression>> elems)
-    : elements(std::move(elems))
+QuasiQuoteExpression::QuasiQuoteExpression(std::shared_ptr<Expression> value)
+    : value(std::move(value))
 {
 }
+
+UnquoteExpression::UnquoteExpression(std::shared_ptr<Expression> value)
+    : value(std::move(value))
+{
+}
+
+SpliceExpression::SpliceExpression(std::shared_ptr<Expression> value)
+    : value(std::move(value))
+{
+}
+
 DefineLibraryExpression::DefineLibraryExpression(
     std::vector<std::shared_ptr<Expression>> name,
     std::vector<HygienicSyntax> exp,
@@ -400,11 +411,20 @@ void Expression::toString(std::stringstream& ss) const
             },
 
             [&](const QuasiQuoteExpression& e) {
-                ss << "'(";
-                for (const auto& ele : e.elements) {
-                    ele->type() != ExprType::Quote ? ss << "," << ele->toString()
-                                                   : ss << ele->toString();
-                }
+                ss << "(quasiquote ";
+                e.value->toString(ss);
+                ss << ")";
+            },
+
+            [&](const UnquoteExpression& e) {
+                ss << "(unquote ";
+                e.value->toString(ss);
+                ss << ")";
+            },
+
+            [&](const SpliceExpression& e) {
+                ss << "(unquote-splice ";
+                e.value->toString(ss);
                 ss << ")";
             },
             [&](const sExpression& e) {
@@ -601,12 +621,25 @@ std::shared_ptr<Expression> Expression::clone() const
     return std::visit(overloaded {
                           [&](const QuasiQuoteExpression& p) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements = {};
-                              for (const auto& ele : p.elements) {
-                                  elements.push_back(ele->clone());
-                              }
                               return std::make_shared<Expression>(Expression {
                                   QuasiQuoteExpression {
-                                      elements },
+                                      p.value->clone() },
+                                  line });
+                          },
+
+                          [&](const UnquoteExpression& p) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements = {};
+                              return std::make_shared<Expression>(Expression {
+                                  UnquoteExpression {
+                                      p.value->clone() },
+                                  line });
+                          },
+
+                          [&](const SpliceExpression& p) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements = {};
+                              return std::make_shared<Expression>(Expression {
+                                  SpliceExpression {
+                                      p.value->clone() },
                                   line });
                           },
                           [&](const DefineLibraryExpression& e) -> std::shared_ptr<Expression> {
@@ -841,9 +874,21 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
             [&](const QuasiQuoteExpression& e) {
                 indent(ss, indentLevel);
                 ss << "QuasiQuoteExpression: ";
-                for (const auto& ele : e.elements) {
-                    ele->toString(ss);
-                }
+                e.value->toString(ss);
+                ss << std::endl;
+            },
+
+            [&](const UnquoteExpression& e) {
+                indent(ss, indentLevel);
+                ss << "UnquoteExpression: ";
+                e.value->toString(ss);
+                ss << std::endl;
+            },
+
+            [&](const SpliceExpression& e) {
+                indent(ss, indentLevel);
+                ss << "SpliceExpression: ";
+                e.value->toString(ss);
                 ss << std::endl;
             },
             [&](const ListExpression& e) {

@@ -76,10 +76,23 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           },
                           [&](const QuasiQuoteExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
-                              elements.push_back(makeAtom("quasiquote", Tokentype::IDENTIFIER));
-                              for (const auto& elem : e.elements) {
-                                  elements.push_back(exprToList(elem));
-                              }
+                              elements.push_back(makeAtom("quasiquote", Tokentype::BACKQUOTE));
+                              elements.push_back(exprToList(e.value));
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
+                          [&](const UnquoteExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("unquote", Tokentype::COMMA));
+                              elements.push_back(exprToList(e.value));
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression { elements, false }, expr->line });
+                          },
+
+                          [&](const SpliceExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("unquote-splice", Tokentype::COMMA_AT));
+                              elements.push_back(exprToList(e.value));
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },

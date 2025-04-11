@@ -114,28 +114,28 @@ This project, however, pursues the more direct path of native code compilation v
 
 \section{Methodology}
 
-The way in which this project was approached was in three seperate sections. First, develop a interpreter for the scheme programming language. Second, develop a compiler for the scheme programming language. Third, develop a web-based interface for the scheme programming language.
+The way in which this project was approached was in three seperate sections. First, develop a interpreter for the Scheme Programming Language. Second, develop a compiler for the Scheme Programing Language. Third, develop a web-based interface for the Scheme Programming Language.
 From the outset it was clear that there was a huge amount of work to be done in order to complete the project. To give the project the best chance of developing every part a standard tree-walk interpreter approach was selected for the interpreter.
-A tree-walk interpreter is the simplest of the approaches to interpretation where we walk an abstract syntax tree evaluating it as we process it. This approach was selected as it is the simplest to implement and would allow for the development of the compiler and web-based to be developed thereafter.
+A tree-walk interpreter is the simplest of the approaches to interpretation where we walk an abstract syntax tree evaluating it as we process it. This approach was selected as it is the simplest to implement and would allow for the development of the compiler and web-based interface to be developed thereafter.
 It is important to note that a compiler, would use the same front-end as an interpreter but split it's pipeline off. The compiler would generate some sort of intermediate representation (IR) which would then be converted into machine code.
 
 \subsection{Interpreter}
 
 \subsubsection{Lexer}
 The initial development of any compiler/interpreter project begins with establishing an effective front-end strategy. This critical first phase involves selecting appropriate approaches for lexing and parsing to transform raw text into a structured format.
-For lexical analysis, several methodologies were considered, including, manual character-by-character scanning with explicit state management. Using lexer generator tools like Flex or ANTLR; Or finally, Regular expression-based pattern matching
+For lexical analysis, several methodologies were considered, including, manual character-by-character scanning with explicit state management, using lexer generator tools like Flex or ANTL. Or finally, Regular expression-based pattern matching
 The regular expression approach was selected for several key reasons. 
 First, regular expressions naturally map to the deterministic finite automaton (DFA) model described by Cooper and Torczon \cite{cooper2011engineering} for lexical analysis. Second, they offer a more concise and maintainable way to express token patterns compared to manual character processing. Third, they avoid the additional learning curve and external dependencies associated with lexer generators, keeping the project self-contained.
-This methodology involves organising token patterns in a prioritised list, with more specific patterns (like keywords) checked before more general ones. This prioritisation is crucial for correct tokenization since patterns may overlap. For instance, scheme-specific patterns for complex numbers needed to be checked before simpler numeric patterns to ensure proper recognition.
+This methodology involves organising token patterns in a prioritised list, with more specific patterns (like keywords) checked before more general ones. This prioritisation is crucial for correct tokenization since patterns may overlap. For instance, scheme-specific patterns for complex numbers needs to be checked before simpler numeric patterns to ensure proper recognition.
 For keyword handling, a two-stage approach was selected: first identify all text as a general identifier, then check a keyword map to determine if it's actually a reserved word. This approach simplifies the regex patterns while maintaining the language's semantics.
 The complete set of token patterns and their priorities were determined by analysing the R7RS Scheme specification \cite{r7rs}, ensuring comprehensive coverage of the language syntax.
 
 \subsubsection{Parser}
 Parsing naturally follows lexing in the construction of an interpreter. The academic literature on parsing strategies is extensive, \cite{aho2006compilers} dedicating significant coverage to the topic. 
-As with lexing, there exist tools that generate parsers automatically, typically producing table-based implementations that would be prohibitively complex to write manually. For this project, a recursive descent parsing (Algorithm) approach was selected, leveraging Scheme's homoiconic nature.
+As with lexing, there exists tools that generate parsers automatically, typically producing table-based implementations that would be prohibitively complex to write manually. For this project, a recursive descent parsing (Algorithm) approach was selected, leveraging Scheme's homoiconic nature.
 The extensive amount of parsing strategies in compiler theory largely stems from the complexity of handling operator precedence. Standard programming languages employ various operator types: postfix (after the operands), prefix (before the operands), infix (between operands), and even mixfix (such as the ternary operator, which interleaves with its operands). Different parsing techniques attempt to efficiently distinguish between these forms.
 However, much of the literature on parsing optimisation originates from an era when computational efficiency was more constrained. Modern hardware has somewhat diminished these concerns relative to implementation simplicity and maintainability.
-Furthermore, Scheme's homoiconic syntax, where every operation is uniformly expressed with parentheses in prefix notation. This significantly simplifies the parsing challenge. Ultimately, it eliminates the need for complex precedence handling, making recursive descent parsing a straightforward and appropriate methodology for this project.
+Furthermore, Scheme's homoiconic syntax, where every operation is uniformly expressed with parentheses in prefix notation, means there is no need for precedence based parsing significantly simplifies the parsing challenge. Ultimately, it eliminates the need for complex precedence handling, making recursive descent parsing a straightforward and appropriate methodology for this project.
 
 \subsubsection{Macros}
 While most programming languages proceed directly from parsing to interpretation, Scheme introduces a crucial intermediate step: macro expansion. Scheme's powerful macro system represents one of its most distinctive features, enabling sophisticated syntactic extensions that transform the Abstract Syntax Tree before evaluation begins.
@@ -200,7 +200,7 @@ The evaluation process uses a dispatch mechanism that selects the appropriate ev
 The requirement for tail call optimisation presented a significant challenge, particularly when implementing in a host language that doesn't natively support this feature. To address this, a technique known as "trampolining" \ref{alg:trampoline}was selected. When a procedure call is identified as being in tail position (the final expression to be evaluated in a function body or conditional branch), instead of executing the call directly, the evaluator returns a tailcall object containing the procedure and arguments. The main evaluation loop detects these tailcall objects and executes them iteratively without growing the call stack. This effectively transforms recursive processes into iterative ones at the implementation level.
 
 \subsubsection{Values}
-During interpretiation objects must be created to represent the values that are being manipulated. These objects need represent the many different types as per the RSR7 specification. These objects are as follows:
+During interpretation objects must be created to represent the values that are being manipulated. These objects need to represent the many different types as per the RSR7 specification. These objects are as follows:
 \begin{itemize}
     \item \textbf{Number}: Scheme's numeric tower includes integers, rationals, and floating-point numbers. The interpreter must support all these types and provide appropriate arithmetic operations for each.
     \item \textbf{String}: Scheme strings are sequences of characters enclosed in double quotes. The interpreter must provide operations for creating, accessing, and manipulating strings.

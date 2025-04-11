@@ -140,6 +140,10 @@ std::optional<SchemeValue> interpret(
     return result;
 }
 
+std::optional<SchemeValue> interpretQuasiQuote(InterpreterState& state, QuasiQuoteExpression q)
+{
+}
+
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr)
@@ -148,6 +152,9 @@ std::optional<SchemeValue> interpret(
         return std::visit(overloaded {
                               [&](const AtomExpression& e) -> std::optional<SchemeValue> {
                                   return interpretAtom(state, e);
+                              },
+                              [&](const QuasiQuoteExpression& e) -> std::optional<SchemeValue> {
+                                  return interpretQuasiQuote(state, e);
                               },
                               [&](const ListExpression& e) -> std::optional<SchemeValue> {
                                   return interpretList(state, e);

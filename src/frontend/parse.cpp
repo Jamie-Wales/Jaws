@@ -81,6 +81,23 @@ Token consume(ParserState& state, const std::string& message, Types... types)
     }
     throw ParseError(message + " Token: " + previousToken(state).lexeme, peek(state), "");
 }
+std::shared_ptr<Expression> parseQuasiQuoted(ParserState& state)
+{
+    return std::make_shared<Expression>(
+        Expression { QuasiQuoteExpression { parseExpression(state) }, previousToken(state).line });
+}
+
+std::shared_ptr<Expression> parseUnquote(ParserState& state)
+{
+    return std::make_shared<Expression>(
+        Expression { UnquoteExpression { parseExpression(state) }, previousToken(state).line });
+}
+
+std::shared_ptr<Expression> parseUnquoteSplicing(ParserState& state)
+{
+    return std::make_shared<Expression>(
+        Expression { SpliceExpression { parseExpression(state) }, previousToken(state).line });
+}
 
 std::shared_ptr<Expression> parseSet(ParserState& state)
 {
@@ -135,6 +152,12 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
     }
     if (match(state, Tokentype::QUOTE))
         return parseQuoted(state);
+    if (match(state, Tokentype::BACKQUOTE))
+        return parseQuasiQuoted(state);
+    if (match(state, Tokentype::COMMA))
+        return parseUnquote(state);
+    if (match(state, Tokentype::COMMA_AT))
+        return parseUnquoteSplicing(state);
     if (match(state, Tokentype::HASH))
         if (match(state, Tokentype::LEFT_PAREN))
             return parseVector(state);

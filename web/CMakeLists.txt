@@ -32,7 +32,10 @@ set_target_properties(jaws_wasm PROPERTIES
                 -s EXPORT_NAME='createJawsModule' \
                 -s ENVIRONMENT='web' \
                 -s DISABLE_EXCEPTION_CATCHING=0 \
+                -s STACK_SIZE=8MB \
                 -s WASM_BIGINT=1 \
+                -sASSERTIONS=1 \
+                -sASSERTIONS=2 \
                 -lembind \
                 --bind \
                 --no-entry"
@@ -45,6 +48,8 @@ target_include_directories(jaws_wasm PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/../include/compiler"
     "${CMAKE_CURRENT_SOURCE_DIR}/../include/utils"
     "${CMAKE_CURRENT_SOURCE_DIR}/../include/interpreter"
+
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include/interpreter/builtins"
 )
 # Copy to the client directory inside web
 add_custom_command(TARGET jaws_wasm POST_BUILD

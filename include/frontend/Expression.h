@@ -11,6 +11,8 @@ class Expression;
 
 enum class ExprType {
     QuasiQuote,
+    UnQuote,
+    Splice,
     Atom,
     DefineLibrary,
     SExpr,
@@ -31,8 +33,20 @@ enum class ExprType {
 
 class QuasiQuoteExpression {
 public:
-    std::vector<std::shared_ptr<Expression>> elements;
-    QuasiQuoteExpression(std::vector<std::shared_ptr<Expression>> elements);
+    std::shared_ptr<Expression> value;
+    QuasiQuoteExpression(std::shared_ptr<Expression> value);
+};
+
+class UnquoteExpression {
+public:
+    std::shared_ptr<Expression> value;
+    UnquoteExpression(std::shared_ptr<Expression> value);
+};
+
+class SpliceExpression {
+public:
+    std::shared_ptr<Expression> value;
+    SpliceExpression(std::shared_ptr<Expression> value);
 };
 
 class AtomExpression {
@@ -269,7 +283,9 @@ public:
         DefineSyntaxExpression,
         DefineLibraryExpression,
         LetExpression,
-        QuasiQuoteExpression>;
+        QuasiQuoteExpression,
+        UnquoteExpression,
+        SpliceExpression>;
 
     ExpressionVariant as;
     int line;
@@ -306,6 +322,9 @@ public:
                               [](const ImportExpression&) { return ExprType::Import; },
                               [](const SyntaxRulesExpression&) { return ExprType::SyntaxRules; },
                               [](const DefineSyntaxExpression&) { return ExprType::DefineSyntax; },
+
+                              [](const UnquoteExpression&) { return ExprType::UnQuote; },
+                              [](const SpliceExpression&) { return ExprType::Splice; },
                               [](const LetExpression&) { return ExprType::Let; } },
             as);
     }
@@ -348,6 +367,10 @@ static std::string typeToString(ExprType type)
         return "Let";
     case ExprType::DefineLibrary:
         return "DefineLibrary";
+    case ExprType::UnQuote:
+        return "Unquote";
+    case ExprType::Splice:
+        return "Splice";
     }
     return "Unknown";
 }
