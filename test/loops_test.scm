@@ -65,8 +65,8 @@
 
 (display "=== fold-loop test ===")
 (newline)
-(display (fold-loop acc init 0 in '(1 2 3 4 5)
-           (+ acc element)))
+(fold-loop total init 0 element in '(1 2 3 4 5)
+  (+ total element)) 
 (newline)
 (display "=== select-case test ===")
 (newline)
