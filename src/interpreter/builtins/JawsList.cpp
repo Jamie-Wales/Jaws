@@ -34,7 +34,7 @@ std::optional<SchemeValue> carProcudure(
     if (!val_sv.isList()) {
         throw InterpreterError("car: argument must be a list-like structure");
     }
-    auto list_ptr = val_sv.asList();
+    auto list_ptr = val_sv.ensureValue().asList();
     if (!list_ptr) {
         throw InterpreterError("car: operation on null list");
     }

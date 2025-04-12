@@ -29,40 +29,53 @@ namespace import {
 void populateInterpreterStateFromRegistry(
     const LibraryRegistry& registry,
     interpret::InterpreterState& state,
-    std::shared_ptr<pattern::MacroEnvironment> macroEnv)
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv) // Use shared_ptr
 {
-    // Process all value bindings, but expand any macros in them first
     for (const auto& [libNameStr, libData] : registry) {
-        for (const auto& [name, binding] : libData.exportedBindings) {
-            if (binding.type == ExportedBinding::Type::VALUE && binding.definition) {
+        for (const auto& definitionExpr : libData.bodyExpressions) { // Iterate body in order
+            if (!definitionExpr)
+                continue;
+
+            if (isDefinition(definitionExpr) && !std::holds_alternative<DefineSyntaxExpression>(definitionExpr->as)) {
                 try {
-                    std::vector<std::shared_ptr<Expression>> toExpand = { binding.definition };
+                    std::vector<std::shared_ptr<Expression>> toExpand = { definitionExpr };
+                    // Expand macros within the definition itself if needed
                     auto expanded = macroexp::expandMacros(toExpand, macroEnv);
+
                     if (!expanded.empty() && expanded[0]) {
                         interpret::interpret(state, expanded[0]);
                     }
                 } catch (const std::exception& e) {
-                    std::cerr << "[Warning] Error defining expanded value '" << name
+                    std::string name = "[unknown]";
+                    if (auto* d = std::get_if<DefineExpression>(&definitionExpr->as))
+                        name = d->name.token.lexeme;
+                    else if (auto* dp = std::get_if<DefineProcedure>(&definitionExpr->as))
+                        name = dp->name.token.lexeme;
+                    std::cerr << "[Warning] Error processing definition for '" << name
                               << "' from library '" << libNameStr << "': " << e.what() << std::endl;
                 }
             }
         }
     }
 }
+
 void populateMacroEnvironmentFromRegistry(const LibraryRegistry& registry, pattern::MacroEnvironment& macroEnv)
 {
     for (const auto& [libNameStr, libData] : registry) {
-        for (const auto& [name, binding] : libData.exportedBindings) {
-            if (binding.type == ExportedBinding::Type::SYNTAX) {
-                if (binding.definition && std::holds_alternative<DefineSyntaxExpression>(binding.definition->as)) {
-                    const auto& ds = std::get<DefineSyntaxExpression>(binding.definition->as);
-                    if (ds.rule && std::holds_alternative<SyntaxRulesExpression>(ds.rule->as)) {
-                        macroEnv.defineMacro(binding.syntax.token.lexeme, ds.rule);
+        for (const auto& bodyExpr : libData.bodyExpressions) { // Iterate body in order
+            if (!bodyExpr)
+                continue;
+
+            // Find syntax definitions
+            if (auto* ds = std::get_if<DefineSyntaxExpression>(&bodyExpr->as)) {
+                // Check if this syntax is exported by the library
+                if (libData.exportNamesSet.count(ds->name.token.lexeme)) {
+                    if (ds->rule && std::holds_alternative<SyntaxRulesExpression>(ds->rule->as)) {
+                        // Define macro using the rule expression pointer
+                        macroEnv.defineMacro(ds->name.token.lexeme, ds->rule);
                     } else {
-                        std::cerr << "[Warning] Exported syntax '" << name << "' from library '" << libNameStr << "' does not contain valid SyntaxRulesExpression." << std::endl;
+                        std::cerr << "[Warning] Exported syntax '" << ds->name.token.lexeme << "' from library '" << libNameStr << "' does not contain valid SyntaxRulesExpression." << std::endl;
                     }
-                } else {
-                    std::cerr << "[Warning] Exported syntax '" << name << "' from library '" << libNameStr << "' is not a DefineSyntaxExpression." << std::endl;
                 }
             }
         }
@@ -218,22 +231,29 @@ LibraryData importLibrary(
         auto source = readFile(path);
         auto tokens = scanner::tokenize(source);
         auto parsedExprsOpt = parse::parse(std::move(tokens));
+
         if (!parsedExprsOpt || parsedExprsOpt->empty()) {
-            throw std::runtime_error("Library empty/parse failed: " + path);
+            throw std::runtime_error("Library empty or parse failed: " + path);
         }
+
         auto parsedExprs = *parsedExprsOpt;
+
         if (auto* libDef = std::get_if<DefineLibraryExpression>(&parsedExprs[0]->as)) {
             libraryData.canonicalName = libDef->libraryName;
-            std::set<std::string> exportNames;
+            libraryData.bodyExpressions = libDef->body;
+
             for (const auto& expSym : libDef->exports) {
-                exportNames.insert(expSym.token.lexeme);
+                libraryData.exportNamesSet.insert(expSym.token.lexeme);
             }
-            for (const auto& bodyExpr : libDef->body) {
-                if (!isDefinition(bodyExpr))
+
+            for (const auto& bodyExpr : libraryData.bodyExpressions) {
+                if (!bodyExpr || !isDefinition(bodyExpr))
                     continue;
+
                 std::string defName;
                 HygienicSyntax defSyntax;
                 ExportedBinding::Type defType = ExportedBinding::Type::UNKNOWN;
+
                 if (auto* d = std::get_if<DefineExpression>(&bodyExpr->as)) {
                     defName = d->name.token.lexeme;
                     defSyntax = d->name;
@@ -247,19 +267,20 @@ LibraryData importLibrary(
                     defSyntax = ds->name;
                     defType = ExportedBinding::Type::SYNTAX;
                 }
-                if (!defName.empty() && exportNames.count(defName)) {
+
+                if (!defName.empty() && libraryData.exportNamesSet.count(defName)) {
                     if (libraryData.exportedBindings.count(defName)) {
-                        std::cerr << "[Warning] Duplicate export '" << defName << "' in library '" << path << "'." << std::endl;
+                        std::cerr << "[Warning] Duplicate export '" << defName << "' detected in library '" << path << "'. Overwriting." << std::endl;
                     }
                     ExportedBinding binding;
                     binding.syntax = defSyntax;
-                    binding.definition = bodyExpr;
+                    binding.definition = bodyExpr; // Point to the expression in bodyExpressions
                     binding.type = defType;
                     libraryData.exportedBindings[defName] = std::move(binding);
                 }
             }
         } else {
-            throw std::runtime_error("Not a valid R7RS library: " + path);
+            throw std::runtime_error("File does not start with (define-library): " + path);
         }
     } catch (...) {
         visitedPaths.erase(path);
@@ -267,8 +288,8 @@ LibraryData importLibrary(
     }
 
     visitedPaths.erase(path);
-    registry[registryKey] = libraryData;
-    return libraryData;
+    registry[registryKey] = std::move(libraryData);
+    return registry[registryKey];
 }
 
 void preloadLibraries(const std::string& basePathStr, LibraryRegistry& registry)

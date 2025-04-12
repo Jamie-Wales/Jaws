@@ -26,6 +26,8 @@ struct ExportedBinding {
 
 struct LibraryData {
     std::vector<std::shared_ptr<Expression>> canonicalName;
+    std::vector<std::shared_ptr<Expression>> bodyExpressions;
+    std::set<std::string> exportNamesSet;
     std::map<std::string, ExportedBinding> exportedBindings;
 };
 

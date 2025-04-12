@@ -32,15 +32,12 @@ InterpreterState createInterpreter()
     auto define = [&state](const HygienicSyntax& syntax, BuiltInProcedure::Func func) {
         state.env->define(syntax, SchemeValue(std::make_shared<BuiltInProcedure>(func)));
     };
-
-    // Create a helper for creating identifier syntax objects
     auto identifier = [](const std::string& name) -> HygienicSyntax {
         Token token;
         token.type = Tokentype::IDENTIFIER;
         token.lexeme = name;
         return HygienicSyntax { token, SyntaxContext() };
     };
-
     define(identifier("+"), jaws_math::plus);
     define(identifier("-"), jaws_math::minus);
     define(identifier("*"), jaws_math::mult);
@@ -49,7 +46,21 @@ InterpreterState createInterpreter()
     define(identifier(">="), jaws_math::greaterOrEqual);
     define(identifier("<"), jaws_math::less);
     define(identifier(">"), jaws_math::greater);
-    define(identifier("="), jaws_eq::equal);
+    define(identifier("="), jaws_math::equal);
+    define(identifier("quotient"), jaws_math::quotient);
+    define(identifier("remainder"), jaws_math::remainder);
+    define(identifier("exact->inexact"), jaws_math::exactToInexact);
+    define(identifier("inexact->exact"), jaws_math::inexactToExact);
+    define(identifier("real-part"), jaws_math::realPart);
+    define(identifier("imag-part"), jaws_math::imagPart);
+    define(identifier("make-rectangular"), jaws_math::makeRectangular);
+    define(identifier("sqrt"), jaws_math::sqrt);
+    define(identifier("exp"), jaws_math::exp);
+    define(identifier("log"), jaws_math::log);
+    define(identifier("sin"), jaws_math::sin);
+    define(identifier("cos"), jaws_math::cos);
+    define(identifier("atan"), jaws_math::atan);
+    define(identifier("random"), jaws_math::random);
     define(identifier("eq?"), jaws_eq::equal);
     define(identifier("equal?"), jaws_eq::equal);
     define(identifier("boolean?"), jaws_eq::isBooleanProc);
@@ -59,6 +70,10 @@ InterpreterState createInterpreter()
     define(identifier("null?"), jaws_eq::isNull);
     define(identifier("port?"), jaws_eq::isPort);
     define(identifier("eqv?"), jaws_eq::isEqv);
+    define(identifier("symbol?"), jaws_eq::isSymbol);
+    define(identifier("number?"), jaws_eq::isNumber);
+    define(identifier("string?"), jaws_eq::isString);
+    define(identifier("list?"), jaws_eq::isList);
     define(identifier("socket-server"), jaws_io::socketServer);
     define(identifier("socket-connect"), jaws_io::socketConnect);
     define(identifier("socket-accept"), jaws_io::socketAccept);
@@ -67,9 +82,6 @@ InterpreterState createInterpreter()
     define(identifier("socket-close"), jaws_io::socketClose);
     define(identifier("socket-set-nonblocking!"), jaws_io::socketSetNonBlocking);
     define(identifier("error"), jaws_io::error);
-    define(identifier("symbol?"), jaws_eq::isSymbol);
-    define(identifier("number?"), jaws_eq::isNumber);
-    define(identifier("string?"), jaws_eq::isString);
     define(identifier("open-input-file"), jaws_io::openInputFile);
     define(identifier("open-output-file"), jaws_io::openOutputFile);
     define(identifier("close-port"), jaws_io::closePort);
@@ -78,14 +90,11 @@ InterpreterState createInterpreter()
     define(identifier("display"), jaws_io::display);
     define(identifier("newline"), jaws_io::newline);
     define(identifier("map"), jaws_hof::map);
-    define(identifier("list?"), jaws_eq::isList);
     define(identifier("list"), jaws_list::listProcedure);
     define(identifier("car"), jaws_list::carProcudure);
     define(identifier("cdr"), jaws_list::cdrProcedure);
     define(identifier("cons"), jaws_list::cons);
     define(identifier("append"), jaws_list::append);
-    define(identifier("load-library"), jaws_ffi::loadLibrary);
-    define(identifier("register-function"), jaws_ffi::registerFunction);
     define(identifier("list-ref"), jaws_list::listRef);
     define(identifier("list-set!"), jaws_list::listSet);
     define(identifier("make-vector"), jaws_vec::makeVector);
@@ -125,6 +134,13 @@ InterpreterState createInterpreter()
     define(identifier("condition-variable-wait"), jaws_thread::conditionWait);
     define(identifier("condition-variable-signal!"), jaws_thread::conditionSignal);
     define(identifier("condition-variable-broadcast!"), jaws_thread::conditionBroadcast);
+    define(identifier("integer?"), jaws_math::isInteger);
+    define(identifier("rational?"), jaws_math::isRational);
+    define(identifier("real?"), jaws_math::isReal);
+    define(identifier("number?"), jaws_eq::isNumber);
+    define(identifier("complex?"), jaws_math::isComplex);
+    define(identifier("exact?"), jaws_math::isExact);
+    define(identifier("inexact?"), jaws_math::isInexact);
     define(identifier("vector->list"), jaws_values::vectorToList);
     define(identifier("list->vector"), jaws_values::listToVector);
 
