@@ -7196,6 +7196,17 @@ async function createWasm() {
   }
   }
 
+  function _random_get(buffer, size) {
+  try {
+  
+      randomFill(HEAPU8.subarray(buffer, buffer + size));
+      return 0;
+    } catch (e) {
+    if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
+    return e.errno;
+  }
+  }
+
 
   var getCFunc = (ident) => {
       var func = Module['_' + ident]; // closure exported function
@@ -7500,7 +7511,9 @@ var wasmImports = {
   /** @export */
   invoke_viiiiiiiiii,
   /** @export */
-  invoke_viiiiiiiiiiiiiii
+  invoke_viiiiiiiiiiiiiii,
+  /** @export */
+  random_get: _random_get
 };
 var wasmExports = await createWasm();
 var ___wasm_call_ctors = createExportWrapper('__wasm_call_ctors', 0);
