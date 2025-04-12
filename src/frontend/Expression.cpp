@@ -455,7 +455,7 @@ void Expression::toString(std::stringstream& ss) const
                 for (const auto& param : e.parameters) {
                     ss << " " << param.token.lexeme;
                 }
-                e.isVariadic ? " ..." : "";
+                ss << (e.isVariadic ? " ..." : "");
                 ss << ") ";
                 for (const auto& expr : e.body) {
                     expr->toString(ss);

@@ -126,10 +126,21 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
 
                               std::vector<std::shared_ptr<Expression>> params;
                               params.push_back(std::make_shared<Expression>(Expression { AtomExpression { d.name }, expr->line }));
-                              for (const auto& param : d.parameters) {
+                              if (d.isVariadic && !d.parameters.empty()) {
+                                  for (size_t i = 0; i < d.parameters.size() - 1; i++) {
+                                      params.push_back(std::make_shared<Expression>(
+                                          Expression { AtomExpression { d.parameters[i] }, expr->line }));
+                                  }
+                                  params.push_back(makeAtom(".", Tokentype::DOT));
                                   params.push_back(std::make_shared<Expression>(
-                                      Expression { AtomExpression { param }, expr->line }));
+                                      Expression { AtomExpression { d.parameters.back() }, expr->line }));
+                              } else {
+                                  for (const auto& param : d.parameters) {
+                                      params.push_back(std::make_shared<Expression>(
+                                          Expression { AtomExpression { param }, expr->line }));
+                                  }
                               }
+
                               elements.push_back(std::make_shared<Expression>(
                                   Expression { ListExpression { params, false }, expr->line }));
 
@@ -303,10 +314,21 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               std::vector<std::shared_ptr<Expression>> elements;
                               elements.push_back(makeAtom("lambda"));
                               std::vector<std::shared_ptr<Expression>> params;
-                              for (const auto& param : l.parameters) {
+                              if (l.isVariadic && !l.parameters.empty()) {
+                                  for (size_t i = 0; i < l.parameters.size() - 1; i++) {
+                                      params.push_back(std::make_shared<Expression>(
+                                          Expression { AtomExpression { l.parameters[i] }, expr->line }));
+                                  }
+                                  params.push_back(makeAtom(".", Tokentype::DOT));
                                   params.push_back(std::make_shared<Expression>(
-                                      Expression { AtomExpression { param }, expr->line }));
+                                      Expression { AtomExpression { l.parameters.back() }, expr->line }));
+                              } else {
+                                  for (const auto& param : l.parameters) {
+                                      params.push_back(std::make_shared<Expression>(
+                                          Expression { AtomExpression { param }, expr->line }));
+                                  }
                               }
+
                               elements.push_back(std::make_shared<Expression>(
                                   Expression { ListExpression { params, false }, expr->line }));
 

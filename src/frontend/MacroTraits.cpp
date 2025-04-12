@@ -176,12 +176,6 @@ std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& exp
                                               throw std::runtime_error("Invalid ellipsis placement near line " + std::to_string(elem->line));
                                           }
                                       }
-                                      if (atom_ptr->syntax.token.type == Tokentype::DOT) {
-                                          if (i + 1 >= list.elements.size()) {
-                                              throw std::runtime_error("Invalid dot syntax in pattern near line " + std::to_string(elem->line));
-                                          }
-                                          elem = fromExpr(list.elements[++i]);
-                                      }
                                   }
                                   processed.push_back(elem);
                               }
@@ -839,9 +833,6 @@ std::pair<std::vector<HygienicSyntax>, bool> parseMacroParameters(
                 if (paramAtom->syntax.token.type == Tokentype::DOT) {
                     if (isVariadic)
                         throw std::runtime_error("Multiple dots found in params");
-                    if (i == 0 || i != paramList->elements.size() - 2) {
-                        throw std::runtime_error("Invalid dot placement in lambda params during conversion");
-                    }
                     isVariadic = true;
                     continue;
                 }

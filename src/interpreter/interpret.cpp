@@ -74,6 +74,7 @@ InterpreterState createInterpreter()
     define(identifier("number?"), jaws_eq::isNumber);
     define(identifier("string?"), jaws_eq::isString);
     define(identifier("list?"), jaws_eq::isList);
+    define(identifier("vector?"), jaws_eq::isVector);
     define(identifier("socket-server"), jaws_io::socketServer);
     define(identifier("socket-connect"), jaws_io::socketConnect);
     define(identifier("socket-accept"), jaws_io::socketAccept);

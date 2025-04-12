@@ -201,7 +201,7 @@ std::optional<SchemeValue> equal(
         auto next = args[i + 1].ensureValue();
 
         if (!curr.isNumber() || !next.isNumber()) {
-            throw InterpreterError("Cannot compare non-numeric values with =");
+            throw InterpreterError("Cannot compare non-numeric values with = " + curr.toString() + " " + next.toString());
         }
 
         if (!(curr == next)) {

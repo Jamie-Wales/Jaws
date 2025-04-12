@@ -28,9 +28,9 @@
           (if (complex? z)
               (let ((r (real-part z))
                     (i (imag-part z)))
-                (if (and (real? r) (real? i)) ; Requires real? primitive
+                (if (and (real? r) (real? i)) 
                     (sqrt (+ (* r r) (* i i)))
-                    (error "magnitude requires real components for complex numbers" z))) ; Or handle appropriately
+                    (error "magnitude requires real components for complex numbers" z))) 
               (if (and (real? z) (< z 0)) 
                   (- z) 
                   z))))
@@ -54,16 +54,16 @@
                (if (< x m) x m))))
 
     (define (modulo n d)
-      (if (or (not (number? n)) (not (number? d)))
-          (error "modulo requires number arguments" n d)
-          (if (zero? d) ; Check divisor is not zero
-              (error "modulo: division by zero" d)
-              (let ((rem (remainder n d)))
-                (if (and (not (zero? rem))
-                         (real? n) (real? d) 
-                         (not (= (negative? n) (negative? d))))
-                    (+ rem d)
-                    rem)))))
+        (if (or (not (number? n)) (not (number? d)))
+            (error "modulo requires number arguments" n d)
+            (if (zero? d)
+                (error "modulo: division by zero" d)
+                (let ((rem (remainder n d)))
+                    (cond
+                    ((zero? rem) 0)
+                    ((and (negative? d) (positive? rem)) (+ rem d))
+                    ((and (positive? d) (negative? rem)) (+ rem d))
+                    (else rem))))))
 
     (define (gcd-two a b) 
       (if (or (not (integer? a)) (not (integer? b))) 
@@ -125,5 +125,5 @@
            (zero? (remainder n 2))))
 
 
-  ) ; end begin
-) ; end define-library
+  ) 
+) 
