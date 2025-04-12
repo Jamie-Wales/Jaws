@@ -1,7 +1,9 @@
 #include "interpret.h"
+#include "Error.h"
 #include "Expression.h"
 #include "Procedure.h"
 #include "jaws_values.h"
+#include <optional>
 
 // define DEBUG_LOGGING
 #ifdef DEBUG_LOGGING
@@ -140,10 +142,6 @@ std::optional<SchemeValue> interpret(
     return result;
 }
 
-std::optional<SchemeValue> interpretQuasiQuote(InterpreterState& state, QuasiQuoteExpression q)
-{
-}
-
 std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr)
@@ -195,8 +193,8 @@ std::optional<SchemeValue> interpret(
                               [&](const SetExpression& e) -> std::optional<SchemeValue> {
                                   return interpretSet(state, e);
                               },
-                              [&](const auto&) -> std::optional<SchemeValue> {
-                                  throw InterpreterError("Unknown expression type");
+                              [&](const auto& e) -> std::optional<SchemeValue> {
+                                  throw InterpreterError("Unknown expression type " + typeToString(expr->type()));
                               } },
             expr->as);
     } catch (const ContinuationInvocationException& e) {
@@ -444,6 +442,115 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
     } else {
         return interpret(state, innerExpr);
     }
+}
+
+std::optional<SchemeValue> processQuasiQuote(InterpreterState& state, std::shared_ptr<Expression> expr, int level = 1)
+{
+    return std::visit(overloaded {
+                          [&](const QuasiQuoteExpression& e) {
+                              // Nested quasiquote - increment level and process
+                              if (level > 0) {
+                                  // Create a quasiquote with the inner expression processed at level+1
+                                  auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                                  values_list_ptr->push_back(SchemeValue(Symbol { "quasiquote" }));
+                                  values_list_ptr->push_back(*processQuasiQuote(state, e.value, level + 1));
+                                  return SchemeValue(values_list_ptr);
+                              } else {
+                                  // Level 0 should never happen in practice
+                                  return expressionToValue(*expr);
+                              }
+                          },
+                          [&](const UnquoteExpression& e) {
+                              if (level == 1) {
+                                  auto result = interpret(state, e.value);
+                                  if (!result) {
+                                      throw InterpreterError("Failed to evaluate unquoted expression");
+                                  }
+                                  return *result;
+                              } else if (level > 1) {
+                                  auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                                  values_list_ptr->push_back(SchemeValue(Symbol { "unquote" }));
+                                  values_list_ptr->push_back(*processQuasiQuote(state, e.value, level - 1));
+                                  return SchemeValue(values_list_ptr);
+                              } else {
+                                  throw InterpreterError("Unquote outside of quasiquote");
+                              }
+                          },
+                          [&](const SpliceExpression& e) {
+                              if (level == 1) {
+                                  auto result = interpret(state, e.value);
+                                  if (!result || !result->isList()) {
+                                      throw InterpreterError("Unquote-splicing requires a list result");
+                                  }
+                                  return *result; // Return the list for splicing by the caller
+                              } else if (level > 1) {
+                                  auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                                  values_list_ptr->push_back(SchemeValue(Symbol { "unquote-splicing" }));
+                                  values_list_ptr->push_back(*processQuasiQuote(state, e.value, level - 1));
+                                  return SchemeValue(values_list_ptr);
+                              } else {
+                                  throw InterpreterError("Unquote-splicing outside of quasiquote");
+                              }
+                          },
+                          [&](const sExpression& e) {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+
+                              for (size_t i = 0; i < e.elements.size(); ++i) {
+                                  const auto& elem = e.elements[i];
+
+                                  if (level == 1 && std::holds_alternative<SpliceExpression>(elem->as)) {
+                                      auto result = interpret(state, std::get<SpliceExpression>(elem->as).value);
+                                      if (!result || !result->isList()) {
+                                          throw InterpreterError("Unquote-splicing requires a list result");
+                                      }
+
+                                      auto list = result->asList();
+                                      for (const auto& item : *list) {
+                                          values_list_ptr->push_back(item);
+                                      }
+                                  } else {
+                                      auto processed = processQuasiQuote(state, elem, level);
+                                      if (processed) {
+                                          values_list_ptr->push_back(*processed);
+                                      }
+                                  }
+                              }
+
+                              return SchemeValue(values_list_ptr);
+                          },
+                          [&](const VectorExpression& e) {
+                              auto values_vec_ptr = std::make_shared<std::vector<SchemeValue>>();
+
+                              for (const auto& elem : e.elements) {
+                                  if (level == 1 && std::holds_alternative<SpliceExpression>(elem->as)) {
+                                      auto result = interpret(state, std::get<SpliceExpression>(elem->as).value);
+                                      if (!result || !result->isList()) {
+                                          throw InterpreterError("Unquote-splicing requires a list result");
+                                      }
+
+                                      auto list = result->asList();
+                                      for (const auto& item : *list) {
+                                          values_vec_ptr->push_back(item);
+                                      }
+                                  } else {
+                                      auto processed = processQuasiQuote(state, elem, level);
+                                      if (processed) {
+                                          values_vec_ptr->push_back(*processed);
+                                      }
+                                  }
+                              }
+
+                              return SchemeValue(values_vec_ptr);
+                          },
+                          [&](const auto&) {
+                              return expressionToValue(*expr);
+                          } },
+        expr->as);
+}
+
+std::optional<SchemeValue> interpretQuasiQuote(InterpreterState& state, const QuasiQuoteExpression& q)
+{
+    return processQuasiQuote(state, q.value);
 }
 
 bool fileExists(const std::string& path)

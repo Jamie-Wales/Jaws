@@ -695,6 +695,12 @@ std::shared_ptr<Expression> convertMacroResultToExpressionInternal(
                               std::string keyword = getKeyword(ml);
                               if (keyword == "quote") {
                                   return convertQuote(ml, line);
+                              } else if (keyword == "quasiquote") {
+                                  return convertQuasiQuote(ml, line);
+                              } else if (keyword == "unquote") {
+                                  return convertUnquote(ml, line);
+                              } else if (keyword == "unquote-splice") {
+                                  return convertSplice(ml, line);
                               } else if (keyword == "set!") {
                                   return convertSet(ml, line);
                               } else if (keyword == "if") {
@@ -747,6 +753,36 @@ std::shared_ptr<Expression> convertQuote(const MacroList& ml, int line)
     if (!datum)
         throw std::runtime_error("Invalid quote datum during conversion");
     return std::make_shared<Expression>(QuoteExpression { datum }, line);
+}
+
+std::shared_ptr<Expression> convertQuasiQuote(const MacroList& ml, int line)
+{
+    if (ml.elements.size() != 2)
+        throw std::runtime_error("Invalid quote structure during conversion");
+    auto datum = convertMacroResultToExpressionInternal(ml.elements[1]);
+    if (!datum)
+        throw std::runtime_error("Invalid quote datum during conversion");
+    return std::make_shared<Expression>(QuasiQuoteExpression { datum }, line);
+}
+
+std::shared_ptr<Expression> convertUnquote(const MacroList& ml, int line)
+{
+    if (ml.elements.size() != 2)
+        throw std::runtime_error("Invalid quote structure during conversion");
+    auto datum = convertMacroResultToExpressionInternal(ml.elements[1]);
+    if (!datum)
+        throw std::runtime_error("Invalid quote datum during conversion");
+    return std::make_shared<Expression>(UnquoteExpression { datum }, line);
+}
+
+std::shared_ptr<Expression> convertSplice(const MacroList& ml, int line)
+{
+    if (ml.elements.size() != 2)
+        throw std::runtime_error("Invalid quote structure during conversion");
+    auto datum = convertMacroResultToExpressionInternal(ml.elements[1]);
+    if (!datum)
+        throw std::runtime_error("Invalid quote datum during conversion");
+    return std::make_shared<Expression>(SpliceExpression { datum }, line);
 }
 
 std::shared_ptr<Expression> convertSet(const MacroList& ml, int line)

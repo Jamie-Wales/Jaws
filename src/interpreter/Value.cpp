@@ -1,4 +1,5 @@
 #include "Value.h"
+#include "Expression.h"
 #include "Procedure.h"
 #include "Visit.h"
 #include "parse.h"
@@ -130,8 +131,6 @@ SchemeValue expressionToValue(const Expression& expr)
                               for (const auto& elem : l.elements) {
                                   values_list_ptr->push_back(expressionToValue(*elem));
                               }
-                              // How to handle improper lists? This assumes proper list.
-                              // If l.isImproper, maybe the last element should be cdr directly? Needs ListExpression support.
                               return SchemeValue(values_list_ptr);
                           },
                           [&](const VectorExpression& v) -> SchemeValue {
@@ -142,16 +141,151 @@ SchemeValue expressionToValue(const Expression& expr)
                               }
                               return SchemeValue(std::move(values_vec_ptr));
                           },
-                          [&](const LetExpression& l) -> SchemeValue { throw std::runtime_error("Cannot convert LetExpression directly to SchemeValue data"); },
-                          [&](const ImportExpression& i) -> SchemeValue { throw std::runtime_error("Cannot convert ImportExpression directly to SchemeValue data"); },
-                          [&](const SyntaxRulesExpression& s) -> SchemeValue { throw std::runtime_error("Cannot convert SyntaxRulesExpression directly to SchemeValue data"); },
-                          [&](const SetExpression& s) -> SchemeValue { throw std::runtime_error("Cannot convert SetExpression directly to SchemeValue data"); },
-                          [&](const DefineExpression& d) -> SchemeValue { throw std::runtime_error("Cannot convert DefineExpression directly to SchemeValue data"); },
-                          [&](const DefineProcedure& d) -> SchemeValue { throw std::runtime_error("Cannot convert DefineProcedure directly to SchemeValue data"); },
-                          [&](const DefineSyntaxExpression& ds) -> SchemeValue { throw std::runtime_error("Cannot convert DefineSyntaxExpression directly to SchemeValue data"); },
-                          [&](const LambdaExpression& l) -> SchemeValue { throw std::runtime_error("Cannot convert LambdaExpression directly to SchemeValue data"); },
-                          [&](const IfExpression& i) -> SchemeValue { throw std::runtime_error("Cannot convert IfExpression directly to SchemeValue data"); },
-                          [&](const TailExpression& e) -> SchemeValue { throw std::runtime_error("Cannot convert TailExpression directly to SchemeValue data"); },
+                          [&](const LetExpression& l) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "let" }));
+                              if (l.name) {
+                                  values_list_ptr->push_back(SchemeValue(Symbol { l.name->token.lexeme }));
+                              }
+                              auto bindings_list = std::make_shared<std::list<SchemeValue>>();
+                              for (const auto& binding : l.arguments) {
+                                  auto binding_pair = std::make_shared<std::list<SchemeValue>>();
+                                  binding_pair->push_back(SchemeValue(Symbol { binding.first.token.lexeme }));
+                                  binding_pair->push_back(expressionToValue(*binding.second));
+                                  bindings_list->push_back(SchemeValue(binding_pair));
+                              }
+                              values_list_ptr->push_back(SchemeValue(bindings_list));
+                              for (const auto& expr : l.body) {
+                                  values_list_ptr->push_back(expressionToValue(*expr));
+                              }
+
+                              return SchemeValue(values_list_ptr);
+                          },
+                          [&](const QuasiQuoteExpression& e) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "quasiquote" }));
+                              values_list_ptr->push_back(expressionToValue(*e.value));
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const UnquoteExpression& e) -> SchemeValue {
+                              // Create a list with 'unquote' and the expression
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "unquote" }));
+                              values_list_ptr->push_back(expressionToValue(*e.value));
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const SpliceExpression& e) -> SchemeValue {
+                              // Create a list with 'unquote-splicing' and the expression
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "unquote-splicing" }));
+                              values_list_ptr->push_back(expressionToValue(*e.value));
+                              return SchemeValue(values_list_ptr);
+                          },
+                          [&](const DefineExpression& d) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "define" }));
+                              values_list_ptr->push_back(SchemeValue(Symbol { d.name.token.lexeme }));
+                              values_list_ptr->push_back(expressionToValue(*d.value));
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const DefineProcedure& d) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "define" }));
+                              auto param_list = std::make_shared<std::list<SchemeValue>>();
+                              param_list->push_back(SchemeValue(Symbol { d.name.token.lexeme }));
+                              for (const auto& param : d.parameters) {
+                                  param_list->push_back(SchemeValue(Symbol { param.token.lexeme }));
+                              }
+
+                              values_list_ptr->push_back(SchemeValue(param_list));
+                              for (const auto& expr : d.body) {
+                                  values_list_ptr->push_back(expressionToValue(*expr));
+                              }
+
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const LambdaExpression& l) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "lambda" }));
+                              auto param_list = std::make_shared<std::list<SchemeValue>>();
+                              for (const auto& param : l.parameters) {
+                                  param_list->push_back(SchemeValue(Symbol { param.token.lexeme }));
+                              }
+                              values_list_ptr->push_back(SchemeValue(param_list));
+                              for (const auto& expr : l.body) {
+                                  values_list_ptr->push_back(expressionToValue(*expr));
+                              }
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const IfExpression& i) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "if" }));
+                              values_list_ptr->push_back(expressionToValue(*i.condition));
+                              values_list_ptr->push_back(expressionToValue(*i.then));
+                              if (i.el) {
+                                  values_list_ptr->push_back(expressionToValue(**i.el));
+                              }
+
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const SetExpression& s) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "set!" }));
+                              values_list_ptr->push_back(SchemeValue(Symbol { s.identifier.token.lexeme }));
+                              values_list_ptr->push_back(expressionToValue(*s.value));
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const TailExpression& e) -> SchemeValue {
+                              // Just convert the inner expression
+                              return expressionToValue(*e.expression);
+                          },
+
+                          [&](const ImportExpression& i) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "import" }));
+                              for (const auto& spec : i.imports) {
+                                  auto lib_list = std::make_shared<std::list<SchemeValue>>();
+                                  for (const auto& part : spec.library) {
+                                      lib_list->push_back(expressionToValue(*part));
+                                  }
+                                  values_list_ptr->push_back(SchemeValue(lib_list));
+                              }
+
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const DefineSyntaxExpression& ds) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "define-syntax" }));
+                              values_list_ptr->push_back(SchemeValue(Symbol { ds.name.token.lexeme }));
+                              values_list_ptr->push_back(expressionToValue(*ds.rule));
+                              return SchemeValue(values_list_ptr);
+                          },
+
+                          [&](const SyntaxRulesExpression& s) -> SchemeValue {
+                              auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
+                              values_list_ptr->push_back(SchemeValue(Symbol { "syntax-rules" }));
+                              auto literals_list = std::make_shared<std::list<SchemeValue>>();
+                              for (const auto& lit : s.literals) {
+                                  literals_list->push_back(SchemeValue(Symbol { lit.lexeme }));
+                              }
+                              values_list_ptr->push_back(SchemeValue(literals_list));
+                              for (const auto& rule : s.rules) {
+                                  auto rule_list = std::make_shared<std::list<SchemeValue>>();
+                                  rule_list->push_back(expressionToValue(*rule.pattern));
+                                  rule_list->push_back(expressionToValue(*rule.template_expr));
+                                  values_list_ptr->push_back(SchemeValue(rule_list));
+                              }
+
+                              return SchemeValue(values_list_ptr);
+                          },
                           [&](const auto& a) -> SchemeValue {
                               throw std::runtime_error("Invalid Expression type in expressionToValue");
                           } },

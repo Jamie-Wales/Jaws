@@ -79,6 +79,10 @@ std::vector<std::shared_ptr<Expression>> expandMacros(
     std::shared_ptr<pattern::MacroEnvironment> env);
 
 std::string getKeyword(const MacroList& ml);
+
+std::shared_ptr<Expression> convertSplice(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertQuasiQuote(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertUnquote(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertQuote(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertSet(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertIf(const MacroList& ml, int line);

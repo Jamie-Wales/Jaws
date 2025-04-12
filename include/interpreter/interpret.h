@@ -58,6 +58,7 @@ std::optional<SchemeValue> interpretVector(InterpreterState& state, const Vector
 std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const TailExpression& tail);
 std::optional<SchemeValue> interpretImport(InterpreterState& state, const ImportExpression& import);
 std::optional<SchemeValue> interpretSet(InterpreterState& state, const SetExpression& set);
+std::optional<SchemeValue> interpretQuasiQuote(InterpreterState& state, const QuasiQuoteExpression& q);
 
 std::optional<ProcedureCall> evaluateProcedureCall(
     InterpreterState& state,

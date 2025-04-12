@@ -7,4 +7,4 @@
             sum)))))
 
 
-(closure-test 100000)
+(closure-test 1000000)
