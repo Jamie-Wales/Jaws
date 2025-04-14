@@ -24,4 +24,12 @@ std::optional<SchemeValue> apply(
 std::optional<SchemeValue> callCC(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
+std::optional<SchemeValue> values(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> callWithValues(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
 }

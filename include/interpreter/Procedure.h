@@ -91,36 +91,36 @@ public:
         interpret::InterpreterState& state,
         const std::vector<SchemeValue>& args) const override;
 };
-// In Procedure.h / Procedure.cpp
+
 class Continuation : public Procedure {
 public:
     explicit Continuation(interpret::InterpreterState capturedState)
-        : state(capturedState) // Make a complete copy of the interpreter state
+        : state(capturedState)
     {
         DEBUG_LOG("Continuation created, capturing state with Env=" << state.env.get());
     }
 
     std::optional<SchemeValue> operator()(
-        interpret::InterpreterState& currentState, // The state when continuation is *called*
+        interpret::InterpreterState& currentState,
         const std::vector<SchemeValue>& args) const override
     {
-        // Process arguments to get the single return value
         SchemeValue returnValue;
-        if (args.size() != 1) {
-            throw InterpreterError("Continuation expects exactly one argument, got " + std::to_string(args.size()));
+
+        if (args.size() == 0) {
+            returnValue = SchemeValue();
+        } else if (args.size() == 1) {
+            returnValue = args[0];
+        } else {
+            auto multiValue = std::make_shared<MultiValue>(args);
+            returnValue = SchemeValue(multiValue);
         }
-        returnValue = args[0];
 
         DEBUG_LOG("Continuation invoked! Throwing exception. Value=" << returnValue.toString() << ". Restoring state with Env=" << state.env.get());
-        // Throw the exception with the ORIGINAL captured state and the return value
         throw ContinuationInvocationException(state, returnValue);
-        // This function effectively never returns normally via std::optional
     }
 
     bool isBuiltin() const override { return true; }
 
 private:
-    interpret::InterpreterState state; // Complete copy of interpreter state (CAPTURED at call/cc time)
+    interpret::InterpreterState state;
 };
-
-// Ensure ContinuationInvocationException is defined (e.g., in Procedure.h or Error.h)

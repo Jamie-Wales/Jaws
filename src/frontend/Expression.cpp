@@ -15,6 +15,11 @@ Expression::Expression(Expression::ExpressionVariant as, int line)
 {
 }
 
+BeginExpression::BeginExpression(std::vector<std::shared_ptr<Expression>> values)
+    : values { values }
+{
+}
+
 sExpression::sExpression(std::vector<std::shared_ptr<Expression>> elems, bool variadic)
     : elements(std::move(elems))
     , isVariadic(variadic)
@@ -374,6 +379,14 @@ void Expression::toString(std::stringstream& ss) const
             [&](const AtomExpression& e) {
                 ss << e.value.token.lexeme;
             },
+
+            [&](const BeginExpression& e) {
+                ss << "(begin ";
+                for (const auto val : e.values) {
+                    val->toString(ss);
+                }
+                ss << ")";
+            },
             [&](const DefineLibraryExpression& e) {
                 ss << "(define-library (";
                 // Print library name
@@ -620,6 +633,18 @@ void Expression::toString(std::stringstream& ss) const
 std::shared_ptr<Expression> Expression::clone() const
 {
     return std::visit(overloaded {
+
+                          [&](const BeginExpression& e) {
+                              std::vector<std::shared_ptr<Expression>> elements = {};
+                              for (const auto val : e.values) {
+                                  elements.push_back(val->clone());
+                              }
+
+                              return std::make_shared<Expression>(Expression {
+                                  BeginExpression {
+                                      elements },
+                                  line });
+                          },
                           [&](const QuasiQuoteExpression& p) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements = {};
                               return std::make_shared<Expression>(Expression {
@@ -820,6 +845,15 @@ void Expression::ASTToString(std::stringstream& ss, int indentLevel) const
 {
     std::visit(
         overloaded {
+
+            [&](const BeginExpression& e) {
+                indent(ss, indentLevel);
+                ss << "BeginExpression: ";
+
+                for (const auto& val : e.values) {
+                    val->ASTToString(ss, indentLevel + 1);
+                }
+            },
             [&](const AtomExpression& e) {
                 indent(ss, indentLevel);
                 ss << "AtomExpression: " << e.value.token.lexeme;

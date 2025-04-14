@@ -91,6 +91,10 @@ InterpreterState createInterpreter()
     define(identifier("display"), jaws_io::display);
     define(identifier("newline"), jaws_io::newline);
     define(identifier("map"), jaws_hof::map);
+    define(identifier("values"), jaws_hof::values);
+    define(identifier("call-with-values"), jaws_hof::callWithValues);
+    define(identifier("set-car!"), jaws_list::setCar);
+    define(identifier("set-cdr!"), jaws_list::setCdr);
     define(identifier("list"), jaws_list::listProcedure);
     define(identifier("car"), jaws_list::carProcudure);
     define(identifier("cdr"), jaws_list::cdrProcedure);
@@ -210,6 +214,10 @@ std::optional<SchemeValue> interpret(
                               [&](const SetExpression& e) -> std::optional<SchemeValue> {
                                   return interpretSet(state, e);
                               },
+
+                              [&](const BeginExpression& e) -> std::optional<SchemeValue> {
+                                  return interpretBegin(state, e);
+                              },
                               [&](const auto& e) -> std::optional<SchemeValue> {
                                   throw InterpreterError("Unknown expression type " + typeToString(expr->type()));
                               } },
@@ -218,6 +226,15 @@ std::optional<SchemeValue> interpret(
         // Re-throw the exception to continue unwinding the stack
         throw;
     }
+}
+
+std::optional<SchemeValue> interpretBegin(InterpreterState& state, const BeginExpression& begin)
+{
+    std::optional<SchemeValue> result = std::nullopt;
+    for (const auto& expr : begin.values) {
+        result = interpret(state, expr);
+    }
+    return result;
 }
 std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpression& atom)
 {

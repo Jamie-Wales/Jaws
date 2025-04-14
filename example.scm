@@ -1,34 +1,57 @@
-(define (find-first pred lst)
-  (call/cc (lambda (return)
-             ;; Uses the for-each below
-             (for-each (lambda (x)
-                         (if (pred x) ; If this is true...
-                             (return x))) ; ...execution jumps out via return
-                       lst)
-             ;; This #f is only reached if the loop finishes without 'return' being called
-             #f)))
+(define-syntax define-values
+(syntax-rules ()
+((define-values () expr)
+(define dummy
+(call-with-values (lambda () expr)
+(lambda args #f))))
+((define-values (var) expr)
+(define var expr))
+((define-values (var0 var1 ... varn) expr)
+(begin
+(define var0
+(call-with-values (lambda () expr)
+list))
+(define var1
+(let ((v (cadr var0)))
+(set-cdr! var0 (cddr var0))
+v)) ...
+(define varn
+(let ((v (cadr var0)))
+(set! var0 (car var0))
+v))))
+((define-values (var0 var1 ... . varn) expr)
+(begin
+(define var0
+(call-with-values (lambda () expr)
+list))
+(define var1
+(let ((v (cadr var0)))
+(set-cdr! var0 (cddr var0))
+v)) ...
+(define varn
+(let ((v (cdr var0)))
+(set! var0 (car var0))
+v))))
+((define-values var expr)
+(define var
+(call-with-values (lambda () expr)
+list)))))
 
-;; Assuming corrected for-each using your 'when'
-(define (for-each proc lst)
-  (if (not (null? lst))
-      ; Then-expression (list is not empty)
-      (begin
-        (proc (car lst))         ; Apply proc to the first element
-        (for-each proc (cdr lst))) ; Recurse on the rest of the list
-      ; Else-expression (list is empty)
-      #f                        ; Return #f (or similar) for the base case
-  ))
-(define (even? x) (letrec ((is-even? (lambda (n)
-                                      (if (zero? n)
-                                          #t
-                                          (is-odd? (- n 1)))))
-                           (is-odd? (lambda (n)
-                                     (if (zero? n)
-                                         #f
-                                         (is-even? (- n 1))))))
-                    (is-even? x)))
 
-(find-first even? '(1 3 5 6 7 8 9))
+(begin (define-values (sum diff) (values (+ 10 5) (- 10 3))) (display sum))
 
 
-`(1 ,@(list 1 2) 4)
+(define-syntax swap!
+  (syntax-rules ()
+    ((swap! a b)
+     (let ((temp a))  ; temp is an internal variable
+       (set! a b)
+       (set! b temp)))))
+(define temp 100)      ; User defines a variable called 'temp'
+(define x 10)
+(define y 20)
+
+(swap! x y)            ; Should swap x and y without affecting temp
+(display temp)         ; Should still be 100
+(display x)            ; Should be 20
+(display y)            ; Should be 10

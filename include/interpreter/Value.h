@@ -1,5 +1,6 @@
 // Value.h
 #pragma once
+#include "MultiValue.h"
 #include "Number.h"
 #include "Port.h"
 #include "Thread.h"
@@ -31,7 +32,9 @@ public:
         std::shared_ptr<MutexHandle>,
         std::shared_ptr<ConditionVarHandle>,
         std::shared_ptr<Expression>,
+        std::shared_ptr<MultiValue>,
         char>;
+
     SchemeValue(SchemeValue&& other) noexcept
         : value(std::move(other.value))
     {
@@ -134,6 +137,18 @@ public:
 
     std::string toString() const;
 
+    bool isMultiValue() const
+    {
+        return std::holds_alternative<std::shared_ptr<MultiValue>>(value);
+    }
+
+    std::shared_ptr<MultiValue> asMultiValue() const
+    {
+        if (!isMultiValue()) {
+            throw std::runtime_error("Value is not a multiple values object");
+        }
+        return std::get<std::shared_ptr<MultiValue>>(value);
+    }
     SchemeValue operator+(const SchemeValue& other) const;
     SchemeValue operator-(const SchemeValue& other) const;
     SchemeValue operator*(const SchemeValue& other) const;

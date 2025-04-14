@@ -1,5 +1,6 @@
 #include "Value.h"
 #include "Expression.h"
+#include "MultiValue.h"
 #include "Procedure.h"
 #include "Visit.h"
 #include "parse.h"
@@ -376,7 +377,8 @@ bool SchemeValue::isTrue() const
                           [](const std::shared_ptr<MutexHandle>&) { return true; },
                           [](const std::shared_ptr<ConditionVarHandle>&) { return true; },
                           [](const Port& p) { return p.isOpen(); },
-                          [](char c) { return true; }, // All chars are true
+                          [](const std::shared_ptr<MultiValue>& p) { return true; },
+                          [](char c) { return true; },
                       },
         value);
 }
@@ -388,6 +390,20 @@ std::string SchemeValue::toString() const
                           [](const std::string& arg) { return std::format("\"{}\"", arg); },
                           [](bool arg) { return arg ? std::string("#t") : "#f"; },
                           [](const Symbol& arg) { return arg.name; },
+                          [](const std::shared_ptr<MultiValue>& mv) {
+                              if (!mv)
+                                  return std::string("#<null-multiple-values>");
+                              std::string result = "#<values (";
+                              bool first = true;
+                              for (const auto& val : mv->values) {
+                                  if (!first)
+                                      result += " ";
+                                  result += val.toString();
+                                  first = false;
+                              }
+                              result += ")>";
+                              return result;
+                          },
                           [](const std::shared_ptr<std::vector<SchemeValue>>& vec_ptr) {
                               if (!vec_ptr)
                                   return std::string("#(<null-vector>)");
@@ -422,6 +438,23 @@ std::string SchemeValue::toString() const
                           [](const std::shared_ptr<Procedure>&) { return std::string("<procedure>"); },
                           [](const Port& p) {
                               return std::string(p.type == PortType::Input ? "<input-port>" : "<output-port>");
+                          },
+                          [](const std::shared_ptr<MultiValue>& a_ptr, const std::shared_ptr<MultiValue>& b_ptr) -> bool {
+                              if (a_ptr == b_ptr)
+                                  return true;
+                              if (!a_ptr || !b_ptr)
+                                  return false;
+
+                              const auto& a = a_ptr->values;
+                              const auto& b = b_ptr->values;
+                              if (a.size() != b.size())
+                                  return false;
+
+                              for (size_t i = 0; i < a.size(); ++i) {
+                                  if (!(a[i] == b[i]))
+                                      return false;
+                              }
+                              return true;
                           },
                           [](char c) {
                               if (c == ' ')
@@ -541,6 +574,23 @@ std::partial_ordering SchemeValue::operator<=>(const SchemeValue& other) const
                           [](const std::string& a, const std::string& b) -> std::partial_ordering { return a <=> b; },
                           [](bool a, bool b) -> std::partial_ordering { return a <=> b; },
                           [](const Symbol& a, const Symbol& b) -> std::partial_ordering { return a.name <=> b.name; },
+                          [](const std::shared_ptr<MultiValue>& a_ptr, const std::shared_ptr<MultiValue>& b_ptr) -> std::partial_ordering {
+                              if (a_ptr == b_ptr)
+                                  return std::partial_ordering::equivalent;
+                              if (!a_ptr || !b_ptr)
+                                  return !a_ptr ? std::partial_ordering::less : std::partial_ordering::greater;
+
+                              const auto& a = a_ptr->values;
+                              const auto& b = b_ptr->values;
+                              auto minSize = std::min(a.size(), b.size());
+
+                              for (size_t i = 0; i < minSize; ++i) {
+                                  if (auto cmp = a[i] <=> b[i]; cmp != std::partial_ordering::equivalent) {
+                                      return cmp;
+                                  }
+                              }
+                              return a.size() <=> b.size();
+                          },
                           [](const std::shared_ptr<std::vector<SchemeValue>>& a_ptr, const std::shared_ptr<std::vector<SchemeValue>>& b_ptr) -> std::partial_ordering {
                               if (!a_ptr && !b_ptr)
                                   return std::partial_ordering::equivalent;

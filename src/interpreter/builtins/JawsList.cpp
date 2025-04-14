@@ -11,14 +11,26 @@
 
 namespace jaws_list {
 
+#ifdef DEBUG_LOGGING
+#define DEBUG_VALUES(x) std::cerr << "VALUES DEBUG: " << x << std::endl
+#else
+#define DEBUG_VALUES(x)
+#endif
+
 std::optional<SchemeValue> listProcedure(
-    interpret::InterpreterState&,
+    interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
+    DEBUG_VALUES("list procedure called with " << args.size() << " arguments");
+    for (size_t i = 0; i < args.size(); ++i) {
+        DEBUG_VALUES("  arg[" << i << "] = " << args[i].toString());
+    }
+
     auto result_ptr = std::make_shared<std::list<SchemeValue>>();
     for (const auto& arg : args) {
         result_ptr->push_back(arg.ensureValue());
     }
+    DEBUG_VALUES("list procedure returning list with " << result_ptr->size() << " elements");
     return SchemeValue(result_ptr);
 }
 
@@ -135,6 +147,68 @@ std::optional<SchemeValue> append(
     }
 
     return SchemeValue(result_ptr);
+}
+
+std::optional<SchemeValue> setCar(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("set-car!: requires exactly 2 arguments");
+    }
+
+    const auto& pair = args[0].ensureValue();
+    const auto& newCar = args[1].ensureValue();
+
+    if (!pair.isList()) {
+        throw InterpreterError("set-car!: first argument must be a pair");
+    }
+
+    auto list = pair.asList();
+    if (!list || list->empty()) {
+        throw InterpreterError("set-car!: cannot set car of empty list or null");
+    }
+    list->front() = newCar;
+
+    return std::nullopt;
+}
+
+std::optional<SchemeValue> setCdr(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() != 2) {
+        throw InterpreterError("set-cdr!: requires exactly 2 arguments");
+    }
+
+    const auto& pair = args[0].ensureValue();
+    const auto& newCdr = args[1].ensureValue();
+
+    if (!pair.isList()) {
+        throw InterpreterError("set-cdr!: first argument must be a pair");
+    }
+
+    auto list = pair.asList();
+    if (!list || list->empty()) {
+        throw InterpreterError("set-cdr!: cannot set cdr of empty list or null");
+    }
+
+    // Save the first element of the list
+    SchemeValue firstElement = list->front();
+
+    // Clear the list and add the first element back
+    list->clear();
+    list->push_back(firstElement);
+    if (newCdr.isList()) {
+        auto newCdrList = newCdr.asList();
+        if (newCdrList) {
+            list->insert(list->end(), newCdrList->begin(), newCdrList->end());
+        }
+    } else {
+        list->push_back(newCdr);
+    }
+
+    return std::nullopt; // set-cdr! returns unspecified value
 }
 
 std::optional<SchemeValue> listRef(

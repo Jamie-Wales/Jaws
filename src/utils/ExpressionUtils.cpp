@@ -104,6 +104,19 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               return std::make_shared<Expression>(
                                   Expression { ListExpression { elements, false }, expr->line });
                           },
+
+                          [&](const BeginExpression& e) -> std::shared_ptr<Expression> {
+                              std::vector<std::shared_ptr<Expression>> elements;
+                              elements.push_back(makeAtom("begin"));
+                              for (const auto& elem : e.values) {
+                                  elements.push_back(exprToList(elem));
+                              }
+                              return std::make_shared<Expression>(
+                                  Expression { ListExpression {
+                                                   elements,
+                                               },
+                                      expr->line });
+                          },
                           [&](const ListExpression& e) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
                               for (const auto& elem : e.elements) {

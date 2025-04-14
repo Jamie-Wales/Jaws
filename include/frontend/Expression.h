@@ -10,6 +10,7 @@
 class Expression;
 
 enum class ExprType {
+    Begin,
     QuasiQuote,
     UnQuote,
     Splice,
@@ -35,6 +36,11 @@ class QuasiQuoteExpression {
 public:
     std::shared_ptr<Expression> value;
     QuasiQuoteExpression(std::shared_ptr<Expression> value);
+};
+class BeginExpression {
+public:
+    std::vector<std::shared_ptr<Expression>> values;
+    BeginExpression(std::vector<std::shared_ptr<Expression>> values);
 };
 
 class UnquoteExpression {
@@ -285,7 +291,7 @@ public:
         LetExpression,
         QuasiQuoteExpression,
         UnquoteExpression,
-        SpliceExpression>;
+        SpliceExpression, BeginExpression>;
 
     ExpressionVariant as;
     int line;
@@ -306,6 +312,7 @@ public:
     ExprType type() const
     {
         return std::visit(overloaded {
+                              [](const BeginExpression&) { return ExprType::Begin; },
                               [](const QuasiQuoteExpression&) { return ExprType::QuasiQuote; },
                               [](const AtomExpression&) { return ExprType::Atom; },
                               [](const sExpression&) { return ExprType::SExpr; },
@@ -322,7 +329,6 @@ public:
                               [](const ImportExpression&) { return ExprType::Import; },
                               [](const SyntaxRulesExpression&) { return ExprType::SyntaxRules; },
                               [](const DefineSyntaxExpression&) { return ExprType::DefineSyntax; },
-
                               [](const UnquoteExpression&) { return ExprType::UnQuote; },
                               [](const SpliceExpression&) { return ExprType::Splice; },
                               [](const LetExpression&) { return ExprType::Let; } },
@@ -369,6 +375,8 @@ static std::string typeToString(ExprType type)
         return "DefineLibrary";
     case ExprType::UnQuote:
         return "Unquote";
+    case ExprType::Begin:
+        return "Begin";
     case ExprType::Splice:
         return "Splice";
     }

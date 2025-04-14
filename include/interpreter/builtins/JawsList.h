@@ -50,6 +50,16 @@ std::optional<SchemeValue> listSet(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
 
+std::optional<SchemeValue> setCdr(
+
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> setCar(
+
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
 std::optional<SchemeValue> member(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);

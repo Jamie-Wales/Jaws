@@ -1,4 +1,6 @@
 #include "MacroTraits.h"
+#include "Expression.h"
+#include "Syntax.h"
 #include "parse.h"
 #include "scan.h"
 #include <algorithm>
@@ -11,13 +13,50 @@
 #include <string>
 #include <variant>
 #include <vector>
-
 // #define DEBUG_LOGGING
+static int transform_depth = 0;
+struct TransformTracer {
+    std::string name;
+    bool entered = false;
+    TransformTracer(const std::string& n)
+        : name(n) { /*...*/ };
+    ~TransformTracer() { /*...*/ };
+};
+#define TRACE_TRANSFORM(name) TransformTracer _tracer(name)
 #ifdef DEBUG_LOGGING
-#define DEBUG_LOG(x) std::cerr << "(MACRO) " << x << "\n"
+#define DEBUG_LOG(x)                              \
+    do {                                          \
+        for (int i = 0; i < transform_depth; ++i) \
+            std::cerr << "  ";                    \
+        std::cerr << "(MACRO) " << x << "\n";     \
+        std::cerr.flush();                        \
+    } while (0)
 #else
 #define DEBUG_LOG(x)
 #endif
+template <typename T>
+std::string vectorToString(const std::vector<T>& vec, const std::string& delim = ", ")
+{
+    std::stringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (i > 0)
+            ss << delim;
+        if constexpr (std::is_same_v<T, Token>) {
+            ss << vec[i].lexeme;
+        } else if constexpr (requires(const T& t) { t->toString(); }) {
+            ss << (vec[i] ? vec[i]->toString() : "null");
+        } else if constexpr (requires(const T& t) { t.toString(); }) {
+            ss << vec[i].toString();
+        } else if constexpr (requires(const T& t) { ss << t; }) {
+            ss << vec[i];
+        } else {
+            ss << "<unstringable>";
+        }
+    }
+    ss << "]";
+    return ss.str();
+}
 namespace macroexp {
 
 MacroExpression::MacroExpression(const MacroAtom& atom, bool variadic, int lineNum)
@@ -73,8 +112,8 @@ void findVariadics(const MacroList& list,
         std::function<void(const std::shared_ptr<MacroExpression>&)> findVars =
             [&](const std::shared_ptr<MacroExpression>& elem) {
                 if (auto* a = std::get_if<MacroAtom>(&elem->value)) {
-                    auto it = env.find(a->syntax.token.lexeme);
-                    if (it != env.end() && isPatternVariable(a->syntax.token, {})) {
+                    auto matches_opt = env.lookup(a->syntax.token.lexeme);
+                    if (matches_opt && isPatternVariable(a->syntax.token, {})) {
                         bool already_found = false;
                         for (const auto& vv : variadicVars) {
                             if (vv == a->syntax.token.lexeme) {
@@ -85,8 +124,7 @@ void findVariadics(const MacroList& list,
                         if (already_found)
                             return;
 
-                        size_t matches_size = it->second.matches.size();
-
+                        size_t matches_size = matches_opt->matches.size();
                         if (matches_size > 1) {
                             if (variadicCount == 0) {
                                 variadicCount = matches_size;
@@ -120,12 +158,12 @@ void findVariadics(const MacroList& list,
         findVars(e);
     }
     std::sort(variadicVars.begin(), variadicVars.end());
-    variadicVars.erase(std::unique(variadicVars.begin(), variadicVars.end()), variadicVars.end());
+    variadicVars.erase(std::unique(variadicVars.begin(), variadicVars.end()),
+        variadicVars.end());
     if (variadicCount == 0 && !variadicVars.empty()) {
         variadicCount = 1;
     }
 }
-
 void MacroExpression::print()
 {
     std::cout << toString() << std::endl;
@@ -139,14 +177,27 @@ bool isEllipsis(std::shared_ptr<MacroExpression> me)
         me->value);
 }
 
-bool isPatternVariable(const Token& token, const std::vector<Token>& literals)
+bool isPatternVariable(const Token& token,
+    const std::vector<Token>& literals)
 {
     if (token.lexeme == "_") {
         return true;
     }
-    return std::find_if(literals.begin(), literals.end(),
-               [&](const Token& lit) { return lit.lexeme == token.lexeme; })
-        == literals.end();
+    if (token.lexeme == ".") {
+        return false;
+    }
+
+    bool isLiteral = std::find_if(literals.begin(), literals.end(),
+                         [&](const Token& lit) { return lit.lexeme == token.lexeme; })
+        != literals.end(); // Found in literals
+
+    if (isLiteral) {
+        DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' found in literals list. Not a variable."); // Optional log
+        return false;
+    }
+    bool result = (token.type == Tokentype::IDENTIFIER);
+    DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' isIdentifier=" << (token.type == Tokentype::IDENTIFIER) << ", isLiteral=false, isKeyword=false, isDot=false, isWildcard=false. Result: " << result); // Optional log
+    return result;
 }
 
 std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& expr)
@@ -198,16 +249,11 @@ std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& exp
 
 void printMatchEnv(const MatchEnv& env, int indent)
 {
-    std::string indentStr(indent * 2, ' ');
-    if (env.empty()) {
-        std::cout << indentStr << "<Empty Environment>" << std::endl;
-        return;
-    }
-    for (const auto& [variable, pattern] : env) {
-        std::cout << indentStr << "Variable: " << variable << std::endl;
-        std::cout << indentStr << "  Matches (" << pattern.matches.size() << "):" << std::endl;
+    for (const auto& [variable, pattern] : env.getAllBindings()) {
+        std::cout << indent << "Variable: " << variable << std::endl;
+        std::cout << indent << "  Matches (" << pattern.matches.size() << "):" << std::endl;
         for (size_t i = 0; i < pattern.matches.size(); i++) {
-            std::cout << indentStr << "    [" << i << "]: " << pattern.matches[i]->toString() << std::endl;
+            std::cout << indent << "    [" << i << "]: " << pattern.matches[i]->toString() << std::endl;
         }
     }
     std::cout << std::endl;
@@ -255,155 +301,207 @@ void findPatternVariables(
     findPatternVariables(pattern, vars, literals, visited);
 }
 
-std::pair<MatchEnv, bool> tryMatch(std::shared_ptr<MacroExpression> pattern,
+std::shared_ptr<MacroExpression> createNonVariadicCopy(const std::shared_ptr<MacroExpression>& expr)
+{
+    return std::visit(overloaded {
+                          [&](const MacroAtom& atom) -> std::shared_ptr<MacroExpression> {
+                              return std::make_shared<MacroExpression>(atom, false, expr->line);
+                          },
+                          [&](const MacroList& list) -> std::shared_ptr<MacroExpression> {
+                              return std::make_shared<MacroExpression>(list, false, expr->line);
+                          } },
+        expr->value);
+}
+
+std::pair<MatchEnv, bool> tryMatch(
+    std::shared_ptr<MacroExpression> pattern,
     std::shared_ptr<MacroExpression> expr,
     const std::vector<Token>& literals,
     const std::string& macroName)
 {
+    DEBUG_LOG("--- tryMatch invoked ---");
+    DEBUG_LOG("  Pattern: " << (pattern ? pattern->toString() : "null"));
+    DEBUG_LOG("  Expr:    " << (expr ? expr->toString() : "null"));
+    DEBUG_LOG("  Literals: " << vectorToString(literals));
+
     MatchEnv env;
-    bool success = visit_many(multi_visitor {
-                                  [&](const MacroAtom& patAtom, const MacroAtom& exprAtom) -> bool {
-                                      bool isVar = isPatternVariable(patAtom.syntax.token, literals);
-                                      if (!isVar) {
-                                          return patAtom.syntax.token.lexeme == exprAtom.syntax.token.lexeme;
-                                      }
-                                      if (patAtom.syntax.token.lexeme != "_") {
-                                          env[patAtom.syntax.token.lexeme].matches.push_back(
-                                              std::make_shared<MacroExpression>(MacroExpression { exprAtom, false, expr->line }));
-                                      }
-                                      return true;
-                                  },
+    bool success = false;
 
-                                  [&](const MacroAtom& patAtom, const MacroList& exprList) -> bool {
-                                      if (isPatternVariable(patAtom.syntax.token, literals)) {
-                                          if (patAtom.syntax.token.lexeme != "_") {
-                                              env[patAtom.syntax.token.lexeme].matches.push_back(
-                                                  std::make_shared<MacroExpression>(MacroExpression { exprList, false, expr->line }));
-                                          }
-                                          return true;
-                                      }
-                                      return false;
-                                  },
+    if (!pattern || !expr) {
+        DEBUG_LOG("  Pattern or Expr is null. Match FAILED.");
+        return { env, false };
+    }
 
-                                  [&](const MacroList& patList, const MacroList& exprList) -> bool {
-                                      if (patList.elements.empty() && exprList.elements.empty()) {
-                                          return true;
-                                      }
+    success = visit_many(multi_visitor {
+                             // --- Case 1: Pattern Atom vs Expression Atom ---
+                             [&](const MacroAtom& patAtom, const MacroAtom& exprAtom) -> bool {
+                                 DEBUG_LOG("  [Atom vs Atom]");
+                                 DEBUG_LOG("    Pat Atom: " << patAtom.syntax.token.lexeme);
+                                 DEBUG_LOG("    Expr Atom: " << exprAtom.syntax.token.lexeme);
 
-                                      size_t i = 0;
-                                      size_t j = 0;
+                                 bool isVar = isPatternVariable(patAtom.syntax.token, literals);
+                                 DEBUG_LOG("    Is Pattern Variable? " << (isVar ? "Yes" : "No"));
 
-                                      while (i < patList.elements.size()) {
-                                          if (j >= exprList.elements.size()) {
-                                              while (i < patList.elements.size()) {
-                                                  if (!patList.elements[i]->isVariadic) {
-                                                      return false;
-                                                  }
-                                                  if (auto* atom = std::get_if<MacroAtom>(&patList.elements[i]->value)) {
-                                                      if (isPatternVariable(atom->syntax.token, literals) && atom->syntax.token.lexeme != "_") {
-                                                          env.try_emplace(atom->syntax.token.lexeme);
-                                                      }
-                                                  } else if (auto* list = std::get_if<MacroList>(&patList.elements[i]->value)) {
-                                                      std::vector<std::string> zero_vars;
-                                                      findPatternVariables(patList.elements[i], zero_vars, literals);
-                                                      for (const auto& var_name : zero_vars) {
-                                                          env.try_emplace(var_name);
-                                                      }
-                                                  }
-                                                  i++;
-                                              }
-                                              return true;
-                                          }
+                                 if (!isVar) {
+                                     bool match = patAtom.syntax.token.lexeme == exprAtom.syntax.token.lexeme;
+                                     DEBUG_LOG("    Literal Match? " << (match ? "Yes" : "No"));
+                                     return match;
+                                 } else {
+                                     if (patAtom.syntax.token.lexeme != "_") {
+                                         DEBUG_LOG("    Binding var '" << patAtom.syntax.token.lexeme << "' to atom: " << exprAtom.syntax.token.lexeme);
+                                         auto matchedExpr = std::make_shared<MacroExpression>(exprAtom, false, expr->line);
+                                         env.addMatch(patAtom.syntax.token.lexeme, matchedExpr);
+                                     } else {
+                                         DEBUG_LOG("    Ignoring wildcard '_' match");
+                                     }
+                                     return true;
+                                 }
+                             },
 
-                                          auto current_pattern_element = patList.elements[i];
+                             // --- Case 2: Pattern Atom vs Expression List ---
+                             [&](const MacroAtom& patAtom, const MacroList& exprList) -> bool {
+                                 DEBUG_LOG("  [Atom vs List]");
+                                 DEBUG_LOG("    Pat Atom: " << patAtom.syntax.token.lexeme);
+                                 DEBUG_LOG("    Expr List: " << expr->toString());
 
-                                          if (current_pattern_element->isVariadic) {
-                                              current_pattern_element->isVariadic = false;
-                                              MatchEnv accumulated_sub_env;
-                                              size_t variadic_match_count = 0;
-                                              size_t initial_j = j;
+                                 bool isVar = isPatternVariable(patAtom.syntax.token, literals);
+                                 DEBUG_LOG("    Is Pattern Variable? " << (isVar ? "Yes" : "No"));
 
-                                              if (i + 1 < patList.elements.size()) {
-                                                  auto next_pattern_element = patList.elements[i + 1];
-                                                  size_t k = j;
-                                                  while (k < exprList.elements.size()) {
-                                                      auto [nextMatchEnv_lookahead, nextMatched_lookahead] = tryMatch(
-                                                          next_pattern_element, exprList.elements[k], literals, macroName);
-                                                      if (nextMatched_lookahead) {
-                                                          variadic_match_count = k - initial_j;
-                                                          break;
-                                                      }
-                                                      k++;
-                                                  }
-                                                  if (k == exprList.elements.size()) {
-                                                      variadic_match_count = exprList.elements.size() - initial_j;
-                                                  }
-                                              } else {
-                                                  variadic_match_count = exprList.elements.size() - initial_j;
-                                              }
+                                 if (isVar) {
+                                     if (patAtom.syntax.token.lexeme != "_") {
+                                         DEBUG_LOG("    Binding var '" << patAtom.syntax.token.lexeme << "' to list: " << expr->toString());
+                                         auto matchedExpr = std::make_shared<MacroExpression>(exprList, false, expr->line);
+                                         env.addMatch(patAtom.syntax.token.lexeme, matchedExpr);
+                                     }
+                                     return true;
+                                 }
+                                 DEBUG_LOG("    Literal atom cannot match list. Match FAILED.");
+                                 return false;
+                             },
 
-                                              if (variadic_match_count == 0) {
-                                                  std::vector<std::string> zero_vars;
-                                                  findPatternVariables(current_pattern_element, zero_vars, literals);
-                                                  for (const auto& var_name : zero_vars) {
-                                                      if (var_name != "_") {
-                                                          env.try_emplace(var_name);
-                                                      }
-                                                  }
-                                              } else {
-                                                  for (size_t v_idx = 0; v_idx < variadic_match_count; ++v_idx) {
-                                                      auto [subEnv, matched] = tryMatch(
-                                                          current_pattern_element, exprList.elements[j], literals, macroName);
-                                                      if (!matched) {
-                                                          current_pattern_element->isVariadic = true;
-                                                          return false;
-                                                      }
-                                                      for (const auto& [key, value] : subEnv) {
-                                                          if (key != "_") {
-                                                              accumulated_sub_env[key].matches.insert(
-                                                                  accumulated_sub_env[key].matches.end(),
-                                                                  value.matches.begin(), value.matches.end());
-                                                          }
-                                                      }
-                                                      j++;
-                                                  }
-                                                  for (const auto& [key, value] : accumulated_sub_env) {
-                                                      env[key].matches.insert(
-                                                          env[key].matches.end(), value.matches.begin(), value.matches.end());
-                                                  }
-                                              }
-                                              current_pattern_element->isVariadic = true;
-                                              i++;
+                             // --- Case 3: Pattern List vs Expression List ---
+                             [&](const MacroList& patList, const MacroList& exprList) -> bool {
+                                 DEBUG_LOG("  [List vs List]");
+                                 DEBUG_LOG("    Pat List: " << pattern->toString());
+                                 DEBUG_LOG("    Expr List: " << expr->toString());
 
-                                          } else {
-                                              auto [subEnv, matched] = tryMatch(
-                                                  current_pattern_element, exprList.elements[j], literals, macroName);
-                                              if (!matched) {
-                                                  return false;
-                                              }
-                                              for (const auto& [key, value] : subEnv) {
-                                                  if (key != "_") {
-                                                      env[key].matches.insert(
-                                                          env[key].matches.end(),
-                                                          value.matches.begin(), value.matches.end());
-                                                  }
-                                              }
-                                              i++;
-                                              j++;
-                                          }
-                                      }
+                                 env.pushScope(); // Create new scope for this list match
 
-                                      return j == exprList.elements.size();
-                                  },
+                                 if (patList.elements.empty() && exprList.elements.empty()) {
+                                     DEBUG_LOG("    Both lists empty. Match SUCCESS.");
+                                     return true;
+                                 }
 
-                                  [&](const MacroList&, const MacroAtom&) -> bool {
-                                      return false;
-                                  },
+                                 size_t i = 0; // Pattern index
+                                 size_t j = 0; // Expression index
 
-                                  [&](const auto&, const auto&) -> bool {
-                                      throw std::runtime_error("Unhandled types in tryMatch visitor during pattern matching");
-                                  } },
+                                 while (i < patList.elements.size()) {
+                                     if (j >= exprList.elements.size()) {
+                                         // Check remaining pattern elements must be variadic with zero matches
+                                         while (i < patList.elements.size()) {
+                                             if (!patList.elements[i]->isVariadic) {
+                                                 env.popScope();
+                                                 return false;
+                                             }
+                                             // Handle zero matches for variadic pattern
+                                             if (auto* atom = std::get_if<MacroAtom>(&patList.elements[i]->value)) {
+                                                 if (atom->syntax.token.lexeme != "_") {
+                                                     // Create empty matches for the variable
+                                                     DEBUG_LOG("    Creating empty matches for variadic var: " << atom->syntax.token.lexeme);
+                                                     env.bind(atom->syntax.token.lexeme, PatternMatches {});
+                                                 }
+                                             }
+                                             i++;
+                                         }
+                                         break;
+                                     }
+
+                                     auto currentPattern = patList.elements[i];
+                                     auto currentExpr = exprList.elements[j];
+
+                                     if (currentPattern->isVariadic) {
+                                         DEBUG_LOG("    Handling variadic pattern at index " << i);
+
+                                         // Look ahead for next non-variadic pattern
+                                         size_t next_pattern_idx = i + 1;
+                                         while (next_pattern_idx < patList.elements.size() && patList.elements[next_pattern_idx]->isVariadic) {
+                                             next_pattern_idx++;
+                                         }
+
+                                         // Calculate how many expressions this variadic pattern should consume
+                                         size_t remaining_exprs = exprList.elements.size() - j;
+                                         size_t min_required = patList.elements.size() - next_pattern_idx;
+                                         if (remaining_exprs < min_required) {
+                                             env.popScope();
+                                             return false;
+                                         }
+
+                                         size_t max_to_consume = remaining_exprs - min_required;
+
+                                         // Create a non-variadic version of the pattern for matching
+                                         auto nonVariadicPattern = createNonVariadicCopy(currentPattern);
+
+                                         MatchEnv variadicEnv;
+                                         for (size_t k = 0; k < max_to_consume; k++) {
+                                             auto [subEnv, matched] = tryMatch(
+                                                 nonVariadicPattern,
+                                                 exprList.elements[j + k],
+                                                 literals,
+                                                 macroName);
+
+                                             if (!matched)
+                                                 break;
+
+                                             variadicEnv.merge(subEnv);
+                                         }
+
+                                         // Merge variadic matches into current environment
+                                         env.merge(variadicEnv);
+
+                                         j += max_to_consume;
+                                         i++;
+                                     } else {
+                                         auto [subEnv, matched] = tryMatch(
+                                             currentPattern,
+                                             currentExpr,
+                                             literals,
+                                             macroName);
+
+                                         if (!matched) {
+                                             env.popScope();
+                                             return false;
+                                         }
+
+                                         env.merge(subEnv);
+                                         i++;
+                                         j++;
+                                     }
+                                 }
+
+                                 bool finalSuccess = (j == exprList.elements.size());
+                                 if (!finalSuccess) {
+                                     env.popScope();
+                                 }
+                                 return finalSuccess;
+                             },
+
+                             // --- Case 4: Pattern List vs Expression Atom ---
+                             [&](const MacroList& patList, const MacroAtom& exprAtom) -> bool {
+                                 DEBUG_LOG("  [List vs Atom]");
+                                 DEBUG_LOG("    List pattern cannot match atomic expression. Match FAILED.");
+                                 return false;
+                             } },
         pattern->value, expr->value);
+
+    if (!success) {
+        DEBUG_LOG("  Match failed, discarding environment");
+    } else {
+        DEBUG_LOG("  Match succeeded with environment:");
+        auto bindings = env.getAllBindings();
+        for (const auto& [var, matches] : bindings) {
+            DEBUG_LOG("    " << var << ": " << matches.matches.size() << " matches");
+        }
+    }
 
     return { env, success };
 }
@@ -441,118 +539,331 @@ HygienicSyntax createFreshSyntaxObject(const Token& token)
     return HygienicSyntax { token, SyntaxContext::createFresh() };
 }
 
+HygienicSyntax createFreshSyntaxObject(const Token& token, SyntaxContext context)
+{
+    return HygienicSyntax { token, context };
+}
+
+bool containsRepeatingVariable(
+    const std::shared_ptr<MacroExpression>& expr,
+    const std::set<std::string>& repeating_pattern_vars) // Set of names of vars like "var"
+{
+    if (!expr)
+        return false;
+    bool found = false;
+    std::set<const MacroExpression*> visited; // Avoid infinite recursion on cycles
+
+    std::function<void(const std::shared_ptr<MacroExpression>&)> check =
+        [&](const std::shared_ptr<MacroExpression>& current) {
+            if (!current || found || !visited.insert(current.get()).second)
+                return;
+
+            std::visit(overloaded {
+                           [&](const MacroAtom& atom) {
+                               if (repeating_pattern_vars.count(atom.syntax.token.lexeme)) {
+                                   DEBUG_LOG("  Helper found repeating var: " << atom.syntax.token.lexeme);
+                                   found = true;
+                               }
+                           },
+                           [&](const MacroList& lst) {
+                               for (const auto& sub_elem : lst.elements) {
+                                   check(sub_elem); // Recurse
+                                   if (found)
+                                       return; // Optimization
+                               }
+                           } },
+                current->value);
+        };
+    check(expr);
+    return found;
+}
+std::shared_ptr<MacroExpression> expandParallel(
+    const std::shared_ptr<MacroExpression>& template_part,
+    MatchEnv& pattern_env,
+    size_t iteration,
+    SyntaxContext macroContext,
+    const std::vector<std::string>& pattern_vars_in_group,
+    const std::vector<std::string>& template_vars_in_group)
+{
+    std::string node_str = template_part ? template_part->toString() : "null";
+    TRACE_TRANSFORM("expandParallel k=" + std::to_string(iteration) + " on: " + node_str);
+
+    if (!template_part)
+        return nullptr;
+
+    MatchEnv iter_env;
+
+    auto all_accessible_bindings = pattern_env.getAllBindings();
+
+    for (const auto& [var_name, matches] : all_accessible_bindings) {
+        if (var_name == "_")
+            continue;
+
+        PatternMatches iter_matches;
+        bool is_controlling_var = std::find(pattern_vars_in_group.begin(), pattern_vars_in_group.end(), var_name) != pattern_vars_in_group.end();
+
+        if (is_controlling_var) {
+            if (matches.matches.size() > iteration) {
+                iter_matches.matches.push_back(matches.matches[iteration]);
+                DEBUG_LOG("  iter_env: Bound controlling var '" << var_name << "' to k=" << iteration << " match: " << iter_matches.matches[0]->toString());
+            } else {
+                DEBUG_LOG("  Error: Not enough matches for controlling var '" << var_name << "' in iteration " << iteration);
+                throw std::runtime_error("Internal error: Not enough matches during parallel expansion for controlling var " + var_name);
+            }
+        } else {
+            if (matches.matches.size() == 1) {
+                iter_matches.matches.push_back(matches.matches[0]);
+                DEBUG_LOG("  iter_env: Bound non-controlling var '" << var_name << "' to single match: " << iter_matches.matches[0]->toString());
+            } else if (matches.matches.empty()) {
+                DEBUG_LOG("  iter_env: Non-controlling var '" << var_name << "' has 0 matches. Binding empty.");
+            } else {
+                if (!matches.matches.empty()) {
+                    iter_matches.matches.push_back(matches.matches[0]);
+                    DEBUG_LOG("  iter_env: Warning: Non-controlling var '" << var_name << "' has >1 matches. Using first for iter_env.");
+                } else {
+                    DEBUG_LOG("  iter_env: Non-controlling var '" << var_name << "' has 0 matches. Binding empty.");
+                }
+            }
+        }
+        iter_env.bind(var_name, iter_matches);
+    }
+    for (const auto& tvar_name : template_vars_in_group) {
+        if (tvar_name == "_")
+            continue;
+        if (!iter_env.isBound(tvar_name)) {
+            int line = template_part->line;
+            Token placeholder_token = { Tokentype::IDENTIFIER, tvar_name, line, 0 }; // Column is dummy
+            SyntaxContext base_placeholder_context = SyntaxContext::createFresh();
+            SyntaxContext combined_context = base_placeholder_context.addMarks(macroContext.marks);
+            HygienicSyntax hygienic_placeholder_syntax = createFreshSyntaxObject(placeholder_token, combined_context); // Needs implementation
+            auto placeholder_expr = std::make_shared<MacroExpression>(MacroAtom { hygienic_placeholder_syntax }, false, line);
+            PatternMatches placeholder_match;
+            placeholder_match.matches.push_back(placeholder_expr);
+            iter_env.bind(tvar_name, placeholder_match);
+            DEBUG_LOG("  iter_env: Bound template var '" << tvar_name << "' to placeholder: " << placeholder_expr->toString());
+        } else {
+            DEBUG_LOG("  Warning: Template variable '" << tvar_name << "' conflicts with existing pattern variable binding in iter_env.");
+        }
+    }
+
+    return transformTemplate(template_part, iter_env, macroContext);
+}
+
 std::shared_ptr<MacroExpression> transformTemplate(
     const std::shared_ptr<MacroExpression>& template_expr,
-    const MatchEnv& env,
+    MatchEnv& env,
     SyntaxContext macroContext)
 {
-    DEBUG_LOG("Transform template " << template_expr->toString() << " with macro context: " << macroContext.toString());
+    if (!template_expr) {
+        DEBUG_LOG("transformTemplate: Input template is null, returning null.");
+        return nullptr;
+    }
+
+    std::string node_str = template_expr->toString();
+    if (node_str.length() > 50)
+        node_str = node_str.substr(0, 47) + "...";
+    TRACE_TRANSFORM("transformTemplate on: " + node_str);
     return std::visit(overloaded {
                           [&](const MacroAtom& atom) -> std::shared_ptr<MacroExpression> {
-                              auto it = env.find(atom.syntax.token.lexeme);
-                              if (it != env.end()) {
-                                  // For pattern variables, propagate the macro's context
-                                  if (!template_expr->isVariadic) {
-                                      if (!it->second.matches.empty()) {
-                                          // Propagate context to substituted expression
-                                          auto match = it->second.matches[0];
-                                          return addUsageContextRecursive(match, macroContext);
-                                      } else {
+                              DEBUG_LOG("  Atom Template: " << atom.syntax.token.lexeme << (template_expr->isVariadic ? "..." : ""));
+                              auto matches_opt = env.lookup(atom.syntax.token.lexeme);
+                              if (matches_opt) {
+                                  DEBUG_LOG("  Found match for '" << atom.syntax.token.lexeme << "' in env. Matches: " << matches_opt->matches.size());
+
+                                  for (size_t i = 0; i < matches_opt->matches.size(); i++) {
+                                      DEBUG_LOG("    Match[" << i << "]: " << matches_opt->matches[i]->toString());
+                                  }
+                                  if (template_expr->isVariadic) {
+                                      DEBUG_LOG("  Atom is variadic (...). Expanding all matches into a List.");
+                                      if (matches_opt->matches.empty()) {
+                                          DEBUG_LOG("  Variadic atom expansion: No matches found, returning empty list.");
                                           return std::make_shared<MacroExpression>(MacroList {}, false, template_expr->line);
                                       }
+                                      std::vector<std::shared_ptr<MacroExpression>> expanded_atoms;
+                                      expanded_atoms.reserve(matches_opt->matches.size());
+                                      for (const auto& match : matches_opt->matches) {
+                                          expanded_atoms.push_back(addUsageContextRecursive(match, macroContext));
+                                          DEBUG_LOG("    Added expanded atom: " << expanded_atoms.back()->toString());
+                                      }
+                                      return std::make_shared<MacroExpression>(
+                                          MacroList { std::move(expanded_atoms) }, false, template_expr->line);
+                                  } else {
+                                      DEBUG_LOG("  Atom is not variadic. Expanding with first match (if any).");
+                                      if (!matches_opt->matches.empty()) {
+                                          auto result = addUsageContextRecursive(matches_opt->matches[0], macroContext);
+                                          DEBUG_LOG("  Substituted '" << atom.syntax.token.lexeme << "' with: " << result->toString());
+                                          return result;
+                                      } else {
+                                          DEBUG_LOG("  Warning: Variable '" << atom.syntax.token.lexeme << "' bound but has no matches in current env. Treating as literal?");
+                                      }
                                   }
-                              } else if (atom.syntax.token.type == Tokentype::IDENTIFIER) {
-                                  // For macro-introduced identifiers, merge contexts
-                                  HygienicSyntax freshSyntax {
-                                      atom.syntax.token,
-                                      atom.syntax.context.addMarks(macroContext.marks)
-                                  };
-                                  return std::make_shared<MacroExpression>(
-                                      MacroAtom { freshSyntax }, template_expr->isVariadic, template_expr->line);
                               }
 
-                              return std::make_shared<MacroExpression>(
-                                  atom, template_expr->isVariadic, template_expr->line);
+                              if (atom.syntax.token.type == Tokentype::IDENTIFIER) {
+                                  DEBUG_LOG("  Identifier '" << atom.syntax.token.lexeme << "' treated as literal. Adding hygiene context.");
+                                  HygienicSyntax freshSyntax { atom.syntax.token, atom.syntax.context.addMarks(macroContext.marks) };
+                                  return std::make_shared<MacroExpression>(
+                                      MacroAtom { freshSyntax }, template_expr->isVariadic, template_expr->line);
+                              } else {
+                                  DEBUG_LOG("  Atom '" << atom.syntax.token.lexeme << "' treated as non-identifier literal.");
+                                  return std::make_shared<MacroExpression>(atom, template_expr->isVariadic, template_expr->line);
+                              }
                           },
-                          [&](const MacroList& list) -> std::shared_ptr<MacroExpression> {
-                              std::vector<std::shared_ptr<MacroExpression>> transformed_elements;
-                              for (size_t i = 0; i < list.elements.size(); ++i) {
-                                  auto current_template_element = list.elements[i];
 
-                                  if (current_template_element->isVariadic) {
-                                      // Handle ellipsis (...)
-                                      if (auto* atom = std::get_if<MacroAtom>(&current_template_element->value)) {
-                                          auto it = env.find(atom->syntax.token.lexeme);
-                                          if (it != env.end()) {
-                                              // Expand variadic pattern and propagate context
-                                              for (const auto& match : it->second.matches) {
-                                                  auto transformedMatch = addUsageContextRecursive(match, macroContext);
-                                                  transformed_elements.push_back(transformedMatch);
+                          [&](const MacroList& list) -> std::shared_ptr<MacroExpression> {
+                              DEBUG_LOG("  List Template: " << template_expr->toString());
+
+                              std::vector<std::shared_ptr<MacroExpression>> transformed_elements;
+                              size_t i = 0;
+                              while (i < list.elements.size()) {
+                                  const auto& current_element = list.elements[i];
+                                  if (!current_element) {
+                                      DEBUG_LOG("  Skipping null element at index " << i);
+                                      i++;
+                                      continue;
+                                  }
+                                  if (current_element->isVariadic) {
+                                      DEBUG_LOG("  Found start of potential variadic sequence group at index " << i);
+                                      size_t group_start_index = i;
+                                      std::vector<std::shared_ptr<MacroExpression>> sequence_group;
+                                      while (i < list.elements.size() && list.elements[i] && list.elements[i]->isVariadic) {
+                                          sequence_group.push_back(list.elements[i]);
+                                          i++;
+                                      }
+                                      DEBUG_LOG("  Variadic sequence group consumed indices [" << group_start_index << ", " << i << ")");
+                                      if (sequence_group.empty()) {
+                                          DEBUG_LOG("  Warning: Empty sequence group detected.");
+                                          continue;
+                                      }
+                                      std::set<std::string> all_vars_in_group;
+                                      std::map<std::string, bool> var_has_bound_matches;
+                                      std::map<std::string, size_t> var_match_counts;
+                                      std::function<void(const std::shared_ptr<MacroExpression>&)> collectVars =
+                                          [&](const std::shared_ptr<MacroExpression>& elem) {
+                                              if (!elem)
+                                                  return;
+                                              std::visit(overloaded {
+                                                             [&](const MacroAtom& atom) {
+                                                                 if (atom.syntax.token.type == Tokentype::IDENTIFIER && atom.syntax.token.lexeme != "_") {
+                                                                     all_vars_in_group.insert(atom.syntax.token.lexeme);
+                                                                     auto matches = env.lookup(atom.syntax.token.lexeme);
+                                                                     var_has_bound_matches[atom.syntax.token.lexeme] = (matches && !matches->matches.empty());
+                                                                     var_match_counts[atom.syntax.token.lexeme] = matches ? matches->matches.size() : 0;
+
+                                                                     DEBUG_LOG("    Variable '" << atom.syntax.token.lexeme
+                                                                                                << "' has " << var_match_counts[atom.syntax.token.lexeme]
+                                                                                                << " matches in env");
+                                                                 }
+                                                             },
+                                                             [&](const MacroList& lst) {
+                                                                 for (const auto& sub_elem : lst.elements) {
+                                                                     collectVars(sub_elem);
+                                                                 }
+                                                             } },
+                                                  elem->value);
+                                          };
+                                      for (const auto& part : sequence_group) {
+                                          auto non_variadic_part = createNonVariadicCopy(part);
+                                          collectVars(non_variadic_part);
+                                      }
+                                      bool should_skip_sequence = false;
+                                      for (const auto& var : all_vars_in_group) {
+                                          bool is_ellipsis_pattern_var = var.size() > 3 && var.substr(0, 3) == "var" && std::isdigit(var[3]) && var != "var0" && var != "varn";
+                                          if (is_ellipsis_pattern_var && var_match_counts[var] == 0) {
+                                              should_skip_sequence = true;
+                                              DEBUG_LOG("  Skipping variadic pattern - ellipsis variable '" << var << "' has zero matches");
+                                              break;
+                                          }
+                                      }
+
+                                      if (should_skip_sequence) {
+                                          continue;
+                                      }
+                                      size_t max_match_count = 0;
+                                      bool expansion_count_determined = false;
+
+                                      for (const auto& var : all_vars_in_group) {
+                                          auto matches = env.lookup(var);
+                                          if (matches && matches->matches.size() > 0) {
+                                              if (matches->matches.size() > 1) {
+                                                  max_match_count = std::max(max_match_count, matches->matches.size());
+                                                  expansion_count_determined = true;
+                                                  DEBUG_LOG("  Variable '" << var << "' has " << matches->matches.size() << " matches - setting expansion count");
+                                              } else if (!expansion_count_determined) {
+                                                  max_match_count = std::max(max_match_count, (size_t)1);
                                               }
                                           }
-                                      } else if (auto* innerList = std::get_if<MacroList>(&current_template_element->value)) {
-                                          // Handle nested lists with ellipsis
-                                          size_t variadicCount = 0;
-                                          std::vector<std::string> variadicVars;
-                                          findVariadics(*innerList, variadicVars, variadicCount, env);
+                                      }
 
-                                          if (variadicCount > 0) {
-                                              // Expand each occurrence
-                                              for (size_t idx = 0; idx < variadicCount; ++idx) {
-                                                  MatchEnv tempEnv;
-                                                  bool possible = true;
-
-                                                  // Build environment for this occurrence
-                                                  for (const auto& var_name : variadicVars) {
-                                                      if (env.count(var_name)) {
-                                                          const auto& matches = env.at(var_name).matches;
-                                                          if (matches.size() == variadicCount) {
-                                                              tempEnv[var_name].matches = { matches[idx] };
-                                                          } else if (matches.size() == 1) {
-                                                              tempEnv[var_name].matches = { matches[0] };
-                                                          } else if (matches.empty() && variadicCount > 0) {
-                                                              tempEnv[var_name].matches = {};
-                                                          } else {
-                                                              possible = false;
-                                                              break;
-                                                          }
-                                                      } else {
-                                                          possible = false;
-                                                          break;
-                                                      }
-                                                  }
-
-                                                  if (!possible)
-                                                      continue;
-
-                                                  auto inner_template_expr = std::make_shared<MacroExpression>(
-                                                      *innerList, false, current_template_element->line);
-                                                  auto transformed_inner = transformTemplate(inner_template_expr, tempEnv, macroContext);
-                                                  transformed_elements.push_back(transformed_inner);
+                                      if (!expansion_count_determined) {
+                                          auto all_bindings = env.getAllBindings();
+                                          for (const auto& [var_name, matches] : all_bindings) {
+                                              if (matches.matches.size() > 1) {
+                                                  max_match_count = std::max(max_match_count, matches.matches.size());
+                                                  expansion_count_determined = true;
+                                                  DEBUG_LOG("  External variable '" << var_name << "' has " << matches.matches.size() << " matches - setting expansion count");
+                                                  break;
                                               }
-                                          } else {
-                                              // No variadic patterns found, transform normally
-                                              auto inner_template_expr = std::make_shared<MacroExpression>(
-                                                  *innerList, false, current_template_element->line);
-                                              transformed_elements.push_back(
-                                                  transformTemplate(inner_template_expr, env, macroContext));
+                                          }
+                                      }
+
+                                      if (max_match_count == 0) {
+                                          max_match_count = 1;
+                                          DEBUG_LOG("  No pattern variables with matches found, defaulting to single expansion");
+                                      }
+
+                                      DEBUG_LOG("  Generating " << max_match_count << " expansions for variadic sequence");
+
+                                      for (size_t k = 0; k < max_match_count; k++) {
+                                          DEBUG_LOG("    Expansion iteration k = " << k);
+                                          MatchEnv iter_env;
+                                          auto all_bindings = env.getAllBindings();
+                                          for (const auto& [var_name, matches] : all_bindings) {
+                                              if (var_name == "_")
+                                                  continue;
+
+                                              PatternMatches iter_matches;
+                                              if (matches.matches.size() > 1 && k < matches.matches.size()) {
+                                                  iter_matches.matches.push_back(matches.matches[k]);
+                                                  DEBUG_LOG("      Bound var '" << var_name << "' to k=" << k << " match");
+                                              } else if (!matches.matches.empty()) {
+                                                  iter_matches.matches.push_back(matches.matches[0]);
+                                                  DEBUG_LOG("      Bound var '" << var_name << "' to first match");
+                                              } else {
+                                                  DEBUG_LOG("      Var '" << var_name << "' has no matches, binding empty");
+                                              }
+                                              iter_env.bind(var_name, iter_matches);
+                                          }
+
+                                          for (const auto& template_part : sequence_group) {
+                                              auto non_variadic_part = createNonVariadicCopy(template_part);
+
+                                              DEBUG_LOG("      Expanding: " << non_variadic_part->toString());
+                                              auto expanded_part = transformTemplate(non_variadic_part, iter_env, macroContext);
+
+                                              if (expanded_part) {
+                                                  DEBUG_LOG("      Result: " << expanded_part->toString());
+                                                  transformed_elements.push_back(expanded_part);
+                                              } else {
+                                                  DEBUG_LOG("      Expansion returned null, skipping");
+                                              }
                                           }
                                       }
                                   } else {
-                                      // Normal (non-variadic) template element
-                                      transformed_elements.push_back(
-                                          transformTemplate(current_template_element, env, macroContext));
+                                      DEBUG_LOG("  Transforming non-variadic element at index " << i << ": " << current_element->toString());
+                                      transformed_elements.push_back(transformTemplate(current_element, env, macroContext));
+                                      i++;
                                   }
                               }
 
+                              DEBUG_LOG("  Finished list transform. Result elements count: " << transformed_elements.size());
                               return std::make_shared<MacroExpression>(
                                   MacroList { std::move(transformed_elements) },
-                                  false,
+                                  false, // Result list is never variadic
                                   template_expr->line);
                           } },
         template_expr->value);
 }
-
 std::shared_ptr<MacroExpression> transformMacroRecursive(
     const std::shared_ptr<MacroExpression>& expr,
     std::shared_ptr<pattern::MacroEnvironment> env)
@@ -655,10 +966,9 @@ std::shared_ptr<MacroExpression> transformMacroRecursive(
 
 std::shared_ptr<MacroExpression> transformMacro(
     const std::shared_ptr<Expression>& template_expr,
-    const MatchEnv& env,
+    MatchEnv& env,
     const std::string& macroName,
-    std::shared_ptr<pattern::MacroEnvironment> macroEnv // Takes shared_ptr
-)
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv)
 {
     auto templateMacroExpr = fromExpr(template_expr);
 
@@ -667,6 +977,20 @@ std::shared_ptr<MacroExpression> transformMacro(
     auto transformed = transformTemplate(templateMacroExpr, env, macroContext);
     auto fullyExpanded = transformMacroRecursive(transformed, macroEnv);
     return fullyExpanded;
+}
+
+std::shared_ptr<Expression> convertBegin(const macroexp::MacroList& ml, int line)
+{
+    std::vector<std::shared_ptr<Expression>> values = {};
+    values.reserve(ml.elements.size() > 0 ? ml.elements.size() - 1 : 0);
+    for (size_t i = 1; i < ml.elements.size(); i++) { // Use size_t
+        auto datum = convertMacroResultToExpressionInternal(ml.elements[i]);
+        if (!datum) {
+            throw std::runtime_error("Invalid expression in 'begin' body during conversion");
+        }
+        values.push_back(datum);
+    }
+    return std::make_shared<Expression>(BeginExpression { std::move(values) }, line);
 }
 
 std::shared_ptr<Expression> convertMacroResultToExpressionInternal(
@@ -691,6 +1015,8 @@ std::shared_ptr<Expression> convertMacroResultToExpressionInternal(
                                   return convertQuote(ml, line);
                               } else if (keyword == "quasiquote") {
                                   return convertQuasiQuote(ml, line);
+                              } else if (keyword == "begin") {
+                                  return convertBegin(ml, line);
                               } else if (keyword == "unquote") {
                                   return convertUnquote(ml, line);
                               } else if (keyword == "unquote-splice") {

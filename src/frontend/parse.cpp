@@ -1,5 +1,5 @@
 #include "parse.h"
-#include "Expression.h"
+#include "Token.h"
 #include <iterator> // For std::make_move_iterator
 #include <memory>
 #include <optional>
@@ -82,29 +82,6 @@ Token consume(ParserState& state, const std::string& message, Types... types)
     }
     throw ParseError(message + " Token: " + previousToken(state).lexeme, peek(state), "");
 }
-std::shared_ptr<Expression> parseQuasiQuote(ParserState& state)
-{
-    int line = previousToken(state).line;
-    auto expr = parseExpression(state); // Parse the expression following `
-    return std::make_shared<Expression>(
-        Expression { QuasiQuoteExpression { expr }, line });
-}
-
-std::shared_ptr<Expression> parseUnquote(ParserState& state)
-{
-    int line = previousToken(state).line;
-    auto expr = parseExpression(state); // Parse the expression following `
-    return std::make_shared<Expression>(
-        Expression { UnquoteExpression { expr }, line });
-}
-
-std::shared_ptr<Expression> parseSplice(ParserState& state)
-{
-    int line = previousToken(state).line;
-    auto expr = parseExpression(state); // Parse the expression following `
-    return std::make_shared<Expression>(
-        Expression { SpliceExpression { expr }, line });
-}
 
 std::shared_ptr<Expression> parseSet(ParserState& state)
 {
@@ -129,12 +106,24 @@ std::shared_ptr<Expression> parseDefineSyntax(ParserState& state)
     return std::make_shared<Expression>(
         Expression { DefineSyntaxExpression { name, syntaxRules }, name.line });
 }
+std::shared_ptr<Expression> parseBegin(ParserState& state)
+{
+    std::vector<std::shared_ptr<Expression>> body;
+    while (!check(state, Tokentype::RIGHT_PAREN)) {
+        body.push_back(parseExpression(state));
+    }
+    consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin body");
+    return std::make_shared<Expression>(Expression { BeginExpression { body }, previousToken(state).line });
+}
+
 std::shared_ptr<Expression> parseExpression(ParserState& state)
 {
     if (match(state, Tokentype::LEFT_PAREN)) {
+
+        if (match(state, Tokentype::BEGIN))
+            return parseBegin(state);
         if (match(state, Tokentype::DEFINE))
             return parseDefine(state);
-
         if (match(state, Tokentype::DEFINE_SYTAX))
             return parseDefineSyntax(state);
         if (match(state, Tokentype::DEFINE_LIBRARY)) {
@@ -155,33 +144,10 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
             return expr;
         }
-        if (match(state, Tokentype::COMMA_AT)) {
-            auto expr = parseUnquote(state);
-            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
-            return expr;
-        }
-
-        if (match(state, Tokentype::COMMA)) {
-            auto expr = parseUnquote(state);
-            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
-            return expr;
-        }
-        if (match(state, Tokentype::BACKQUOTE)) {
-            auto expr = parseQuasiQuote(state);
-            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
-            return expr;
-        }
-
         return parseSExpression(state);
     }
     if (match(state, Tokentype::QUOTE))
         return parseQuoted(state);
-    if (match(state, Tokentype::BACKQUOTE))
-        return parseQuasiQuote(state);
-    if (match(state, Tokentype::COMMA))
-        return parseUnquote(state);
-    if (match(state, Tokentype::COMMA_AT))
-        return parseSplice(state);
     if (match(state, Tokentype::HASH))
         if (match(state, Tokentype::LEFT_PAREN))
             return parseVector(state);
@@ -205,9 +171,6 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     case Tokentype::FALSE:
     case Tokentype::LAMBDA:
     case Tokentype::ARROW:
-    case Tokentype::COMMA:
-    case Tokentype::COMMA_AT:
-    case Tokentype::BACKQUOTE:
     case Tokentype::IF:
     case Tokentype::CHAR:
     case Tokentype::SYNTAX_RULE:
@@ -631,11 +594,13 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
 {
     int line = previousToken(state).line;
 
+    // Parse library name
     std::vector<std::shared_ptr<Expression>> libraryName = parseLibraryName(state);
     std::vector<HygienicSyntax> exports;
     std::vector<ImportExpression::ImportSpec> imports;
     std::vector<std::shared_ptr<Expression>> body;
 
+    // Main loop to process export, import, and begin clauses
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         if (!check(state, Tokentype::LEFT_PAREN)) {
             errorAt(state, peek(state), "Expected '(' to start library declaration clause (export, import, or begin)");
@@ -643,31 +608,34 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
                 advance(state);
             continue;
         }
+
         advance(state); // Consume the '('
 
         if (match(state, Tokentype::EXPORT)) {
-            // **** MODIFIED EXPORT LOOP ****
+            // Improved export parsing
             while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
-                // Check if the next token is an allowable export name type
-                if (isExportableNameToken(peek(state).type)) {
+                if (check(state, Tokentype::LEFT_PAREN)) {
+                    // Handle complex export forms like (rename ...) if needed
+                    errorAt(state, peek(state), "Complex export forms not yet supported");
+                    advance(state);
+                    int parenLevel = 1;
+                    while (!isAtEnd(state) && parenLevel > 0) {
+                        if (peek(state).type == Tokentype::LEFT_PAREN)
+                            parenLevel++;
+                        else if (peek(state).type == Tokentype::RIGHT_PAREN)
+                            parenLevel--;
+                        advance(state);
+                    }
+                } else if (isExportableNameToken(peek(state).type)) {
                     Token id = advance(state); // Consume the valid name token
                     exports.push_back(HygienicSyntax { id, {} });
                 } else {
-                    // Throw error if it's not an expected name type
-                    errorAt(state, peek(state), "Expected an identifier or exportable keyword name in export list");
-                    // Recovery: Skip until we find the closing parenthesis
-                    while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state))
+                    errorAt(state, peek(state), "Expected an identifier or exportable keyword in export list");
+                    if (!isAtEnd(state))
                         advance(state);
-                    break; // Exit inner loop after error
                 }
             }
-            // **** END MODIFIED EXPORT LOOP ****
-
-            if (isAtEnd(state) && !check(state, Tokentype::RIGHT_PAREN)) {
-                errorAt(state, previousToken(state), "Unexpected end of input in export list, expected ')'");
-            } else {
-                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after export list");
-            }
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after export list");
 
         } else if (match(state, Tokentype::IMPORT)) {
             std::vector<ImportExpression::ImportSpec> clauseImports = parseImportSpecifications(state);
@@ -676,21 +644,15 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
                 std::make_move_iterator(clauseImports.end()));
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after import declaration clause");
 
-        } else if (match(state, Tokentype::IDENTIFIER) && previousToken(state).lexeme == "begin") {
+        } else if (match(state, Tokentype::BEGIN)) {
+            // NO advance here - BEGIN token was already consumed by match()
+
+            // Parse expressions in the begin block
             while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
-                auto currentPosBeforeParse = state.current;
                 body.push_back(parseExpression(state));
-                if (state.current == currentPosBeforeParse && !check(state, Tokentype::RIGHT_PAREN)) {
-                    errorAt(state, peek(state), "Parser did not advance in begin block, potential infinite loop");
-                    if (!isAtEnd(state))
-                        advance(state);
-                }
             }
-            if (isAtEnd(state) && !check(state, Tokentype::RIGHT_PAREN)) {
-                errorAt(state, previousToken(state), "Unexpected end of input in begin block, expected ')'");
-            } else {
-                consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin block");
-            }
+
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin block");
         } else {
             errorAt(state, peek(state), "Expected keyword 'export', 'import', or 'begin' after '(' in define-library");
             int parenLevel = 1;
