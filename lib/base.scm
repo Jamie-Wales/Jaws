@@ -1,6 +1,6 @@
 (define-library (base)
 
-  (export do begin values call-with-values cond let* let-values letrec lej
+  (export do cond let* let-values letrec lej define-values
           and or when unless zero? not print println)
 
   (begin
@@ -15,10 +15,45 @@
         ((do "step" x) x)
         ((do "step" x y) y)))
 
-    (define-syntax begin
-      (syntax-rules ()
-        ((begin exp ...)
-         ((lambda () exp ...)))))
+
+(define-syntax define-values
+(syntax-rules ()
+((define-values () expr)
+(define dummy
+(call-with-values (lambda () expr)
+(lambda args #f))))
+((define-values (var) expr)
+(define var expr))
+((define-values (var0 var1 ... varn) expr)
+(my-begin
+(define var0
+(call-with-values (lambda () expr)
+list))
+(define var1
+(let ((v (cadr var0)))
+(set-cdr! var0 (cddr var0))
+v)) ...
+(define varn
+(let ((v (cadr var0)))
+(set! var0 (car var0))
+v))))
+((define-values (var0 var1 ... . varn) expr)
+(my-begin
+(define var0
+(call-with-values (lambda () expr)
+list))
+(define var1
+(let ((v (cadr var0)))
+(set-cdr! var0 (cddr var0))
+v)) ...
+(define varn
+(let ((v (cdr var0)))
+(set! var0 (car var0))
+v))))
+((define-values var expr)
+(define var
+(call-with-values (lambda () expr)
+list)))))
 
     (define-syntax cond
       (syntax-rules (else =>)
@@ -75,15 +110,6 @@
     (define-syntax unless
       (syntax-rules ()
         ((unless test result1 result2 ...) (if (not test) (begin result1 result2 ...)))))
-
-    ;; Core Function Definitions (as before)
-    (define (values . things)
-      (call-with-current-continuation
-       (lambda (cont) (apply cont things))))
-
-    (define call-with-values
-      (lambda (producer consumer)
-        ((lambda (args) (apply consumer args)) (producer))))
 
     (define (zero? x) (eqv? x 0))
 
