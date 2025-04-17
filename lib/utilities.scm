@@ -1,6 +1,6 @@
 ;; utilities.scm
 (define-library (utilities)
-  (export filter fold-left fold-right reverse ; Existing
+  (export filter fold-left fold-right sort; Existing
           any? every? find find-tail remove partition ; List Predicates/Search/Manipulation HOFs
           compose identity constantly) ; Function Manipulation HOFs
 
@@ -27,15 +27,16 @@
       (if (null? lst)
           init
           (func (car lst) (fold-right func init (cdr lst)))))
+; QuickSort implementation
+(define (sort lst compare-proc)
+  (if (or (null? lst) (null? (cdr lst)))
+      lst
+      (let ((pivot (car lst))
+            (rest (cdr lst)))
+        (append (sort (filter (lambda (x) (compare-proc x pivot)) rest) compare-proc)
+                (list pivot)
+                (sort (filter (lambda (x) (not (compare-proc x pivot))) rest) compare-proc)))))
 
-    ;; (reverse lst) -> list
-    (define (reverse lst)
-      (let loop ((original lst) (result '()))
-        (if (null? original)
-            result
-            (loop (cdr original) (cons (car original) result)))))
-
-    ;; --- New Higher-Order Functions ---
 
     ;; (any? pred lst) -> boolean
     ;; Checks if predicate pred holds for at least one element in lst.
