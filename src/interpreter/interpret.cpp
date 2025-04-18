@@ -523,10 +523,7 @@ std::optional<SchemeValue> processQuasiQuote(InterpreterState& state, std::share
                           [&](const SpliceExpression& e) {
                               if (level == 1) {
                                   auto result = interpret(state, e.value);
-                                  if (!result || !result->isList()) {
-                                      throw InterpreterError("Unquote-splicing requires a list result");
-                                  }
-                                  return *result;
+                                  return result->ensureValue();
                               } else if (level > 1) {
                                   auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
                                   values_list_ptr->push_back(SchemeValue(Symbol { "unquote-splicing" }));
