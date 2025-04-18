@@ -1,6 +1,8 @@
 # C++ build
+.github/
 build/
 Testing/
+.*
 *.o
 *.out
 *.exe

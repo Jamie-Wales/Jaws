@@ -2,7 +2,6 @@
 #include <string>
 
 enum class Tokentype {
-    ELSE,
     EXPORT,
     CHAR,
     DOT,

@@ -187,7 +187,7 @@ bool isPatternVariable(const Token& token,
         DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' found in literals list. Not a variable."); // Optional log
         return false;
     }
-    bool result = (token.type == Tokentype::IDENTIFIER || token.type == Tokentype::ELSE || Tokentype::BEGIN == token.type);
+    bool result = (token.type == Tokentype::IDENTIFIER);
     DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' isIdentifier=" << (token.type == Tokentype::IDENTIFIER) << ", isLiteral=false, isKeyword=false, isDot=false, isWildcard=false. Result: " << result); // Optional log
     return result;
 }

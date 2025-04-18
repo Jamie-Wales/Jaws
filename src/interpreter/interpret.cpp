@@ -460,10 +460,8 @@ std::optional<SchemeValue> interpretVector(InterpreterState& state, const Vector
     elements.reserve(vec.elements.size());
 
     for (const auto& ele : vec.elements) {
-        auto item = interpret(state, ele);
-        if (!item)
-            return std::nullopt;
-        elements.push_back(*item);
+        auto item = expressionToValue(*ele);
+        elements.push_back(item);
     }
     return SchemeValue(std::make_shared<std::vector<SchemeValue>>(std::move(elements)));
 }

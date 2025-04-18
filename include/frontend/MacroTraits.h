@@ -225,6 +225,7 @@ std::shared_ptr<Expression> convertSet(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertIf(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertLambda(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertDefine(const MacroList& ml, int line);
+std::shared_ptr<Expression> convertVector(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertLet(const MacroList& ml, int line);
 std::pair<std::vector<HygienicSyntax>, bool> parseMacroParameters(const std::shared_ptr<MacroExpression>& paramsMacroExpr);
 

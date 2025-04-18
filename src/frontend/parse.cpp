@@ -115,6 +115,23 @@ std::shared_ptr<Expression> parseBegin(ParserState& state)
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin body");
     return std::make_shared<Expression>(Expression { BeginExpression { body }, previousToken(state).line });
 }
+std::shared_ptr<Expression> parseQuasiQuoted(ParserState& state)
+{
+    return std::make_shared<Expression>(
+        Expression { QuasiQuoteExpression { parseExpression(state) }, previousToken(state).line });
+}
+
+std::shared_ptr<Expression> parseUnquote(ParserState& state)
+{
+    return std::make_shared<Expression>(
+        Expression { UnquoteExpression { parseExpression(state) }, previousToken(state).line });
+}
+
+std::shared_ptr<Expression> parseUnquoteSplicing(ParserState& state)
+{
+    return std::make_shared<Expression>(
+        Expression { SpliceExpression { parseExpression(state) }, previousToken(state).line });
+}
 
 std::shared_ptr<Expression> parseExpression(ParserState& state)
 {
@@ -128,6 +145,22 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
             return parseDefineSyntax(state);
         if (match(state, Tokentype::DEFINE_LIBRARY)) {
             return parseDefineLibrary(state);
+        }
+        if (match(state, Tokentype::COMMA_AT)) {
+            auto expr = parseUnquote(state);
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
+            return expr;
+        }
+
+        if (match(state, Tokentype::COMMA)) {
+            auto expr = parseUnquote(state);
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
+            return expr;
+        }
+        if (match(state, Tokentype::BACKQUOTE)) {
+            auto expr = parseQuasiQuoted(state);
+            consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after quoted expression");
+            return expr;
         }
         if (match(state, Tokentype::LET))
             return parseLet(state);
@@ -148,19 +181,23 @@ std::shared_ptr<Expression> parseExpression(ParserState& state)
     }
     if (match(state, Tokentype::QUOTE))
         return parseQuoted(state);
+    if (match(state, Tokentype::BACKQUOTE))
+        return parseQuasiQuoted(state);
+    if (match(state, Tokentype::COMMA))
+        return parseUnquote(state);
+    if (match(state, Tokentype::COMMA_AT))
+        return parseUnquoteSplicing(state);
     if (match(state, Tokentype::HASH))
         if (match(state, Tokentype::LEFT_PAREN))
             return parseVector(state);
     return parseAtom(state);
 }
-
 std::shared_ptr<Expression> parseAtom(ParserState& state)
 {
     Token token = advance(state);
     switch (token.type) {
     case Tokentype::IDENTIFIER:
     case Tokentype::INTEGER:
-    case Tokentype::ELSE:
     case Tokentype::FLOAT:
     case Tokentype::COMPLEX:
     case Tokentype::RATIONAL:
@@ -172,6 +209,9 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     case Tokentype::LAMBDA:
     case Tokentype::ARROW:
     case Tokentype::IF:
+    case Tokentype::COMMA:
+    case Tokentype::COMMA_AT:
+    case Tokentype::BACKQUOTE:
     case Tokentype::CHAR:
     case Tokentype::SYNTAX_RULE:
         return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });

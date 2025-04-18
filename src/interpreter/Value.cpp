@@ -112,8 +112,6 @@ SchemeValue expressionToValue(const Expression& expr)
                                   return SchemeValue(Symbol { "if" });
                               case Tokentype::ELLIPSIS:
                                   return SchemeValue(Symbol { "..." });
-                              case Tokentype::ELSE:
-                                  return SchemeValue(Symbol { "else" });
                               case Tokentype::QUOTE:
                                   return SchemeValue(Symbol { "quote" });
                               default:

@@ -14,7 +14,7 @@
 #include <string>
 #include <variant>
 #include <vector>
-#define DEBUG_LOGGING
+// #define DEBUG_LOGGING
 static int transform_depth = 0;
 struct TransformTracer {
     std::string name;
@@ -196,7 +196,10 @@ bool isPatternVariable(const Token& token,
         DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' found in literals list. Not a variable."); // Optional log
         return false;
     }
-    bool result = (token.type == Tokentype::IDENTIFIER || token.type == Tokentype::ELSE || Tokentype::BEGIN == token.type);
+
+    // FIX: Only consider identifiers as pattern variables
+    bool result = (token.type == Tokentype::IDENTIFIER);
+
     DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' isIdentifier=" << (token.type == Tokentype::IDENTIFIER) << ", isLiteral=false, isKeyword=false, isDot=false, isWildcard=false. Result: " << result); // Optional log
     return result;
 }
@@ -1164,6 +1167,8 @@ std::shared_ptr<Expression> convertMacroResultToExpressionInternal(
                                   return convertLambda(ml, line);
                               } else if (keyword == "define") {
                                   return convertDefine(ml, line);
+                              } else if (keyword == "#") {
+                                  return convertVector(ml, line);
                               } else {
                                   std::vector<std::shared_ptr<Expression>> convertedElements;
                                   convertedElements.reserve(ml.elements.size());
@@ -1314,6 +1319,21 @@ std::pair<std::vector<HygienicSyntax>, bool> parseMacroParameters(
         throw std::runtime_error("Unsupported parameter structure during conversion (neither list nor atom)");
     }
     return { params, isVariadic };
+}
+
+std::shared_ptr<Expression> convertVector(const MacroList& ml, int line)
+{
+    std::vector<std::shared_ptr<Expression>> body;
+    body.reserve(ml.elements.size() - 1);
+    for (size_t i = 1; i < ml.elements.size(); ++i) {
+        if (auto converted = convertMacroResultToExpressionInternal(ml.elements[i])) {
+            body.push_back(converted);
+        } else {
+            throw std::runtime_error("Invalid lambda body element during conversion");
+        }
+    }
+    wrapLastBodyExpression(body);
+    return std::make_shared<Expression>(VectorExpression { std::move(body) }, line);
 }
 
 std::shared_ptr<Expression> convertLambda(const MacroList& ml, int line)

@@ -245,8 +245,8 @@ export const CURRICULUM: Chapter[] = [
                     },
                     {
                         description: 'Using fold to reverse a list:',
-                        code: '; Using fold to reverse a list\n(fold-left (lambda (acc x) (cons x acc)) \'() \'(1 2 3 4))',
-                        explanation: 'This uses fold-left to build a reversed list. Starting with an empty list, for each element x, we cons x onto the front of our accumulated list, resulting in (4 3 2 1).'
+                        code: '; Using fold to reverse a list\n(fold-left (lambda (x acc) (cons x acc)) \'() \'(1 2 3 4))',
+                        explanation: 'This uses fold-left to build a reversed list. The lambda takes the current element `x` and the accumulated list `acc`. Starting with an empty list `\'()`, for each element `x` from the input list, we `cons` `x` onto the front of our accumulated list `acc`. This effectively reverses the list, resulting in `(4 3 2 1)`.'
                     }
                 ],
                 difficulty: 'Intermediate'
@@ -735,7 +735,7 @@ export const CURRICULUM: Chapter[] = [
                 codeExamples: [
                     {
                         description: 'A simple query language:',
-                        code: '(import jawslist)\n; Define a simple SQL-like query language\n(define-syntax select\n  (syntax-rules (from where)\n    ((select fields from table where condition)\n     (map fields (filter condition table)))\n    ((select fields from table)\n     (map fields table))))\n\n; Sample data\n(define people\n  \'((name "Alice" age 30 city "New York")\n    (name "Bob" age 25 city "Boston")\n    (name "Charlie" age 35 city "New York")\n    (name "Diana" age 28 city "Boston")))\n\n; Use our DSL\n(select (lambda (p) (list (cadr p) (cadddr p)))\n        from people\n        where (lambda (p) (> (cadddr p) 27)))',
+                        code: '; Define a simple SQL-like query language\n(define-syntax select\n  (syntax-rules (from where)\n    ((select fields from table where condition)\n     (map fields (filter condition table)))\n    ((select fields from table)\n     (map fields table))))\n\n; Sample data\n(define people\n  \'((name "Alice" age 30 city "New York")\n    (name "Bob" age 25 city "Boston")\n    (name "Charlie" age 35 city "New York")\n    (name "Diana" age 28 city "Boston")))\n\n; Use our DSL\n(select (lambda (p) (list (cadr p) (cadddr p)))\n        from people\n        where (lambda (p) (> (cadddr p) 27)))',
                         explanation: 'This example creates a simple SQL-like DSL for querying data. The select macro takes field selectors, a data source, and an optional condition. It transforms these into appropriate map and filter operations. In this example, we select the name and age of people older than 27, resulting in a list of (name age) pairs.'
                     },
                     {
@@ -744,9 +744,9 @@ export const CURRICULUM: Chapter[] = [
                         explanation: 'This example creates a DSL for mathematical summations. The sum macro takes a variable, a range, and an expression to evaluate for each value in the range. It transforms this high-level notation into an efficient iterative computation. In this example, we calculate the sum of squares from 1 to 5, which is 1²+2²+3²+4²+5² = 55.'
                     },
                     {
-                        description: 'A DSL for pattern matching:',
-                        code: '; Define a pattern matching DSL\n(define-syntax match\n  (syntax-rules (else)\n    ((match value\n       (pattern1 expr1)\n       (pattern2 expr2) ...)\n     (let ((val value))\n       (cond\n        ((equal? val pattern1) expr1)\n        ((equal? val pattern2) expr2) ...)))\n    \n    ((match value\n       (pattern1 expr1)\n       (pattern2 expr2) ...\n       (else default-expr))\n     (let ((val value))\n       (cond\n        ((equal? val pattern1) expr1)\n        ((equal? val pattern2) expr2) ...\n        (else default-expr))))))\n\n; Use our pattern matching DSL\n(define (factorial n)\n  (match n\n    (0 1)\n    (1 1)\n    (else (* n (factorial (- n 1))))))\n\n; Call the factorial function\n(factorial 5)',
-                        explanation: 'This example creates a DSL for pattern matching, a common feature in functional languages. The match macro takes a value and a series of pattern-expression pairs, matching the value against each pattern in turn. This allows for clear, declarative code. We use it to implement factorial with explicit base cases, then call it with the value 5 to calculate 5! = 120.'
+                        "description": "A DSL for pattern matching:",
+                        "code": "; Define a pattern matching DSL\n(define-syntax match\n  (syntax-rules (else)\n    ((match value\n       (pattern1 expr1)\n       (pattern2 expr2) ...)\n     (let ((val value))\n       (cond\n        ((equal? val pattern1) expr1)\n        ((equal? val pattern2) expr2) ...)))\n    \n    ((match value\n       (pattern1 expr1)\n       (pattern2 expr2) ...\n       (else default-expr))\n     (let ((val value))\n       (cond\n        ((equal? val pattern1) expr1)\n        ((equal? val pattern2) expr2) ...\n        (else default-expr))))))\n\n; Use our pattern matching DSL\n(define (factorial n)\n  (match n\n    (0 1)\n    (1 1)\n    (else (* n (factorial (- n 1))))))\n\n; Call the factorial function\n(factorial 5)",
+                        "explanation": "This example creates a DSL for pattern matching, a common feature in functional languages. The match macro takes a value and a series of pattern-expression pairs, matching the value against each pattern in turn. This allows for clear, declarative code. We use it to implement factorial with explicit base cases, then call it with the value 5 to calculate 5! = 120."
                     },
                     {
                         description: 'A DSL for data validation:',
@@ -804,22 +804,22 @@ export const CURRICULUM: Chapter[] = [
                 codeExamples: [
                     {
                         description: 'The for loop:',
-                        code: '(import loops)\n; Simple list of numbers\n(define numbers \'(1 2 3 4 5))\n\n; Square each number using for\n(for x in numbers\n  (* x x))',
+                        code: 'Simple list of numbers\n(define numbers \'(1 2 3 4 5))\n\n; Square each number using for\n(for x in numbers\n  (* x x))',
                         explanation: 'The for macro provides a simple way to iterate over a list. Here we square each number in the list. Note that for is implemented using map, so it returns a new list containing the results of applying the body expression to each element. The result is (1 4 9 16 25).'
                     },
                     {
                         description: 'Alternative for syntax:',
-                        code: '(import loops)\n; Using the alternative "as" syntax\n(for numbers as x\n  (* x x))',
+                        code: '\n; Using the alternative "as" syntax\n(for numbers as x\n  (* x x))',
                         explanation: 'The for macro supports an alternative syntax where the list comes first, followed by "as" and the element variable. This can be more readable in some cases, especially with complex list expressions. The result is the same: (1 4 9 16 25).'
                     },
                     {
                         description: 'The for-each-with-index macro:',
-                        code: '\n(import loops); Print each element with its index\n(for-each-with-index (element index) in \'(a b c d e)\n  (display "Element at index ")\n  (display index)\n  (display ": ")\n  (display element)\n  (newline))',
+                        code: '\n Print each element with its index\n(for-each-with-index (element index) in \'(a b c d e)\n  (display "Element at index ")\n  (display index)\n  (display ": ")\n  (display element)\n  (newline))',
                         explanation: 'The for-each-with-index macro iterates over a list, providing both the current element and its index for each iteration. Unlike for, it does not collect return values, making it suitable for side effects like displaying output.'
                     },
                     {
                         description: 'Processing list elements:',
-                        code: '\n(import loops); Find the sum and product of a list\n(define (sum-and-product numbers)\n  (let ((sum 0)\n        (product 1))\n    (for-each-with-index (num _) in numbers\n      (set! sum (+ sum num))\n      (set! product (* product num)))\n    (list sum product)))\n\n(sum-and-product \'(1 2 3 4 5))',
+                        code: '\nFind the sum and product of a list\n(define (sum-and-product numbers)\n  (let ((sum 0)\n        (product 1))\n    (for-each-with-index (num _) in numbers\n      (set! sum (+ sum num))\n      (set! product (* product num)))\n    (list sum product)))\n\n(sum-and-product \'(1 2 3 4 5))',
                         explanation: 'This example uses for-each-with-index to calculate both the sum and product of a list of numbers. We use _ as a placeholder for the index since we don\'t need it. The result is (15 120), representing the sum and product of 1 through 5.'
                     }
                 ],
@@ -835,17 +835,17 @@ export const CURRICULUM: Chapter[] = [
                 codeExamples: [
                     {
                         description: 'The repeat macro:',
-                        code: '(import loops)\n Display "Hello" 3 times\n(repeat 3\n  (display "Hello")\n  (newline))',
+                        code: ';Display "Hello" 3 times\n(repeat 3\n  (display "Hello")\n  (newline))',
                         explanation: 'The repeat macro executes its body a fixed number of times. It\'s useful when you need to perform an operation repeatedly without needing a loop variable. Here, it displays "Hello" three times.'
                     },
                     {
                         description: 'The for-range macro:',
-                        code: '\n(import loops); Display numbers from 1 to 5\n(for-range i 1 5\n  (display i)\n  (display " "))',
+                        code: '\nDisplay numbers from 1 to 5\n(for-range i 1 5\n  (display i)\n  (display " "))',
                         explanation: 'The for-range macro provides a convenient way to iterate over a range of numbers. It takes a variable name, starting value, and ending value (inclusive). This example displays the numbers 1 through 5.'
                     },
                     {
                         description: 'The iterate macro with custom step:',
-                        code: '\n(import loops); Display even numbers from 2 to 10\n(iterate i from 2 to 10 by 2\n  (display i)\n  (display " "))',
+                        code: ';Display even numbers from 2 to 10\n(iterate i from 2 to 10 by 2\n  (display i)\n  (display " "))',
                         explanation: 'The iterate macro extends for-range by adding the ability to specify a custom step size. This example counts by 2s, displaying only even numbers from 2 to 10.'
                     },
                     {
@@ -875,9 +875,9 @@ export const CURRICULUM: Chapter[] = [
                         explanation: 'The fold-loop macro combines iteration with accumulation, similar to a fold/reduce operation. It maintains an accumulator that is updated at each step based on the current element. This example calculates the sum of a list of numbers, starting with an initial value of 0.'
                     },
                     {
-                        description: 'The select-case construct:',
-                        code: '; Process different types of data\n(define (process-item item)\n  (select-case (car item)\n    ((number) (display "Processing number: ")\n               (display (cadr item)))\n    ((string) (display "Processing string: ")\n               (display (string-upcase (cadr item))))\n    ((list)   (display "Processing list of length: ")\n               (display (length (cadr item))))\n    (else     (display "Unknown item type"))))\n\n(process-item \'(number 42))\n(newline)\n(process-item \'(string "hello"))',
-                        explanation: 'The select-case macro combines pattern matching with control flow, allowing you to execute different code based on the structure or value of data. This example processes different types of items, displaying different information depending on whether the item is a number, string, or list.'
+                        "description": "Implementing a custom loop macro:",
+                        "code": "; Define a countdown macro\n(define-syntax countdown\n  (syntax-rules (from to)\n    ((countdown var from start to end body ...)\n     (let loop ((var start))\n       (when (>= var end)\n         body ...\n         (loop (- var 1)))))))\n\n; Use the countdown macro\n(countdown i from 5 to 1\n  (display i)\n  (display \" \"))",
+                        "explanation": "This example shows how to implement a custom countdown macro that counts downward instead of upward. Like for-range, it uses a named let, but it decreases the loop variable and continues as long as it remains greater than or equal to the end value. This displays \"5 4 3 2 1 \"."
                     },
                     {
                         description: 'Building a matrix with nested loops:',

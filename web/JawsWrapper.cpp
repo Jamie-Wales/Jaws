@@ -114,7 +114,7 @@ private:
         if (!librariesPreloaded) {
             try {
                 std::cout << "[Info] Preloading libraries into WASM environment..." << std::endl;
-                import::preloadLibraries("/lib", registry);
+                import::preloadLibraries("/Jaws/lib", registry);
                 import::populateMacroEnvironmentFromRegistry(registry, *macroEnv);
                 import::populateInterpreterStateFromRegistry(registry, state, macroEnv);
                 std::cout << "[Info] Preloaded libraries populated into WASM environment." << std::endl;

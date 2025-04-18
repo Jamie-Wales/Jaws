@@ -165,7 +165,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                           },
                           [&](const VectorExpression& v) -> std::shared_ptr<Expression> {
                               std::vector<std::shared_ptr<Expression>> elements;
-                              elements.push_back(makeAtom("vector"));
+                              elements.push_back(makeAtom("#"));
                               for (const auto& elem : v.elements) {
                                   elements.push_back(exprToList(elem));
                               }

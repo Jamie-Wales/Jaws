@@ -9,7 +9,7 @@ import "@/styles/globals.css"
 
 export default function App() {
     return (
-        <BrowserRouter basename="/jaws">
+        <BrowserRouter basename="/Jaws">
             <Routes>
                 <Route path="/" element={<WelcomePage />} />
                 <Route element={<Layout />}>
