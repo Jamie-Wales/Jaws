@@ -7,6 +7,7 @@
          until
          do-while
          for-each-with-index
+         for-each-in
          for-range
          iterate
          fold-loop
@@ -90,7 +91,7 @@
       body
       ...))))
 
-  (define-syntax for-each
+  (define-syntax for-each-in
    (syntax-rules (in)
     ;; 'in' is a literal keyword
     ((for-each element in list body ...)
