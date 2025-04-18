@@ -296,22 +296,50 @@ void preloadLibraries(const std::string& basePathStr, LibraryRegistry& registry)
 {
 #ifdef WASM_BUILD
     std::cout << "[Info] Preloading libraries for WASM from hardcoded list..." << std::endl;
+
+    // Ensure basePathStr starts with a slash and ends with a slash
+    std::string normalizedBasePath = basePathStr;
+    if (!normalizedBasePath.empty() && normalizedBasePath.front() != '/') {
+        normalizedBasePath = "/" + normalizedBasePath;
+    }
+    if (!normalizedBasePath.empty() && normalizedBasePath.back() != '/') {
+        normalizedBasePath += "/";
+    }
+
     std::vector<std::string> wasm_library_paths = {
-        "/lib/base.scm",
-        "/lib/list_utils.scm", // Assuming name (jaws list-utils) maps here
-        "/lib/loops.scm" // Assuming name (jaws loops) maps here
+        "base.scm",
+        "list-utils.scm",
+        "loops.scm",
+        "vector-utils.scm",
+        "utilities.scm",
+        "math.scm",
     };
+
     std::set<std::string> visitedPathsForPreload;
     for (const std::string& path : wasm_library_paths) {
-        std::string registryKey = path;
+        std::string fullPath = normalizedBasePath + path;
+        std::string registryKey = fullPath;
+
         if (registry.count(registryKey)) {
             continue;
         }
-        std::cout << "[Info] WASM Preloading library: " << path << std::endl;
+
+        std::cout << "[Info] WASM Preloading library: " << fullPath << std::endl;
         try {
-            importLibrary(path, registry, visitedPathsForPreload);
+            importLibrary(fullPath, registry, visitedPathsForPreload);
         } catch (const std::exception& e) {
-            std::cerr << "[Warning] Failed to preload library '" << path << "': " << e.what() << std::endl;
+            std::cerr << "[Warning] Failed to preload library '" << fullPath << "': " << e.what() << std::endl;
+
+            // Try alternate path in case the file exists in a different location
+            std::string altPath = "/lib/" + path;
+            if (altPath != fullPath) {
+                std::cout << "[Info] Trying alternate path: " << altPath << std::endl;
+                try {
+                    importLibrary(altPath, registry, visitedPathsForPreload);
+                } catch (const std::exception& e) {
+                    std::cerr << "[Warning] Also failed with alternate path '" << altPath << "': " << e.what() << std::endl;
+                }
+            }
         }
         visitedPathsForPreload.clear();
     }

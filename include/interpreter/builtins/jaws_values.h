@@ -34,4 +34,32 @@ std::optional<SchemeValue> vectorToList(
 std::optional<SchemeValue> symbolToString(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> charToString(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> stringToSymbol(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> stringToNumber(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> charToInteger(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> intToChar(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> stringToVector(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
+
+std::optional<SchemeValue> vectorToString(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
 } // namespace jaws_values

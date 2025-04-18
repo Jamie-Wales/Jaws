@@ -114,7 +114,7 @@ std::shared_ptr<Expression> exprToList(std::shared_ptr<Expression> expr)
                               return std::make_shared<Expression>(
                                   Expression { ListExpression {
                                                    elements,
-                                               },
+                                                   false },
                                       expr->line });
                           },
                           [&](const ListExpression& e) -> std::shared_ptr<Expression> {

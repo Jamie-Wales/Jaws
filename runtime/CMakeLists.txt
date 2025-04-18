@@ -31,7 +31,6 @@ set_target_properties(runtime PROPERTIES
     C_STANDARD_REQUIRED ON
     POSITION_INDEPENDENT_CODE ON
 )
-else()
 
 # Platform-specific compiler flags
 if(APPLE)

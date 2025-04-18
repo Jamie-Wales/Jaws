@@ -338,6 +338,183 @@ The parser's error recovery system synchronises to the next valid expression aft
 
 The recursive descent strategy, combined with helper functions for token consumption and checking, provides a direct and understandable implementation for parsing Scheme's relatively simple core syntax, while correctly identifying structures necessary for later stages like macro expansion and tail call optimisation.
 
+\subsection{Macro Expansion} % Changed from \subsection
+
+Scheme's hygienic macro system, based on \texttt{syntax-rules}, is a powerful feature for syntactic abstraction, allowing programmers to define new language constructs that transform code before evaluation. Jaws implements this system through a dedicated macro expansion pass that operates on the Abstract Syntax Tree (AST) after parsing and before interpretation or compilation.
+
+\subsubsection{Macro Representation and Environment}
+Macros are defined using the \texttt{define-syntax} special form, which binds an identifier to a macro transformer. In Jaws, the transformer is typically the result of evaluating a \texttt{syntax-rules} form, represented internally as a \texttt{SyntaxRulesExpression} AST node. This node contains the list of literal identifiers that should not be treated as pattern variables, and a list of rules, each consisting of a pattern and a template expression.
+
+These macro definitions are stored in a dedicated \texttt{MacroEnvironment}, separate from the runtime environment used for variable bindings. The \texttt{MacroEnvironment} maps macro keywords (strings) to the corresponding \texttt{Expression} node representing their definition (usually the \texttt{SyntaxRulesExpression}). Like the runtime \texttt{Environment}, the \texttt{MacroEnvironment} can be hierarchical, allowing macros to be scoped, although often a single environment is shared during expansion.
+
+\subsubsection{Expansion Process}
+The top-level entry point for macro expansion is the \texttt{expandMacros} function. It takes a sequence of expressions (typically the result of parsing a file or input) and the current \texttt{MacroEnvironment}. It iterates through the expressions:
+\begin{enumerate}
+    \item \texttt{DefineSyntaxExpression} nodes are used to populate the \texttt{MacroEnvironment} but are then typically removed from the sequence passed to the interpreter.
+    \item Other expressions are processed by the core recursive expansion function, \texttt{transformMacroRecursive}.
+\end{enumerate}
+The \texttt{transformMacroRecursive} function performs a fixed-point expansion. It repeatedly traverses an input expression tree until no further macro expansions can be applied. It operates as follows:
+\begin{itemize}
+    \item If the current node is an identifier (represented as \texttt{MacroAtom}) that is bound to a macro in the \texttt{MacroEnvironment}, it attempts to apply the macro rules (this usually only succeeds if the macro pattern is just the identifier itself).
+    \item If the current node is a list (represented as \texttt{MacroList}) whose first element is an identifier bound to a macro, it attempts to match the entire list against the rules of that macro.
+    \item If a macro match is found and successfully expanded (using \texttt{tryMatch} and \texttt{transformTemplate}), the original macro call expression is replaced by the expansion result. Crucially, the process then \textbf{restarts} the expansion analysis on this \textbf{new} code structure, allowing macros to expand into forms that use other macros.
+    \item If the current node is not a macro call, \texttt{transformMacroRecursive} recursively calls itself on the sub-expressions (e.g., the elements of a list) to expand any macros nested within.
+    \item A recursion depth limit is enforced to detect and prevent infinite macro expansion loops.
+\end{itemize}
+This iterative process ensures that all macro invocations are expanded until only core Scheme forms and procedure calls remain.
+
+\paragraph{Pattern Matching}
+When a potential macro invocation is identified, the \texttt{tryMatch} function is called to match the macro invocation (the input expression) against a specific rule's pattern. Both the pattern and the input are first converted into an internal \texttt{MacroExpression} representation using the \texttt{fromExpr} helper. \texttt{tryMatch} recursively compares the structure of the pattern against the input:
+\begin{itemize}
+    \item \textbf{Literals:} Identifiers declared as literals in the \texttt{syntax-rules} form must match the corresponding symbols exactly in the input expression.
+    \item \textbf{Pattern Variables:} Identifiers in the pattern that are not literals (and not \texttt{\_} or \texttt{.}) act as pattern variables. They match any single corresponding sub-expression in the input. These matches are captured and stored in a \texttt{MatchEnv} object, which maps the variable name (string) to a \texttt{PatternMatches} structure containing a list of the \texttt{MacroExpression}s it matched. The wildcard \texttt{\_} matches any single expression but does not bind it.
+    \item \textbf{Ellipsis (\texttt{...}):} The ellipsis indicates that the preceding pattern element (which must be a pattern variable or a sub-pattern containing variables) can match zero or more elements in the input expression. When a variadic pattern matches multiple input elements, the corresponding pattern variables within that pattern are bound in the \texttt{MatchEnv} to a list containing each of the matched sub-expressions. The system handles nested ellipses and ensures that variables associated with the same ellipsis match the same number of elements.
+\end{itemize}
+If the entire input expression successfully matches the pattern according to these rules, \texttt{tryMatch} returns true along with the populated \texttt{MatchEnv}.
+
+\subsubsection{Template Instantiation and Hygiene}
+If a pattern matches successfully, the \texttt{transformTemplate} function instantiates the corresponding template using the bindings captured in the \texttt{MatchEnv}. It recursively traverses the template structure:
+\begin{itemize}
+    \item Literals and structure from the template are copied directly into the output.
+    \item When a pattern variable is encountered in the template, it is replaced by the corresponding matched expression(s) stored in the \texttt{MatchEnv}.
+    \item \textbf{Hygiene:} Crucially, Scheme macros are hygienic, meaning they avoid unintentional variable capture. Jaws implements this using syntax contexts (\texttt{SyntaxContext}), which attach unique 'marks' (scope identifiers) to identifiers. When \texttt{transformTemplate} substitutes a matched expression (copied from the macro input) for a pattern variable, the expression retains its original syntax context. However, when an identifier that was part of the original macro template (i.e., not a pattern variable) is copied to the output, it is given a fresh context associated with the specific macro expansion (\texttt{macroContext}), often combined with the context of the original macro definition. This ensures that variables introduced by the macro cannot accidentally capture or clash with variables in the surrounding code where the macro is used, and vice-versa. The \texttt{addUsageContextRecursive} helper likely handles applying the macro expansion context to template literals.
+    \item \textbf{Ellipsis (\texttt{...}):} If a template element containing pattern variables is followed by an ellipsis, \texttt{transformTemplate} triggers variadic expansion, often delegated to helpers like \texttt{expandVariadicPatternGroup} or \texttt{expandParallel}. These functions determine the number of expansions required based on the number of matches stored in the \texttt{MatchEnv} for the 'controlling' variables (those matched by the ellipsis in the pattern). They then iterate that many times. In each iteration \texttt{k}, they create a temporary environment containing the k-th match for controlling variables and the single match (if any) for non-controlling variables, and recursively call \texttt{transformTemplate} on the template sub-expression (without the ellipsis). The results from all iterations are collected and spliced into the output structure.
+\end{itemize}
+
+\subsubsection{Final Conversion}
+After the iterative expansion process by \texttt{transformMacroRecursive} completes, the final resulting \texttt{MacroExpression} tree, now free of macro calls defined by \texttt{syntax-rules}, is converted back into the standard \texttt{Expression} AST using the \texttt{convertMacroResultToExpression} function. This final AST is then ready for the interpreter or compiler.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% End of Macro Expansion Section
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Interpreter}
+
+The interpreter forms the executable heart of the Jaws system, bringing the parsed and expanded Scheme code to life. It operates by traversing the Abstract Syntax Tree (AST) generated by the preceding stages, applying Scheme's evaluation rules to compute the program's result. The implementation follows the tree-walk interpretation methodology described earlier.
+
+\subsubsection{Evaluation Semantics and Special Forms}
+
+The core of the interpreter is the \texttt{interpret} function, which recursively evaluates expressions within a given environment. This function employs a dispatch mechanism, implemented using \texttt{std::visit} on the \texttt{Expression} variant, to select the appropriate evaluation logic based on the type of AST node encountered.
+
+Self-evaluating expressions, such as numbers, strings, booleans, and characters, are handled by \texttt{interpretAtom}. This function directly translates the token's literal value into the corresponding \texttt{SchemeValue} representation (e.g., \texttt{"hello"} becomes a \texttt{SchemeValue} holding a \texttt{std::string}, \texttt{\#t} becomes a \texttt{SchemeValue} holding \texttt{true}). For \texttt{AtomExpression} nodes representing identifiers, \texttt{interpretAtom} looks up the identifier in the \texttt{InterpreterState}'s environment. If found, the associated \texttt{SchemeValue} is returned; otherwise, an "Undefined variable" error is thrown.
+
+The standard evaluation rule for compound expressions, represented by \texttt{sExpression} nodes, dictates applicative-order evaluation. The \texttt{interpretSExpression} function first recursively calls \texttt{interpret} on the first element of the S-expression (the operator position). It then recursively calls \texttt{interpret} on each subsequent element (the operand positions). If the operator evaluates to a procedure (\texttt{SchemeValue} holding a \texttt{std::shared\_ptr<Procedure>}), the \texttt{executeProcedure} function is invoked with the procedure and the list of evaluated operands. This standard evaluation path is facilitated by the \texttt{evaluateProcedureCall} helper function which handles the evaluation of the operator and operands before \texttt{executeProcedure} is called.
+
+However, Scheme requires several special forms that deviate from this standard evaluation rule. These forms are essential for control flow, definition, and syntactic abstraction, and cannot be implemented as regular procedures because they require non-standard evaluation of their arguments or direct manipulation of the execution environment. Jaws handles these via dedicated interpretation functions:
+
+\begin{itemize}
+    \item \textbf{Conditionals:} \texttt{if}. The \texttt{interpretIf} function evaluates \textbf{only} the condition expression first. Based on whether the result is true (any value other than \texttt{\#f}), it then evaluates \textbf{only} the \texttt{then} branch or the optional \texttt{else} branch, ensuring that \textbf{only} the necessary code path is executed.
+    \item \textbf{Definitions:} \texttt{define}, \texttt{define-syntax}. The \texttt{interpretDefine} and \texttt{interpretDefineProcedure} functions handle definitions. \texttt{interpretDefine} evaluates the value expression and then binds the resulting \texttt{SchemeValue} to the specified identifier (\texttt{HygienicSyntax}) directly within the \textbf{current} environment. \texttt{interpretDefineProcedure} constructs a \texttt{UserProcedure} object (capturing the current environment) and binds it similarly. If \texttt{define} were a regular procedure, the interpreter would attempt to evaluate the identifier \textbf{before} it was defined, leading to an error. \texttt{define-syntax} is handled similarly during macro expansion, \textbf{not} interpretation directly.
+    \item \textbf{Abstractions:} \texttt{lambda}, \texttt{let}. The \texttt{interpretLambda} function creates a \texttt{UserProcedure} object. Crucially, it captures the \textbf{current} environment as the procedure's closure environment but does \textbf{not} evaluate the procedure's body expressions at this time. The body is \textbf{only} evaluated later when the procedure is actually called via \texttt{executeProcedure}. While \texttt{let} expressions introduce local bindings, they are often implemented as syntactic sugar for an immediately invoked lambda expression. The \texttt{interpretLet} function effectively constructs and calls such an implicit lambda, evaluating the binding expressions in the current environment and then executing the body within a new environment where the bindings are established. Named \texttt{let} provides a convenient syntax for local recursive procedures, also handled by \texttt{interpretLet} by binding the procedure name within the new environment before evaluating the body.
+    \item \textbf{Assignment:} \texttt{set!}. The \texttt{interpretSet} function evaluates the value expression, then modifies an \textbf{existing} binding for the identifier in the environment hierarchy. It requires the variable to be already defined.
+    \item \textbf{Quoting:} \texttt{quote}, \texttt{quasiquote}, \texttt{unquote}, \texttt{unquote-splicing}. \texttt{interpretQuote} prevents evaluation entirely, returning the quoted expression structure directly as data (represented by nested \texttt{SchemeValue} lists, symbols, etc.). \texttt{interpretQuasiQuote} handles quasiquotation with its associated \texttt{unquote} and \texttt{unquote-splicing} mechanisms, described in detail later.
+\end{itemize}
+
+This distinction between standard procedure calls and special forms is fundamental to Scheme's semantics. The interpreter's structure, dispatching based on the AST node type, allows it to correctly implement these differing evaluation rules.
+
+\subsubsection{Environment, Closures, and Control Flow}
+
+Scheme's execution model relies heavily on its environment structure for managing variable bindings and its specific control flow mechanisms, including guaranteed tail call optimisation and first-class continuations.
+
+\paragraph{Environment and Closures}
+Lexical scoping is fundamental to Scheme and is implemented in Jaws using a hierarchical environment structure, represented by the \texttt{Environment} class. Each \texttt{Environment} object holds local bindings in an unordered map mapping \texttt{HygienicSyntax} identifiers to \texttt{SchemeValue} objects, a shared pointer (\texttt{parent}) to its enclosing environment, and a mutex for thread-safe access.
+
+When looking up a variable using the \texttt{get} method, the interpreter searches the current environment's \texttt{variables} map first. This lookup respects macro hygiene, comparing not only the identifier name but also the associated syntactic context (marks) stored within the \texttt{HygienicSyntax} object. Specific rules apply, such as allowing global unmarked bindings or identifiers without marks to match more broadly, facilitating bindings introduced by macros. If no compatible binding is found in the current environment, the search continues recursively up the chain by calling \texttt{get} on the \texttt{parent} environment, terminating only when a binding is found or the root environment (where \texttt{parent} is null) is reached.
+
+New bindings are introduced using the \texttt{define} method, which adds or replaces an entry directly in the \textbf{current} environment's \texttt{variables} map. Assignment to existing variables uses the \texttt{set} method, which similarly searches for a hygienically compatible binding in the current environment and updates it; if none is found, it recursively attempts the \texttt{set} operation on the parent. New scopes are created using the \texttt{extend} method, which constructs a new \texttt{Environment} object whose \texttt{parent} pointer points back to the environment it was called from.
+
+Closures are the mechanism that enables first-class procedures while respecting this lexical scope. When a \texttt{lambda} expression is evaluated by \texttt{interpretLambda}, it creates a \texttt{UserProcedure} object. Crucially, this object captures a shared pointer to the \textbf{current} environment active at the time of definition, storing it in its \texttt{closure} member. This captured environment is used when the procedure is later invoked by \texttt{UserProcedure::executeBody}. The \texttt{executeBody} method creates the new execution environment by calling \texttt{extend} on the captured \texttt{closure} environment, ensuring the procedure body executes with access to the variables that were in scope when and where it was defined.
+
+\paragraph{Tail Call Optimization (TCO)}
+The R7RS specification mandates that Scheme implementations perform tail call optimisation, allowing infinite tail recursion to execute in constant stack space. Jaws implements this using a technique known as trampolining, managed cooperatively between the parser, the interpreter functions, and the main procedure execution logic.
+
+As discussed previously, the parser identifies expressions occurring in tail position and wraps them in a \texttt{TailExpression} AST node. The interpreter function \texttt{interpretTailCall} is responsible for handling these nodes. If the expression wrapped by \texttt{TailExpression} is an \texttt{sExpression} that evaluates to a \texttt{UserProcedure} call, TCO is possible.
+
+Instead of making a direct recursive call to \texttt{interpret} or \texttt{executeProcedure}, \texttt{interpretTailCall} sets specific flags and stores the target procedure and arguments within the \texttt{InterpreterState} object. It then returns \texttt{std::nullopt}, signaling to its caller that a tail call has been set up but not executed.
+
+The actual optimisation occurs within the \texttt{executeProcedure} function. This function operates in a loop. At the beginning of each iteration, it checks if a tail call was requested by the previous step. If true, it loads the pending procedure and arguments into its local variables, resets the tail call state, and \textbf{continues to the next iteration of the loop}. This avoids creating a new C++ stack frame for the tail call, effectively replacing the current procedure activation with the new one, thus achieving the required constant stack space behaviour. If no tail call is pending, \texttt{executeProcedure} proceeds normally, calling the procedure's implementation (either \texttt{BuiltinProcedure::operator()} or \texttt{UserProcedure::executeBody}). \textbf{Only} when a procedure returns normally \textbf{without} setting up a tail call does the \texttt{executeProcedure} loop terminate and return a value.
+
+\paragraph{Continuations}
+Scheme's \texttt{call-with-current-continuation} (or \texttt{call/cc}) provides powerful control flow capabilities by reifying the current control context as a first-class procedure. Jaws implements this feature using exception handling to manage the non-local transfer of control.
+
+The built-in procedure \texttt{jaws\_hof::callCC} takes a single argument, which must be a procedure (the 'receiver' procedure). When \texttt{callCC} is executed, it first captures the current state of the interpreter, including the active environment, into a \texttt{Continuation} object. This \texttt{Continuation} object itself derives from \texttt{Procedure}. \texttt{callCC} then immediately invokes the receiver procedure, passing the newly created \texttt{Continuation} object as its argument.
+
+If the receiver procedure returns normally, its return value becomes the return value of the original \texttt{callCC} expression. However, if the \texttt{Continuation} object is ever invoked (called like a regular procedure), its \texttt{operator()} captures the value(s) passed to it and throws a special exception, \texttt{ContinuationInvocationException}. This exception carries both the captured \texttt{InterpreterState} from when the continuation was created and the value(s) passed to the continuation.
+
+This exception propagates up the C++ call stack, unwinding it. The main interpretation loop contain a \texttt{try...catch} block specifically for \texttt{ContinuationInvocationException}. When caught, the interpreter state is completely replaced with the state stored inside the exception, effectively discarding the intermediate execution context and restoring the context from when \texttt{callCC} was originally invoked. The value stored in the exception then becomes the return value at the point where the continuation was restored. This allows Scheme code to implement complex control structures like non-local exits, coroutines, and backtracking.
+
+\subsubsection{Quoting and Unquoting}
+
+Scheme provides mechanisms to treat code as data (\texttt{quote}) and to selectively evaluate parts of data structures as code (\texttt{quasiquote}, \texttt{unquote}, \texttt{unquote-splicing}).
+
+The \texttt{interpretQuote} function handles the \texttt{quote} special form. It simply prevents the evaluation of its operand expression. To return the expression structure as data, it relies on the helper function \texttt{expressionToValue}. This function recursively traverses the unevaluated AST \texttt{Expression} node provided to \texttt{quote}. Using \texttt{std::visit}, \texttt{expressionToValue} pattern matches on the type of the \texttt{Expression} node and constructs the corresponding runtime \texttt{SchemeValue} representation. For instance, an \texttt{AtomExpression} containing an identifier token becomes a \texttt{SchemeValue} holding a \texttt{Symbol}; an \texttt{sExpression} becomes a \texttt{SchemeValue} holding a \texttt{std::shared\_ptr<std::list<SchemeValue>>}, where each element of the C++ list is the result of recursively calling \texttt{expressionToValue} on the corresponding element in the AST \texttt{sExpression}. This systematic conversion transforms the AST representation of code into the first-class data structures (lists, symbols, numbers, etc.) manipulated by Scheme programs. For example, \texttt{(quote (+ 1 2))} results in a \texttt{SchemeValue} representing a list containing the symbol \texttt{+}, the number 1, and the number 2.
+
+Quasiquotation, handled by \texttt{interpretQuasiQuote}, provides more intricate control over this code-to-data transformation. It works in conjunction with a recursive helper function, \texttt{processQuasiQuote}, which takes the expression and a nesting level parameter.
+
+This mechanism allows programmers to construct complex data structures (often representing code templates) while selectively evaluating and inserting computed values or sequences.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Start of Values Section (Revised)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Values}
+
+Scheme features a rich set of data types, and a compliant implementation must represent and manipulate these values correctly. In Jaws, all runtime values are uniformly represented by the \texttt{SchemeValue} class, which acts as a type-safe container for the various kinds of data that can exist during program execution.
+
+Internally, \texttt{SchemeValue} utilizes the C++ \texttt{std::variant} feature (member \texttt{value}) to hold one of the possible underlying C++ types corresponding to Scheme types. This approach provides type safety at compile time while allowing a single \texttt{SchemeValue} object to represent any Scheme value at runtime. The \texttt{SchemeValue} class provides numerous predicate methods (e.g., \texttt{isNumber()}, \texttt{isList()}, \texttt{isProcedure()}, \texttt{isSymbol()}) to check the currently held type, as well as accessor methods (e.g., \texttt{asNumber()}, \texttt{asList()}) to retrieve the underlying data, often throwing an error if the type does not match expectations.
+
+The primary Scheme data types specified by R7RS, along with Jaws-specific extensions, are represented within the \texttt{SchemeValue}'s variant as follows:
+\begin{itemize}
+    \item \textbf{Numbers:} Represented by the \texttt{Number} class, which itself uses a \texttt{std::variant} to implement Scheme's numeric tower, capable of holding integers (\texttt{int}), floating-point numbers (\texttt{double}), exact rationals (\texttt{Number::Rational}), and complex numbers (\texttt{std::complex<double>}).
+    \item \textbf{Booleans:} Represented directly by C++ \texttt{bool} (\texttt{\#t} is \texttt{true}, \texttt{\#f} is \texttt{false}).
+    \item \textbf{Pairs and Lists:} Represented by \texttt{std::shared\_ptr<std::list<SchemeValue>>}. A proper list is a chain of pairs terminating in the empty list. The empty list \texttt{()} is represented by a \texttt{SchemeValue} holding a pointer to an empty \texttt{std::list}. Pairs that do not form proper lists (dotted pairs) are also represented using this list structure convention where the final element is not the empty list.
+    \item \textbf{Vectors:} Represented by \texttt{std::shared\_ptr<std::vector<SchemeValue>>}.
+    \item \textbf{Strings:} Represented by \texttt{std::string}.
+    \item \textbf{Characters:} Represented by \texttt{char}.
+    \item \textbf{Symbols:} Represented by a simple \texttt{Symbol} struct containing the symbol's name as a \texttt{std::string}.
+    \item \textbf{Procedures:} Represented by \texttt{std::shared\_ptr<Procedure>}, where \texttt{Procedure} is an abstract base class with derived classes \texttt{UserProcedure} (for lambda-defined procedures) and \texttt{BuiltinProcedure}.
+    \item \textbf{Ports:} Represented by the \texttt{Port} class, which wraps various C++ stream types (\texttt{std::fstream}, \texttt{std::stringstream}, \texttt{SocketStream}) to handle file, string, and network I/O.
+    \item \textbf{Continuations:} Represented by the \texttt{Continuation} class (derived from \texttt{Procedure}), capturing a saved interpreter state to enable non-local control flow via \texttt{call/cc}.
+    \item \textbf{Threading Primitives:} Represented by \texttt{std::shared\_ptr} to \texttt{ThreadHandle}, \texttt{MutexHandle}, and \texttt{ConditionVarHandle} objects, providing mechanisms for concurrency control.
+    \item \textbf{Multiple Values:} Represented by \texttt{std::shared\_ptr<MultiValue>} to handle functions returning multiple results, primarily used with \texttt{call-with-values}.
+\end{itemize}
+
+Operations on these values are implemented either directly on the C++ representation classes or via built-in procedures.
+
+\subsection{Standard Library and Imports}
+
+Following R7RS conventions and common Scheme practice, Jaws implements a significant portion of its standard functionality \textit{in Scheme itself}. This is achieved through a library system that allows Scheme code to be organized into modules, define exported bindings, and import functionality from other libraries. The core import mechanism is handled by C++ code, which then populates the interpreter's environment with the definitions provided by the Scheme libraries.
+
+\subsubsection{Built-in Procedures}
+
+The foundation of the Jaws Scheme environment is established by a set of built-in procedures implemented directly in C++. These procedures provide the core operations upon which the rest of the language, including much of the standard library, is built.
+
+Built-ins are represented in the interpreter as \texttt{SchemeValue} objects containing a \texttt{std::shared\_ptr<BuiltinProcedure>}. The \texttt{BuiltinProcedure} class, derived from the base \texttt{Procedure} class, holds a callable C++ entity, typically a \texttt{std::function<std::optional<SchemeValue>(interpret::InterpreterState\&, const std::vector<SchemeValue>\&)>} (aliased as \texttt{BuiltInProcedure::Func}). This function pointer or lambda directly implements the primitive operation.
+
+When the interpreter is initialized, the \texttt{createInterpreter} function populates the initial (root) environment by binding Scheme symbols (as \texttt{HygienicSyntax} objects) to instances of \texttt{BuiltinProcedure} wrapping the corresponding C++ implementation functions.
+
+During execution, when \texttt{executeProcedure} encounters a \texttt{SchemeValue} whose underlying type is \texttt{BuiltinProcedure}, it directly invokes the stored C++ function (\texttt{func}), passing it the current \texttt{InterpreterState} and the vector of already-evaluated argument \texttt{SchemeValue}s. The C++ functions implementing these built-ins typically perform necessary argument count and type checking before operating directly on the underlying C++ data within the passed \texttt{SchemeValue} arguments or interacting with the interpreter state or external resources.
+
+The implementations for the broad range of built-ins reside in the \texttt{builtins/} directory, covering areas such as: Mathematical operations (\texttt{JawsMath.cpp}), List/pair operations (\texttt{JawsList.cpp}), Input/Output (\texttt{JawsIO.cpp}), Equality/Type predicates (\texttt{JawsEq.cpp}), Higher-order functions (\texttt{JawsHof.cpp}), Threading (\texttt{JawsThread.cpp}), FFI (\texttt{jaws\_ffi.cpp}), and various value conversions and manipulations (\texttt{JawsVector.cpp}, \texttt{jaws\_string.cpp}, \texttt{jaws\_values.cpp}).
+
+Notable among these are the threading and FFI implementations. The threading built-ins (\texttt{thread-spawn}, \texttt{mutex-create}, etc.) wrap standard C++ concurrency primitives to expose parallelism within Scheme. The FFI system (\texttt{load-library}, \texttt{register-function}) allows Jaws to interact with external C code by dynamically loading shared libraries and wrapping C functions.
+
+\subsection{Standard Library and Imports} % Adjust section/subsection numbering as needed
+
+Following R7RS conventions and common Scheme practice, Jaws implements a significant portion of its standard functionality \textit{in Scheme itself}. This is achieved through a library system that allows Scheme code to be organized into modules, define exported bindings, and import functionality from other libraries. The core import mechanism is handled by C++ code, which then populates the interpreter's environment with the definitions provided by the Scheme libraries.
+
+\paragraph{Import Mechanism}
+The loading and processing of libraries are managed by functions within the \texttt{import} namespace (\texttt{Import.cpp}). When the interpreter starts or encounters an \texttt{import} declaration, the \texttt{processImports} function identifies required libraries. It resolves library names (e.g., \texttt{(jaws list-utils)}) to file paths via \texttt{resolveLibraryPath} (handling platform differences) and invokes \texttt{importLibrary}. This function reads and parses the \texttt{.scm} file, expecting a \texttt{(define-library ...)} form, extracts exports and body expressions, checks for circular dependencies, and stores the resulting \texttt{LibraryData} in a global \texttt{LibraryRegistry} to prevent redundant loads. The \texttt{preloadLibraries} function can load libraries from a base directory at startup. Finally, \texttt{populateInterpreterStateFromRegistry} and \texttt{populateMacroEnvironmentFromRegistry} use the registry to make the exported values and syntax definitions available to the interpreter and macro expander, respectively, interpreting definitions as needed.
+
+\paragraph{Standard Library Content}
+The standard libraries, located in the \texttt{lib/} directory, are implemented in Scheme and provide much of the language's user-facing functionality. Key libraries like \texttt{(base)}, \texttt{(list-utils)}, \texttt{(loops)}, \texttt{(utilities)}, \texttt{(vector-utils)}, and \texttt{(math)} define fundamental macros (\texttt{cond}, \texttt{let*}, \texttt{and}, \texttt{or}, various loops), common list and vector utilities, higher-order functions (\texttt{map}, \texttt{filter}, \texttt{fold-left}), and derived mathematical procedures. The successful implementation and execution of these libraries demonstrate that the Jaws interpreter core provides a sufficiently powerful foundation to run substantial Scheme programs. Further details on the specific functions provided by each library can be found in the source code located in the appendix or supplementary material.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% End of Standard Library and Imports Section (Condensed)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% End of Standard Library and Imports Section
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 

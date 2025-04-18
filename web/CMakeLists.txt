@@ -32,7 +32,7 @@ set_target_properties(jaws_wasm PROPERTIES
                 -s EXPORT_NAME='createJawsModule' \
                 -s ENVIRONMENT='web' \
                 -s DISABLE_EXCEPTION_CATCHING=0 \
-                -s STACK_SIZE=8MB \
+                -s STACK_SIZE=24MB \
                 -s WASM_BIGINT=1 \
                 -sASSERTIONS=1 \
                 -sASSERTIONS=2 \

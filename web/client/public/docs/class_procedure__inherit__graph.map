@@ -1,9 +1,0 @@
-<map id="Procedure" name="Procedure">
-<area shape="rect" id="Node000001" title=" " alt="" coords="152,5,251,153"/>
-<area shape="rect" id="Node000002" href="$class_built_in_procedure.html" title=" " alt="" coords="5,201,133,328"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="145,162,116,203,112,200,141,159"/>
-<area shape="rect" id="Node000003" href="$class_tail_call.html" title=" " alt="" coords="158,201,245,328"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="204,168,204,201,199,201,199,168"/>
-<area shape="rect" id="Node000004" href="$class_user_procedure.html" title=" " alt="" coords="268,211,388,318"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="261,162,294,210,290,213,257,165"/>
-</map>

@@ -43,6 +43,7 @@ public:
     Number operator-() const;
     Number operator*(const Number& other) const;
     Number operator/(const Number& other) const;
+    static std::optional<Number> fromString(std::string input);
     std::partial_ordering operator<=>(const Number& other) const;
     bool operator==(const Number& other) const;
 };

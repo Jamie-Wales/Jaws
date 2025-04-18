@@ -160,30 +160,63 @@ public:
 std::shared_ptr<Expression> exprToList(const std::shared_ptr<Expression>& expr);
 std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& expr);
 bool isPatternVariable(const Token& t, const std::vector<Token>& literals);
+bool isEllipsis(std::shared_ptr<MacroExpression> me);
+std::shared_ptr<MacroExpression> createNonVariadicCopy(const std::shared_ptr<MacroExpression>& expr);
 void findVariadics(const MacroList& list, std::vector<std::string>& variadicVars, size_t& variadicCount, const MatchEnv& env);
 void printMatchResult(const std::pair<MatchEnv, bool>& result);
-std::pair<MatchEnv, bool> tryMatch(std::shared_ptr<MacroExpression> pattern,
+
+// Pattern matching
+std::pair<MatchEnv, bool> tryMatch(
+    std::shared_ptr<MacroExpression> pattern,
     std::shared_ptr<MacroExpression> expr,
     const std::vector<Token>& literals,
     const std::string& macroName);
+
+// Template transformation with PatternVariableInfo
 std::shared_ptr<MacroExpression> transformTemplate(
     const std::shared_ptr<MacroExpression>& template_expr,
-    MatchEnv& env, // Current environment (Pattern env or iter_env)
-    SyntaxContext macroContext); // Context from macro definition/invocation
+    MatchEnv& env,
+    SyntaxContext macroContext,
+    const PatternVariableInfo& pattern_info = PatternVariableInfo());
+
+std::shared_ptr<MacroExpression> expandParallel(
+    const std::shared_ptr<MacroExpression>& template_part,
+    MatchEnv& pattern_env,
+    size_t iteration,
+    SyntaxContext macroContext,
+    const std::vector<std::string>& pattern_vars_in_group,
+    const std::vector<std::string>& template_vars_in_group,
+    const PatternVariableInfo& pattern_info = PatternVariableInfo());
+
+std::shared_ptr<MacroExpression> transformMacro(
+    const std::shared_ptr<Expression>& template_expr,
+    MatchEnv& env,
+    const std::string& macroName,
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv,
+    const PatternVariableInfo& pattern_info = PatternVariableInfo());
+
 std::shared_ptr<MacroExpression> transformMacroRecursive(
     const std::shared_ptr<MacroExpression>& expr,
     std::shared_ptr<pattern::MacroEnvironment> env);
-std::shared_ptr<MacroExpression> transformMacro(
-    const std::shared_ptr<Expression>& template_expr,
-    const MatchEnv& env,
-    const std::string& macroName,
-    std::shared_ptr<pattern::MacroEnvironment> macroEnv);
+
+std::shared_ptr<MacroExpression> addUsageContextRecursive(
+    const std::shared_ptr<MacroExpression>& expr,
+    const SyntaxContext& context);
+
+HygienicSyntax createFreshSyntaxObject(const Token& token);
+HygienicSyntax createFreshSyntaxObject(const Token& token, SyntaxContext context);
+
+// Conversion functions
 std::shared_ptr<Expression> convertMacroResultToExpressionInternal(const std::shared_ptr<MacroExpression>& macroResult);
 std::shared_ptr<Expression> convertMacroResultToExpression(const std::shared_ptr<MacroExpression>& macroResult);
 void wrapLastBodyExpression(std::vector<std::shared_ptr<Expression>>& body);
 std::vector<std::shared_ptr<Expression>> expandMacros(
     const std::vector<std::shared_ptr<Expression>>& exprs,
     std::shared_ptr<pattern::MacroEnvironment> env);
+
+// Specific conversion functions
+std::string getKeyword(const MacroList& ml);
+std::shared_ptr<Expression> convertBegin(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertSplice(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertQuasiQuote(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertUnquote(const MacroList& ml, int line);
@@ -194,7 +227,14 @@ std::shared_ptr<Expression> convertLambda(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertDefine(const MacroList& ml, int line);
 std::shared_ptr<Expression> convertLet(const MacroList& ml, int line);
 std::pair<std::vector<HygienicSyntax>, bool> parseMacroParameters(const std::shared_ptr<MacroExpression>& paramsMacroExpr);
-HygienicSyntax createFreshSyntaxObject(const Token& token);
 
-std::string getKeyword(const MacroList& ml);
+// Helper functions
+void findPatternVariables(
+    const std::shared_ptr<MacroExpression>& pattern,
+    std::vector<std::string>& vars,
+    const std::vector<Token>& literals);
+
+bool containsRepeatingVariable(
+    const std::shared_ptr<MacroExpression>& expr,
+    const std::set<std::string>& repeating_pattern_vars);
 }

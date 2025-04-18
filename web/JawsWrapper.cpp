@@ -26,6 +26,7 @@ private:
     import::LibraryRegistry registry;
     std::stringstream ss;
     std::stringstream outputCapture;
+    bool librariesPreloaded = false; // Track whether libraries have been preloaded
 
     struct CompilationStages {
         std::vector<std::shared_ptr<Expression>> parsed;
@@ -108,6 +109,22 @@ private:
         std::cout.rdbuf(oldBuf);
     }
 
+    void ensureLibrariesPreloaded()
+    {
+        if (!librariesPreloaded) {
+            try {
+                std::cout << "[Info] Preloading libraries into WASM environment..." << std::endl;
+                import::preloadLibraries("/lib", registry);
+                import::populateMacroEnvironmentFromRegistry(registry, *macroEnv);
+                import::populateInterpreterStateFromRegistry(registry, state, macroEnv);
+                std::cout << "[Info] Preloaded libraries populated into WASM environment." << std::endl;
+                librariesPreloaded = true;
+            } catch (const std::exception& e) {
+                std::cerr << "[Warning] Error setting up WASM environment: " << e.what() << std::endl;
+            }
+        }
+    }
+
     // Helper to prepare interpreter environment with expanded imported values
     void prepareInterpreterEnvironment(const import::ProcessedCode& code)
     {
@@ -136,26 +153,15 @@ public:
         : state(interpret::createInterpreter())
         , macroEnv(std::make_shared<pattern::MacroEnvironment>())
     {
-        // Initialize library registry and populate environments
-        try {
-            // Load libraries into registry first
-            import::preloadLibraries("/lib", registry);
-
-            // Populate the macro environment first
-            import::populateMacroEnvironmentFromRegistry(registry, *macroEnv);
-
-            // Then populate the interpreter state with expanded values
-            import::populateInterpreterStateFromRegistry(registry, state, macroEnv);
-
-            std::cout << "[Info] Preloaded libraries populated into WASM environment." << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "[Warning] Error setting up WASM environment: " << e.what() << std::endl;
-        }
+        ensureLibrariesPreloaded();
     }
 
     emscripten::val evaluate(const std::string& input)
     {
         try {
+            // Ensure libraries are loaded (only happens once)
+            ensureLibrariesPreloaded();
+
             auto oldBuf = redirectStdout();
 
             // Parse code
@@ -227,6 +233,9 @@ public:
     emscripten::val getAllStages(const std::string& input)
     {
         try {
+            // Ensure libraries are loaded (only happens once)
+            ensureLibrariesPreloaded();
+
             auto tokens = scanner::tokenize(input);
             auto expressionsOpt = parse::parse(std::move(tokens));
             if (!expressionsOpt) {

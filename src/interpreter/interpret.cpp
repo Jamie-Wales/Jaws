@@ -38,6 +38,9 @@ InterpreterState createInterpreter()
         token.lexeme = name;
         return HygienicSyntax { token, SyntaxContext() };
     };
+
+    define(identifier("load-library"), jaws_ffi::loadLibrary);
+    define(identifier("register-function"), jaws_ffi::registerFunction);
     define(identifier("+"), jaws_math::plus);
     define(identifier("-"), jaws_math::minus);
     define(identifier("*"), jaws_math::mult);
@@ -55,6 +58,7 @@ InterpreterState createInterpreter()
     define(identifier("imag-part"), jaws_math::imagPart);
     define(identifier("make-rectangular"), jaws_math::makeRectangular);
     define(identifier("sqrt"), jaws_math::sqrt);
+
     define(identifier("exp"), jaws_math::exp);
     define(identifier("log"), jaws_math::log);
     define(identifier("sin"), jaws_math::sin);
@@ -146,9 +150,20 @@ InterpreterState createInterpreter()
     define(identifier("complex?"), jaws_math::isComplex);
     define(identifier("exact?"), jaws_math::isExact);
     define(identifier("inexact?"), jaws_math::isInexact);
+
+    define(identifier("symbol->string"), jaws_values::symbolToString);
     define(identifier("vector->list"), jaws_values::vectorToList);
     define(identifier("list->vector"), jaws_values::listToVector);
-
+    define(identifier("scheme->string"), jaws_values::schemeToString);
+    define(identifier("values->list"), jaws_values::valuesToList);
+    define(identifier("values->vector"), jaws_values::valuesToList);
+    define(identifier("char->string"), jaws_values::charToString);
+    define(identifier("string->symbol"), jaws_values::symbolToString);
+    define(identifier("string->number"), jaws_values::stringToNumber);
+    define(identifier("char->int"), jaws_values::charToInteger);
+    define(identifier("int->char"), jaws_values::intToChar);
+    define(identifier("string->vector"), jaws_values::stringToVector);
+    define(identifier("vector->string"), jaws_values::stringToVector);
     return state;
 }
 
@@ -326,20 +341,20 @@ std::optional<SchemeValue> interpretList(InterpreterState& state, const ListExpr
 
 std::optional<SchemeValue> interpretSExpression(InterpreterState& state, const sExpression& sexpr)
 {
-    auto call = evaluateProcedureCall(state, sexpr); // Uses current state.env
+    auto call = evaluateProcedureCall(state, sexpr);
     if (!call) {
         throw InterpreterError("Cannot evaluate procedure call: Expression did not evaluate to a callable procedure.");
     }
     DEBUG_LOG("InterpretSExpr: Calling executeProcedure for proc: " << call->procedure.toString() << " from Env@ " << state.env.get());
 
-    auto savedEnv = state.env; // <<< SAVE ENV HERE
+    auto savedEnv = state.env;
     std::optional<SchemeValue> result;
     try {
         result = executeProcedure(state, call->procedure, std::move(call->arguments));
     } catch (const ContinuationInvocationException& e) {
         throw;
     }
-    state.env = savedEnv; // <<< RESTORE ENV HERE
+    state.env = savedEnv;
     DEBUG_LOG("InterpretSExpr: Restored Env@ " << savedEnv.get() << " after procedure execution completed.");
     return result;
 }
@@ -363,7 +378,7 @@ std::optional<SchemeValue> interpretDefineProcedure(InterpreterState& state, con
     std::vector<HygienicSyntax> params;
     params.reserve(proc.parameters.size());
     for (const auto& param : proc.parameters) {
-        params.push_back(param); // Now param is already a HygienicSyntax
+        params.push_back(param);
     }
     auto procedure = std::make_shared<UserProcedure>(params, proc.body, state.env, proc.isVariadic);
     state.env->define(proc.name, SchemeValue(std::move(procedure)));
@@ -374,7 +389,7 @@ std::optional<SchemeValue> interpretLambda(InterpreterState& state, const Lambda
     std::vector<HygienicSyntax> params;
     params.reserve(lambda.parameters.size());
     for (const auto& param : lambda.parameters) {
-        params.push_back(param); // Now param is already a HygienicSyntax
+        params.push_back(param);
     }
     auto closureEnv = state.env;
     auto proc = std::make_shared<UserProcedure>(
@@ -482,15 +497,12 @@ std::optional<SchemeValue> processQuasiQuote(InterpreterState& state, std::share
 {
     return std::visit(overloaded {
                           [&](const QuasiQuoteExpression& e) {
-                              // Nested quasiquote - increment level and process
                               if (level > 0) {
-                                  // Create a quasiquote with the inner expression processed at level+1
                                   auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
                                   values_list_ptr->push_back(SchemeValue(Symbol { "quasiquote" }));
                                   values_list_ptr->push_back(*processQuasiQuote(state, e.value, level + 1));
                                   return SchemeValue(values_list_ptr);
                               } else {
-                                  // Level 0 should never happen in practice
                                   return expressionToValue(*expr);
                               }
                           },
@@ -516,7 +528,7 @@ std::optional<SchemeValue> processQuasiQuote(InterpreterState& state, std::share
                                   if (!result || !result->isList()) {
                                       throw InterpreterError("Unquote-splicing requires a list result");
                                   }
-                                  return *result; // Return the list for splicing by the caller
+                                  return *result;
                               } else if (level > 1) {
                                   auto values_list_ptr = std::make_shared<std::list<SchemeValue>>();
                                   values_list_ptr->push_back(SchemeValue(Symbol { "unquote-splicing" }));

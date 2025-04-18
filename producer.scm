@@ -1,4 +1,4 @@
-(import list)
+(import (list-utils))
 
 (define buffer '())
 (define buffer-max-size 3)        

@@ -1,4 +1,4 @@
-(import base)
+(import (base))
 
 (define (for-each proc lst)
   (if (null? lst)

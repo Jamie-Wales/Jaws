@@ -13,11 +13,12 @@ var searchData=
   ['constantfold_2eh_10',['ConstantFold.h',['../_constant_fold_8h.html',1,'']]],
   ['constantfoldtdefine_11',['constantFoldTDefine',['../namespaceoptimise.html#a0c7cfd9730e301d99148884db2edac1e',1,'optimise']]],
   ['convertanf_12',['convertANF',['../namespacetac.html#a62c345665121dbb6897827bd22b1080b',1,'tac']]],
-  ['convertinstruction_13',['convertInstruction',['../namespaceassembly.html#a4cd69339169a300abcd13588cdb9e069',1,'assembly::convertInstruction()'],['../_q_b_e_generator_8h.html#ad76fec3923ba59d717399aaf2085e858',1,'convertInstruction(const tac::ThreeACInstruction &amp;instr, QBEGeneratorState &amp;state, const std::set&lt; std::string &gt; &amp;globalVars):&#160;QBEGenerator.cpp'],['../_q_b_e_generator_8cpp.html#ad76fec3923ba59d717399aaf2085e858',1,'convertInstruction(const tac::ThreeACInstruction &amp;instr, QBEGeneratorState &amp;state, const std::set&lt; std::string &gt; &amp;globalVars):&#160;QBEGenerator.cpp']]],
-  ['convertprimitive_14',['convertPrimitive',['../_q_b_e_generator_8h.html#ad58aefac00c11f1e1e5a6da2c46bab5d',1,'convertPrimitive():&#160;QBEGenerator.cpp'],['../namespaceassembly.html#a1f80e8759f62f9c83feeefac7af74b2b',1,'assembly::convertPrimitive()'],['../_q_b_e_generator_8cpp.html#ad58aefac00c11f1e1e5a6da2c46bab5d',1,'convertPrimitive():&#160;QBEGenerator.cpp']]],
+  ['convertinstruction_13',['convertInstruction',['../namespaceassembly.html#a4cd69339169a300abcd13588cdb9e069',1,'assembly::convertInstruction()'],['../namespaceqbe.html#a83629841e6a1fecb3d558b7061b17943',1,'qbe::convertInstruction()']]],
+  ['convertprimitive_14',['convertPrimitive',['../namespaceassembly.html#a1f80e8759f62f9c83feeefac7af74b2b',1,'assembly']]],
   ['copy_15',['COPY',['../namespacetac.html#a790294ecbe38c0f2c53e788c8b8b6190ae8606d021da140a92c7eba8d9b8af84f',1,'tac']]],
   ['createbooltoken_16',['createBoolToken',['../namespaceoptimise.html#a6dbd1ab93158ed0c015904f6ec9f8f55',1,'optimise']]],
   ['createconstantnode_17',['createConstantNode',['../namespaceoptimise.html#a9b2284d22480a99debf3540249f8dc9a',1,'optimise']]],
   ['createnumbertoken_18',['createNumberToken',['../namespaceoptimise.html#a3ca220563c6489bf347489c83646a6db',1,'optimise']]],
-  ['currentstackoffset_19',['currentStackOffset',['../structassembly_1_1_assembly_generator_state.html#a71c0059c514a1164bf313ddd3995daff',1,'assembly::AssemblyGeneratorState']]]
+  ['currentfuncparamnamestac_19',['currentFuncParamNamesTAC',['../structqbe_1_1_q_b_e_generator_state.html#a808064f86b2253b442289c77629327bc',1,'qbe::QBEGeneratorState']]],
+  ['currentstackoffset_20',['currentStackOffset',['../structassembly_1_1_assembly_generator_state.html#a71c0059c514a1164bf313ddd3995daff',1,'assembly::AssemblyGeneratorState']]]
 ];

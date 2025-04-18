@@ -7,6 +7,8 @@
 #include <numeric>
 #include <stdexcept>
 
+using std::nullopt;
+
 Number::Rational::Rational(int n, int d)
     : numerator(n)
     , denominator(d)
@@ -642,6 +644,154 @@ Number::Rational Number::asRational() const
                               return Number(c.real()).asRational();
                           } },
         value);
+}
+std::string trim(const std::string& str)
+{
+    size_t first = str.find_first_not_of(" \t\n\r\f\v");
+    if (std::string::npos == first) {
+        return str; // empty or all whitespace
+    }
+    size_t last = str.find_last_not_of(" \t\n\r\f\v");
+    return str.substr(first, (last - first + 1));
+}
+
+std::optional<Number> Number::fromString(std::string input)
+{
+
+    std::string str = trim(input); // Trim whitespace
+
+    if (str.empty()) {
+        return std::nullopt;
+    }
+
+    // --- 1. Complex Number Check ---
+    // Look for 'i' suffix, but not as the only character.
+    if (str.length() > 1 && str.back() == 'i') {
+        std::string num_part = str.substr(0, str.length() - 1);
+        if (num_part.empty())
+            return std::nullopt; // Should not happen if str.length() > 1
+
+        size_t last_plus = num_part.find_last_of('+');
+        size_t last_minus = num_part.find_last_of('-');
+
+        size_t split_pos = std::string::npos;
+        if (last_plus != std::string::npos && last_plus != 0) {
+            split_pos = last_plus;
+        }
+        if (last_minus != std::string::npos && last_minus != 0) {
+            // Take the later sign if both '+' and '-' exist after position 0
+            if (split_pos == std::string::npos || last_minus > split_pos) {
+                split_pos = last_minus;
+            }
+        }
+
+        double real = 0.0;
+        double imag = 0.0;
+        std::size_t chars_processed = 0;
+
+        try {
+            if (split_pos == std::string::npos) {
+                if (num_part == "+" || num_part.empty()) {
+                    imag = 1.0;
+                    chars_processed = num_part.length();
+                } else if (num_part == "-") {
+                    imag = -1.0;
+                    chars_processed = num_part.length();
+                } else {
+                    imag = std::stod(num_part, &chars_processed);
+                }
+                if (chars_processed != num_part.length())
+                    return std::nullopt;
+                real = 0.0;
+
+            } else {
+                std::string real_str = num_part.substr(0, split_pos);
+                std::string imag_str = num_part.substr(split_pos); // Includes sign e.g "+2", "-5.6", "+", "-"
+                real = std::stod(real_str, &chars_processed);
+                if (chars_processed != real_str.length())
+                    return std::nullopt;
+                if (imag_str == "+") {
+                    imag = 1.0;
+                    chars_processed = imag_str.length();
+                } else if (imag_str == "-") {
+                    imag = -1.0;
+                    chars_processed = imag_str.length();
+                } else {
+                    imag = std::stod(imag_str, &chars_processed);
+                }
+                if (chars_processed != imag_str.length())
+                    return std::nullopt;
+            }
+            return Number(ComplexType(real, imag));
+
+        } catch (const std::invalid_argument&) {
+            return std::nullopt;
+        } catch (const std::out_of_range&) {
+            return std::nullopt;
+        } catch (...) {
+            return std::nullopt;
+        }
+    }
+    size_t slash_pos = str.find('/');
+    if (slash_pos != std::string::npos && slash_pos != 0 && slash_pos != str.length() - 1 && str.find('/', slash_pos + 1) == std::string::npos) // Only one slash
+    {
+        std::string num_str = str.substr(0, slash_pos);
+        std::string den_str = str.substr(slash_pos + 1);
+        std::size_t chars_processed_num = 0;
+        std::size_t chars_processed_den = 0;
+        try {
+            int num = std::stoi(num_str, &chars_processed_num);
+            int den = std::stoi(den_str, &chars_processed_den);
+            if (chars_processed_num != num_str.length() || chars_processed_den != den_str.length()) {
+                return std::nullopt;
+            }
+            if (den == 0) {
+                return std::nullopt;
+            }
+            return Number(Rational(num, den));
+        } catch (const std::invalid_argument&) {
+            return std::nullopt;
+        } catch (const std::out_of_range&) {
+            return std::nullopt;
+        } catch (const std::runtime_error&) {
+            return std::nullopt;
+        } catch (...) {
+            return std::nullopt;
+        }
+    }
+    bool maybe_float = str.find_first_of(".eE") != std::string::npos;
+    std::size_t chars_processed = 0;
+
+    if (maybe_float) {
+        try {
+            double val = std::stod(str, &chars_processed);
+            // Ensure the entire string was consumed
+            if (chars_processed != str.length())
+                return std::nullopt;
+            return Number(val);
+        } catch (const std::invalid_argument&) {
+            return nullopt;
+        } catch (const std::out_of_range&) {
+            return std::nullopt;
+        } catch (...) {
+            return std::nullopt;
+        }
+    } else {
+        try {
+            int val = std::stoi(str, &chars_processed);
+            if (chars_processed != str.length())
+                return std::nullopt;
+            return Number(val);
+        } catch (const std::invalid_argument&) {
+            return std::nullopt;
+        } catch (const std::out_of_range&) {
+            return std::nullopt;
+        } catch (...) {
+            return std::nullopt;
+        }
+    }
+
+    return std::nullopt;
 }
 
 Number::ComplexType Number::asComplex() const

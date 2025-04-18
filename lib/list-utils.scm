@@ -7,10 +7,10 @@
           caadaa caadda cadaaa cadaad cadada caddaa caddda cdaaaa
           cdaaad cdaada cdadaa cdadda cddaaa cddaad cddada cdddaa
           cdddda
-          reverse list-tail last last-pair length filter
+          reverse list-tail last last-pair length 
           memq memv member assoc assv assq)
 
-  (import (base))        ;; For let, cond, zero?, not, #f, +, -, =, >, <, etc.
+  (import (base))        
 
   (begin
 
@@ -101,13 +101,6 @@
             (else (memq obj (cdr lst)))))
 
     ;; --- Definitions moved inside the begin block ---
-    (define (filter pred lst)
-      (cond
-        ((null? lst) '()) ; Base case: empty list returns empty list
-        ((pred (car lst)) ; Test: does the predicate hold for the first element?
-         (cons (car lst) (filter pred (cdr lst)))) ; If yes, cons it onto the result of filtering the rest
-        (else ; Otherwise (predicate is false)
-         (filter pred (cdr lst)))))
 
     (define (memv obj lst)
       (cond ((null? lst) #f)

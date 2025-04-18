@@ -2,6 +2,7 @@
 #include "Syntax.h"
 #include "Token.h"
 #include <Visit.h>
+#include <map>
 #include <memory>
 #include <string>
 #include <variant>
@@ -91,12 +92,23 @@ public:
         std::vector<std::shared_ptr<Expression>> body);
 };
 
+struct PatternVariableInfo {
+    std::set<std::string> regular_vars;
+    std::set<std::string> ellipsis_vars;
+    std::map<std::string, int> ellipsis_depth;
+};
+
 class SyntaxRule {
 public:
     std::shared_ptr<Expression> pattern;
     std::shared_ptr<Expression> template_expr;
-
+    PatternVariableInfo pattern_info;
     SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expression> template_expr);
+    void analyzePattern(const std::vector<Token>& literals);
+    void analyzePatternRecursive(
+        const std::shared_ptr<Expression>& expr,
+        const std::vector<Token>& literals,
+        int ellipsis_level);
 };
 
 class SyntaxRulesExpression {

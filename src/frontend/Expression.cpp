@@ -164,6 +164,96 @@ SyntaxRule::SyntaxRule(std::shared_ptr<Expression> pattern, std::shared_ptr<Expr
     , template_expr(std::move(template_expr))
 {
 }
+void SyntaxRule::analyzePattern(const std::vector<Token>& literals)
+{
+    analyzePatternRecursive(pattern, literals, 0);
+}
+
+bool isPatternVariable(const Token& token,
+    const std::vector<Token>& literals)
+{
+    if (token.lexeme == "_") {
+        return true;
+    }
+    if (token.lexeme == ".") {
+        return false;
+    }
+
+    bool isLiteral = std::find_if(literals.begin(), literals.end(),
+                         [&](const Token& lit) { return lit.lexeme == token.lexeme; })
+        != literals.end(); // Found in literals
+
+    if (isLiteral) {
+        DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' found in literals list. Not a variable."); // Optional log
+        return false;
+    }
+    bool result = (token.type == Tokentype::IDENTIFIER || token.type == Tokentype::ELSE || Tokentype::BEGIN == token.type);
+    DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' isIdentifier=" << (token.type == Tokentype::IDENTIFIER) << ", isLiteral=false, isKeyword=false, isDot=false, isWildcard=false. Result: " << result); // Optional log
+    return result;
+}
+bool isEllipsisToken(const std::shared_ptr<Expression>& expr)
+{
+    if (!expr)
+        return false;
+
+    return std::visit(overloaded {
+                          [](const AtomExpression& atom) {
+                              return atom.value.token.type == Tokentype::ELLIPSIS;
+                          },
+                          [](const auto&) { return false; } },
+        expr->as);
+}
+
+void SyntaxRule::analyzePatternRecursive(
+    const std::shared_ptr<Expression>& expr,
+    const std::vector<Token>& literals,
+    int ellipsis_level)
+{
+    if (!expr)
+        return;
+
+    // Use std::visit to handle different expression types
+    std::visit(overloaded {
+                   [&](const AtomExpression& atom) {
+                       if (isPatternVariable(atom.value.token, literals)) {
+                           std::string var_name = atom.value.token.lexeme;
+                           if (ellipsis_level > 0) {
+                               pattern_info.ellipsis_vars.insert(var_name);
+                               pattern_info.ellipsis_depth[var_name] = std::max(
+                                   pattern_info.ellipsis_depth[var_name], ellipsis_level);
+                           } else {
+                               pattern_info.regular_vars.insert(var_name);
+                           }
+                       }
+                   },
+                   [&](const ListExpression& list) {
+                       for (size_t i = 0; i < list.elements.size(); i++) {
+                           bool has_ellipsis = (i + 1 < list.elements.size() && isEllipsisToken(list.elements[i + 1]));
+                           analyzePatternRecursive(
+                               list.elements[i],
+                               literals,
+                               has_ellipsis ? ellipsis_level + 1 : ellipsis_level);
+                           if (has_ellipsis)
+                               i++;
+                       }
+                   },
+                   [&](const VectorExpression& vec) {
+                       for (size_t i = 0; i < vec.elements.size(); i++) {
+                           bool has_ellipsis = (i + 1 < vec.elements.size() && isEllipsisToken(vec.elements[i + 1]));
+                           analyzePatternRecursive(
+                               vec.elements[i],
+                               literals,
+                               has_ellipsis ? ellipsis_level + 1 : ellipsis_level);
+                           if (has_ellipsis)
+                               i++;
+                       }
+                   },
+                   [&](const QuoteExpression& quote) {
+                   },
+                   [&](const auto&) {
+                   } },
+        expr->as);
+}
 
 // SyntaxRulesExpression implementation
 SyntaxRulesExpression::SyntaxRulesExpression(std::vector<Token> literals, std::vector<SyntaxRule> rules)
@@ -384,6 +474,7 @@ void Expression::toString(std::stringstream& ss) const
                 ss << "(begin ";
                 for (const auto val : e.values) {
                     val->toString(ss);
+                    ss << " ";
                 }
                 ss << ")";
             },

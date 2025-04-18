@@ -1,5 +1,6 @@
 #pragma once
 #include "ANF.h"
+#include <list>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -18,11 +19,24 @@ enum class Operation {
     ALLOC,
     LOAD,
     STORE,
-    GC
+    P_APP,
+    GC,
+    PARAM,
+    RETURN,
+    FUNC_BEGIN,
+    FUNC_END,
+
 };
 
 std::string operationToString(Operation op);
 
+using Scope = std::unordered_map<std::string, std::string>;
+struct DeferredFunction {
+    std::string label;
+    std::vector<std::string> paramNames;
+    std::shared_ptr<ir::ANF> body;
+    Scope definitionScope; // Scope where lambda was defined (for free vars)
+};
 class ThreeACInstruction {
 public:
     Operation op;
@@ -32,13 +46,12 @@ public:
     std::string toString() const;
     void toString(std::stringstream& ss) const;
 };
-
-class ThreeAddressModule {
-public:
+struct ThreeAddressModule {
     std::vector<ThreeACInstruction> instructions;
-    std::unordered_map<std::string, size_t> functionOffsets;
-    std::string toString() const;
+    std::list<DeferredFunction> deferredFunctions; // <-- ADDED
+
     void addInstr(const ThreeACInstruction instr);
+    std::string toString() const;
 };
 
 ThreeAddressModule anfToTac(const std::vector<std::shared_ptr<ir::TopLevel>>& toplevel);

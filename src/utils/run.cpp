@@ -316,7 +316,7 @@ void evaluate(
                 std::string asmFile = (outPath / "output.asm").string();
                 std::string exeFile = (outPath / "scheme_program").string();
                 std::cout << "Generating QBE IR to: " << qbeFile << std::endl;
-                generateQBEIr(_3ac, qbeFile); // Assuming exists
+                qbe::generateQBEIr(_3ac, qbeFile); // Assuming exists
                 std::cout << "Compiling QBE IR to assembly: " << asmFile << std::endl;
                 std::string qbeCmd = "qbe " + qbeFile + " > " + asmFile;
                 if (system(qbeCmd.c_str()) != 0) {

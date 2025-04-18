@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(jaws)
 
-if (NOT APPLE)
-    message(FATAL_ERROR "This project is currently only supported on macOS")
-endif ()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")

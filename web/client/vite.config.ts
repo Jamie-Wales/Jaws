@@ -44,43 +44,46 @@ const wasmPlugin = (): Plugin => ({
     }
 });
 
-const markdownPlugin = (): Plugin => ({
-    name: 'markdown-plugin',
-    transform(src, id) {
-        if (id.endsWith('.md')) {
-            return `export default ${JSON.stringify(src)}`;
-        }
-    },
-});
-
-const docsPlugin = (): Plugin => ({
-    name: 'docs-plugin',
+// Plugin to handle the lib directory
+const libPlugin = (): Plugin => ({
+    name: 'lib-plugin',
     configureServer(server) {
-        const sourceDir = path.join('../../docs/html');
-        const destDir = path.join('public', 'docs');
-        if (fs.existsSync(sourceDir)) {
-            if (!fs.existsSync(destDir)) {
-                fs.mkdirSync(destDir, { recursive: true });
+        // Create a symbolic link or copy lib directory for development
+        const devLibDir = path.join('public', 'lib');
+        if (fs.existsSync(devLibDir)) {
+            // Create a symlink for development
+            const destLibDir = path.join('dist', 'lib');
+            if (!fs.existsSync(destLibDir)) {
+                fs.mkdirSync(destLibDir, { recursive: true });
             }
-            fs.cpSync(sourceDir, destDir, { recursive: true });
-
-            // Copy search directory specifically
-            const searchDir = path.join(sourceDir, 'search');
-            const destSearchDir = path.join(destDir, 'search');
-            if (fs.existsSync(searchDir)) {
-                fs.cpSync(searchDir, destSearchDir, { recursive: true });
-            }
+            // Copy all scheme files
+            fs.readdirSync(devLibDir).forEach(file => {
+                if (file.endsWith('.scm')) {
+                    fs.copyFileSync(
+                        path.join(devLibDir, file),
+                        path.join(destLibDir, file)
+                    );
+                }
+            });
         }
     },
     writeBundle() {
-        // Copy docs to build directory
-        const sourceDir = path.join('../../docs/html');
-        const destDir = path.join('dist', 'docs');
-        if (fs.existsSync(sourceDir)) {
-            if (!fs.existsSync(destDir)) {
-                fs.mkdirSync(destDir, { recursive: true });
+        // Copy lib directory to build output
+        const sourceLibDir = path.join('public', 'lib');
+        const destLibDir = path.join('dist', 'lib');
+        if (fs.existsSync(sourceLibDir)) {
+            if (!fs.existsSync(destLibDir)) {
+                fs.mkdirSync(destLibDir, { recursive: true });
             }
-            fs.cpSync(sourceDir, destDir, { recursive: true });
+            // Copy all scheme files
+            fs.readdirSync(sourceLibDir).forEach(file => {
+                if (file.endsWith('.scm')) {
+                    fs.copyFileSync(
+                        path.join(sourceLibDir, file),
+                        path.join(destLibDir, file)
+                    );
+                }
+            });
         }
     }
 });
@@ -89,8 +92,7 @@ export default defineConfig(({ command }) => ({
     plugins: [
         react(),
         wasmPlugin(),
-        markdownPlugin(),
-        docsPlugin()
+        libPlugin() // Only keep the necessary plugins
     ],
     base: command === 'serve' ? '/' : './',
     resolve: {

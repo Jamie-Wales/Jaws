@@ -2,7 +2,7 @@ var searchData=
 [
   ['aatom_0',['Aatom',['../namespaceir.html#a091425a011224be8738326fbc99acf5d',1,'ir']]],
   ['addedge_1',['addEdge',['../classoptimise_1_1_dependancy_graph.html#a09ae73cdab4d1c4c2eb2573abcff56d5',1,'optimise::DependancyGraph']]],
-  ['addinstr_2',['addInstr',['../classtac_1_1_three_address_module.html#afef428b71661b5c772c915de5e124892',1,'tac::ThreeAddressModule']]],
+  ['addinstr_2',['addInstr',['../structtac_1_1_three_address_module.html#afef428b71661b5c772c915de5e124892',1,'tac::ThreeAddressModule']]],
   ['adefine_3',['ADefine',['../namespaceir.html#a4b45620e5a79f9545f8d96da25c378f0',1,'ir']]],
   ['adefineprocedure_4',['ADefineProcedure',['../namespaceir.html#adc41c17c14017651824a57a8691e31fd',1,'ir']]],
   ['aif_5',['AIf',['../namespaceir.html#a64a3a6a8509915d9379ba0856fa2c611',1,'ir']]],

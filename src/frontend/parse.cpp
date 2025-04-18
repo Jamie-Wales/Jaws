@@ -437,7 +437,10 @@ std::shared_ptr<Expression> parseSyntaxRules(ParserState& state)
         auto pattern = parseMacroExpression(state);
         auto template_expr = parseMacroExpression(state);
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after template in 'syntax-rules'");
-        rules.push_back(SyntaxRule(pattern, template_expr));
+
+        SyntaxRule rule(pattern, template_expr);
+        rule.analyzePattern(literals); // Analyze and record pattern variables
+        rules.push_back(std::move(rule));
     }
 
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after 'syntax-rules'");

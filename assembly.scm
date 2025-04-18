@@ -1,1 +1,3 @@
-(if #t (display 10) (display 20))
+(define (sum x) (+ x x))
+
+(display (sum 10))
