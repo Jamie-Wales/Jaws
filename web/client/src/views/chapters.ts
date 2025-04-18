@@ -428,8 +428,22 @@ export const CURRICULUM: Chapter[] = [
                 ],
                 codeExamples: [
                     {
+                        description: 'Simple single-list for-each procedure:',
+                        code:
+                            `;; A simpler version of for-each for a single list.
+;; Applies proc to each element of lst for side effects.
+(define (simple-for-each proc lst)
+  (if (not (null? lst)) ; Check if the list is not empty
+      (begin
+        (proc (car lst)) ; Apply proc to the first element
+        (simple-for-each proc (cdr lst))))) ; Recurse on the rest of the list
+  ;; Implicitly returns an unspecified value when the list is empty
+)`, // Note: Using template literal for easier multiline code
+                        explanation: 'This is a simplified version of for-each that only handles a single list. It applies the procedure `proc` to each element for its side effect and stops when the list is empty. It\'s suitable for cases like the `find-first` example where multi-list capability isn\'t needed.'
+                    },
+                    {
                         description: 'Early return with call/cc:',
-                        code: '; Find first even number in a list\n(define (find-first pred lst)\n  (call/cc\n   (lambda (return)\n     (for-each\n      (lambda (x)\n        (if (pred x)\n            (return x)))\n      lst)\n     #f)))',
+                        code: '\n ; Find first even number in a list\n(define (find-first pred lst)\n  (call/cc\n   (lambda (return)\n     (for-each\n      (lambda (x)\n        (if (pred x)\n            (return x)))\n      lst)\n     #f)))',
                         explanation: 'This function uses call/cc to create an early-return mechanism. The continuation "return" captures the current execution state. When an element satisfying the predicate is found, the continuation is called with that element, immediately jumping out of the for-each loop and returning the value. If no element matches, #f is returned as a default value.'
                     },
                     {

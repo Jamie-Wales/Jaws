@@ -541,11 +541,7 @@ std::optional<SchemeValue> processQuasiQuote(InterpreterState& state, std::share
 
                                   if (level == 1 && std::holds_alternative<SpliceExpression>(elem->as)) {
                                       auto result = interpret(state, std::get<SpliceExpression>(elem->as).value);
-                                      if (!result || !result->isList()) {
-                                          throw InterpreterError("Unquote-splicing requires a list result");
-                                      }
-
-                                      auto list = result->asList();
+                                      auto list = result->ensureValue().asList();
                                       for (const auto& item : *list) {
                                           values_list_ptr->push_back(item);
                                       }
@@ -564,12 +560,8 @@ std::optional<SchemeValue> processQuasiQuote(InterpreterState& state, std::share
 
                               for (const auto& elem : e.elements) {
                                   if (level == 1 && std::holds_alternative<SpliceExpression>(elem->as)) {
-                                      auto result = interpret(state, std::get<SpliceExpression>(elem->as).value);
-                                      if (!result || !result->isList()) {
-                                          throw InterpreterError("Unquote-splicing requires a list result");
-                                      }
-
-                                      auto list = result->asList();
+                                      auto result = interpret(state, std::get<SpliceExpression>(elem->as).value)->ensureValue();
+                                      auto list = result.asList();
                                       for (const auto& item : *list) {
                                           values_vec_ptr->push_back(item);
                                       }
