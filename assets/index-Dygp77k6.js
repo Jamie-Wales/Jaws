@@ -596,20 +596,19 @@ Display numbers from 1 to 5
 (define numbers '(1 2 3 4 5))
 
 (fold-loop sum init 0 in numbers
-  (+ sum element))`,explanation:"The fold-loop macro combines iteration with accumulation, similar to a fold/reduce operation. It maintains an accumulator that is updated at each step based on the current element. This example calculates the sum of a list of numbers, starting with an initial value of 0."},{description:"The select-case construct:",code:`; Process different types of data
-(define (process-item item)
-  (select-case (car item)
-    ((number) (display "Processing number: ")
-               (display (cadr item)))
-    ((string) (display "Processing string: ")
-               (display (string-upcase (cadr item))))
-    ((list)   (display "Processing list of length: ")
-               (display (length (cadr item))))
-    (else     (display "Unknown item type"))))
+  (+ sum element))`,explanation:"The fold-loop macro combines iteration with accumulation, similar to a fold/reduce operation. It maintains an accumulator that is updated at each step based on the current element. This example calculates the sum of a list of numbers, starting with an initial value of 0."},{description:"Implementing a custom loop macro:",code:`; Define a countdown macro
+(define-syntax countdown
+  (syntax-rules (from to)
+    ((countdown var from start to end body ...)
+     (let loop ((var start))
+       (when (>= var end)
+         body ...
+         (loop (- var 1)))))))
 
-(process-item '(number 42))
-(newline)
-(process-item '(string "hello"))`,explanation:"The select-case macro combines pattern matching with control flow, allowing you to execute different code based on the structure or value of data. This example processes different types of items, displaying different information depending on whether the item is a number, string, or list."},{description:"Building a matrix with nested loops:",code:`; Create a 3×3 identity matrix
+; Use the countdown macro
+(countdown i from 5 to 1
+  (display i)
+  (display " "))`,explanation:'This example shows how to implement a custom countdown macro that counts downward instead of upward. Like for-range, it uses a named let, but it decreases the loop variable and continues as long as it remains greater than or equal to the end value. This displays "5 4 3 2 1 ".'},{description:"Building a matrix with nested loops:",code:`; Create a 3×3 identity matrix
 (define (make-identity-matrix size)
   (let ((matrix (make-vector size)))
     (for-range i 0 (- size 1)
