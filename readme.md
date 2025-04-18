@@ -50,20 +50,15 @@ Jaws is an **R7RS Scheme** implementation written in C++ and compiled to WebAsse
   * `client/`: Contains the source code for the web interface (React, Vite).
     * `vite.config.js` (or `.ts`): Configuration for the Vite build tool, including custom plugins for handling WASM and Doxygen documentation.
     * `package.json`: Node.js project file defining scripts and dependencies.
-    * `public/`: Static assets.
-      * `wasm/`: Source location for CMake-generated `jaws.js` and `jaws.wasm`.
-      * `javascript/`: Destination for WASM files during development (copied by Vite plugin).
-      * `docs/`: Destination for Doxygen HTML files during development (copied by Vite plugin).
 * `lib/`: Contains Scheme library files (`.scm`) used by the import system (e.g., `base.scm`, `list-utils.scm`).
 * `runtime/`: Contains C source code for the runtime system (e.g., `gc.c`, `types.c`) needed for natively compiled Scheme programs.
-* `docs/`: Likely contains Doxygen configuration and output (`html/`).
 * `include/`: Header files for the C++ code.
 * `tests/`: C++ unit tests using GoogleTest.
 * `CMakeLists.txt`: Main CMake file for building the native executable and tests.
 
 ## Runtime System ⚙️
 
-When compiling Scheme code to a native executable (using the `--compile` option, QBE, and Clang), the resulting program is linked against a small C runtime library (likely built from `runtime/gc.c`, `runtime/types.c`, etc.). This runtime provides essential services:
+When compiling Scheme code to a native executable (using the `--compile` option, QBE, and Clang), the resulting program is linked against a small C runtime. This runtime provides essential services:
 
 * **Memory Management**: Implements a heap for allocating Scheme objects (`SchemeObject`).
 * **Garbage Collection**: Includes a basic mark-and-sweep (compacting) garbage collector (`gc`, `mark_roots`, `sweep_compact`). It marks reachable objects starting from roots found on the C stack. The heap can grow and potentially shrink based on usage.
