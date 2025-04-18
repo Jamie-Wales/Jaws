@@ -238,7 +238,6 @@ std::optional<SchemeValue> interpret(
                               } },
             expr->as);
     } catch (const ContinuationInvocationException& e) {
-        // Re-throw the exception to continue unwinding the stack
         throw;
     }
 }

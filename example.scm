@@ -1,24 +1,31 @@
-(define (merge-sort lst)
-  (define (merge lst1 lst2)
-    (cond ((null? lst1) lst2)
-          ((null? lst2) lst1)
-          ((< (car lst1) (car lst2))
-           (cons (car lst1) (merge (cdr lst1) lst2)))
-          (else
-           (cons (car lst2) (merge lst1 (cdr lst2))))))
-  
-  (define (split lst)
-    (if (or (null? lst) (null? (cdr lst)))
-        (values lst '())
-        (let-values (((first-half second-half)
-                      (split (cddr lst))))
-          (values (cons (car lst) first-half)
-                  (cons (cadr lst) second-half)))))
-  
-  (if (or (null? lst) (null? (cdr lst)))
-      lst
-      (let-values (((first-half second-half) (split lst)))
-        (merge (merge-sort first-half)
-               (merge-sort second-half)))))
+(define (simple-for-each proc lst)
+  (if (not (null? lst)) ; Check if the list is not empty
+      (begin
+        (proc (car lst)) ; Apply proc to the first element
+        (simple-for-each proc (cdr lst)))))
+(define (find-first pred lst)
+  (call/cc
+   (lambda (return)
+     (simple-for-each
+      (lambda (x)
+        (if (pred x)
+            (return x)))
+      lst)
+     #f)))
 
-(merge-sort '(3 1 4 1 5 9 2 6 5))
+(find-first even? '(1 3 5 6 7 8 9))
+
+(define (divide a b)
+  (call/cc
+   (lambda (k)
+     (if (= b 0)
+         (k '(error "Division by zero"))
+         (k `(ok ,(/ a b)))))))
+(define (handle-result result)
+  (if (eq? (car result) 'error)
+      (cadr result)
+      (cadr result)))
+
+(handle-result (divide 10 2))
+
+(handle-result (divide 10 0))
