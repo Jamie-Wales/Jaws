@@ -1,8 +1,0 @@
-<map id="MacroExpander::expandToAtoms" name="MacroExpander::expandToAtoms">
-<area shape="rect" id="Node000001" title=" " alt="" coords="420,29,634,55"/>
-<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="568,17,554,11,527,8,502,10,489,15,486,20,493,27,489,31,481,21,485,11,501,5,527,3,556,5,570,12"/>
-<area shape="rect" id="Node000002" href="$class_macro_expander.html#a89482c5cec930c0dab5cc18fd359d596" title=" " alt="" coords="216,29,372,55"/>
-<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="404,45,373,45,373,40,404,40"/>
-<area shape="rect" id="Node000003" href="$class_macro_expander.html#a3a3a51a72dfca94185353da836aa1895" title=" " alt="" coords="5,29,168,55"/>
-<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="200,45,168,45,168,40,200,40"/>
-</map>

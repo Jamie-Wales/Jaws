@@ -1,8 +1,0 @@
-<map id="jaws_list::length" name="jaws_list::length">
-<area shape="rect" id="Node000001" title=" " alt="" coords="354,5,469,31"/>
-<area shape="rect" id="Node000002" href="$class_interpreter.html#a3754b9f73bab99e855e421f7f9fe9aff" title="Constructs a new Interpreter instance." alt="" coords="5,5,153,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="338,21,153,21,153,16,338,16"/>
-<area shape="rect" id="Node000003" href="$namespacejaws__list.html#a33b0916df3d5d73ed59daa1bf1a28f83" title=" " alt="" coords="201,31,306,56"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="339,32,307,38,306,32,338,27"/>
-<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="185,36,153,32,153,26,185,31"/>
-</map>
