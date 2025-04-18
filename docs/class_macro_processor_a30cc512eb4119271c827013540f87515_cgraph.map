@@ -1,7 +1,0 @@
-<map id="MacroProcessor::collectMacros" name="MacroProcessor::collectMacros">
-<area shape="rect" id="Node000001" title=" " alt="" coords="5,29,211,55"/>
-<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="71,31,63,21,68,11,83,5,108,3,135,5,149,12,147,17,134,10,108,8,84,10,71,15,69,20,75,27"/>
-<area shape="rect" id="Node000002" href="$_debug_utils_8cpp.html#a674a3010f1d82bfb85da29200b857be8" title=" " alt="" coords="259,29,407,55"/>
-<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="211,40,243,40,243,45,211,45"/>
-<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="296,31,288,21,293,11,308,5,333,3,360,5,374,12,372,17,359,10,333,8,309,10,296,15,293,20,300,27"/>
-</map>

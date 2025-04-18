@@ -1,7 +1,0 @@
-<map id="Expression::print" name="Expression::print">
-<area shape="rect" id="Node000001" title="Prints the expression with proper indentation." alt="" coords="5,29,125,55"/>
-<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="35,30,29,21,33,11,45,5,65,3,87,5,98,12,95,16,85,10,65,8,46,10,37,15,35,20,39,28"/>
-<area shape="rect" id="Node000002" href="$class_expression.html#a450f0f0d7056515bc02ff49136ce8ae7" title="Converts the expression to its string representation." alt="" coords="173,29,312,55"/>
-<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="125,40,157,40,157,45,125,45"/>
-<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="212,30,207,21,210,11,222,5,242,3,264,5,275,12,272,16,262,10,242,8,224,10,214,15,212,20,217,28"/>
-</map>
