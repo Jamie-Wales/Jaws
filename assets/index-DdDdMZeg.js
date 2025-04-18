@@ -437,8 +437,7 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
         (merge (merge-sort first-half)
                (merge-sort second-half)))))
 
-(merge-sort '(3 1 4 1 5 9 2 6 5))`,explanation:"This implements the merge sort algorithm. It recursively splits the list into two halves, sorts each half, and then merges the sorted halves. The merge operation takes two sorted lists and combines them into a single sorted list. Merge sort has better worst-case performance than quicksort and is stable, meaning it preserves the relative order of equal elements."}],difficulty:"Advanced"},{id:"building-dsl",title:"Building Domain-Specific Languages",content:["One of Scheme's strengths is its ability to extend the language through macros, making it ideal for creating domain-specific languages (DSLs). DSLs are specialized languages designed for a particular application domain.","By building a DSL, you can create abstractions that match the concepts in your problem domain, making your code more readable and maintainable. Scheme's macro system enables powerful DSL construction."],codeExamples:[{description:"A simple query language:",code:`(import jawslist)
-; Define a simple SQL-like query language
+(merge-sort '(3 1 4 1 5 9 2 6 5))`,explanation:"This implements the merge sort algorithm. It recursively splits the list into two halves, sorts each half, and then merges the sorted halves. The merge operation takes two sorted lists and combines them into a single sorted list. Merge sort has better worst-case performance than quicksort and is stable, meaning it preserves the relative order of equal elements."}],difficulty:"Advanced"},{id:"building-dsl",title:"Building Domain-Specific Languages",content:["One of Scheme's strengths is its ability to extend the language through macros, making it ideal for creating domain-specific languages (DSLs). DSLs are specialized languages designed for a particular application domain.","By building a DSL, you can create abstractions that match the concepts in your problem domain, making your code more readable and maintainable. Scheme's macro system enables powerful DSL construction."],codeExamples:[{description:"A simple query language:",code:`Define a simple SQL-like query language
 (define-syntax select
   (syntax-rules (from where)
     ((select fields from table where condition)
@@ -543,24 +542,23 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
       (set! i (+ i 1)))
     result))
 
-(factorial 5)`,explanation:"This example implements the factorial function using a while loop instead of recursion. We initialize result to 1 and i to 1, then multiply result by i for each value from 1 to n. The factorial of 5 is 120."}],difficulty:"Beginner"},{id:"list-iteration",title:"Iterating Over Lists",content:["Scheme excels at list processing, and its functional nature provides elegant ways to operate on lists. However, sometimes a more imperative style of iteration can be clearer, especially for those coming from other programming paradigms.","In this section, we'll explore macros that provide convenient syntax for iterating over lists, including for loops with various configurations and specialized iterators that expose element indices."],codeExamples:[{description:"The for loop:",code:`(import loops)
-; Simple list of numbers
+(factorial 5)`,explanation:"This example implements the factorial function using a while loop instead of recursion. We initialize result to 1 and i to 1, then multiply result by i for each value from 1 to n. The factorial of 5 is 120."}],difficulty:"Beginner"},{id:"list-iteration",title:"Iterating Over Lists",content:["Scheme excels at list processing, and its functional nature provides elegant ways to operate on lists. However, sometimes a more imperative style of iteration can be clearer, especially for those coming from other programming paradigms.","In this section, we'll explore macros that provide convenient syntax for iterating over lists, including for loops with various configurations and specialized iterators that expose element indices."],codeExamples:[{description:"The for loop:",code:`Simple list of numbers
 (define numbers '(1 2 3 4 5))
 
 ; Square each number using for
 (for x in numbers
-  (* x x))`,explanation:"The for macro provides a simple way to iterate over a list. Here we square each number in the list. Note that for is implemented using map, so it returns a new list containing the results of applying the body expression to each element. The result is (1 4 9 16 25)."},{description:"Alternative for syntax:",code:`(import loops)
+  (* x x))`,explanation:"The for macro provides a simple way to iterate over a list. Here we square each number in the list. Note that for is implemented using map, so it returns a new list containing the results of applying the body expression to each element. The result is (1 4 9 16 25)."},{description:"Alternative for syntax:",code:`
 ; Using the alternative "as" syntax
 (for numbers as x
   (* x x))`,explanation:'The for macro supports an alternative syntax where the list comes first, followed by "as" and the element variable. This can be more readable in some cases, especially with complex list expressions. The result is the same: (1 4 9 16 25).'},{description:"The for-each-with-index macro:",code:`
-(import loops); Print each element with its index
+ Print each element with its index
 (for-each-with-index (element index) in '(a b c d e)
   (display "Element at index ")
   (display index)
   (display ": ")
   (display element)
   (newline))`,explanation:"The for-each-with-index macro iterates over a list, providing both the current element and its index for each iteration. Unlike for, it does not collect return values, making it suitable for side effects like displaying output."},{description:"Processing list elements:",code:`
-(import loops); Find the sum and product of a list
+Find the sum and product of a list
 (define (sum-and-product numbers)
   (let ((sum 0)
         (product 1))
@@ -569,16 +567,14 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
       (set! product (* product num)))
     (list sum product)))
 
-(sum-and-product '(1 2 3 4 5))`,explanation:"This example uses for-each-with-index to calculate both the sum and product of a list of numbers. We use _ as a placeholder for the index since we don't need it. The result is (15 120), representing the sum and product of 1 through 5."}],difficulty:"Beginner"},{id:"numeric-iteration",title:"Numeric Iteration Patterns",content:["Many algorithms involve iterating over ranges of numbers. While this can be done with basic loops and manual counters, dedicated numeric iteration constructs make the code more concise and readable.","This section covers various forms of numeric iteration, including range-based loops, repeat loops for fixed-count iteration, and loops with custom step sizes."],codeExamples:[{description:"The repeat macro:",code:`(import loops)
- Display "Hello" 3 times
+(sum-and-product '(1 2 3 4 5))`,explanation:"This example uses for-each-with-index to calculate both the sum and product of a list of numbers. We use _ as a placeholder for the index since we don't need it. The result is (15 120), representing the sum and product of 1 through 5."}],difficulty:"Beginner"},{id:"numeric-iteration",title:"Numeric Iteration Patterns",content:["Many algorithms involve iterating over ranges of numbers. While this can be done with basic loops and manual counters, dedicated numeric iteration constructs make the code more concise and readable.","This section covers various forms of numeric iteration, including range-based loops, repeat loops for fixed-count iteration, and loops with custom step sizes."],codeExamples:[{description:"The repeat macro:",code:`;Display "Hello" 3 times
 (repeat 3
   (display "Hello")
   (newline))`,explanation:`The repeat macro executes its body a fixed number of times. It's useful when you need to perform an operation repeatedly without needing a loop variable. Here, it displays "Hello" three times.`},{description:"The for-range macro:",code:`
-(import loops); Display numbers from 1 to 5
+Display numbers from 1 to 5
 (for-range i 1 5
   (display i)
-  (display " "))`,explanation:"The for-range macro provides a convenient way to iterate over a range of numbers. It takes a variable name, starting value, and ending value (inclusive). This example displays the numbers 1 through 5."},{description:"The iterate macro with custom step:",code:`
-(import loops); Display even numbers from 2 to 10
+  (display " "))`,explanation:"The for-range macro provides a convenient way to iterate over a range of numbers. It takes a variable name, starting value, and ending value (inclusive). This example displays the numbers 1 through 5."},{description:"The iterate macro with custom step:",code:`;Display even numbers from 2 to 10
 (iterate i from 2 to 10 by 2
   (display i)
   (display " "))`,explanation:"The iterate macro extends for-range by adding the ability to specify a custom step size. This example counts by 2s, displaying only even numbers from 2 to 10."},{description:"Computing a sum using for-range:",code:`; Calculate the sum of numbers from 1 to 10
