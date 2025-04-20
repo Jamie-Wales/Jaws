@@ -266,14 +266,12 @@ numbers`,explanation:"This creates a list of numbers from 1 to 5 and assigns it 
         (sum-iter (cdr lst) (+ (car lst) acc))))
   (sum-iter lst 0))`,explanation:"This is a tail-recursive sum function. Like the tail-recursive factorial, it uses an accumulator to carry the partial sum, making the recursive call the last operation."},{description:"Testing the tail-recursive sum:",code:`; Test the tail-recursive sum
 (sum-list-tail '(1 2 3 4 5))`,explanation:"This calls our tail-recursive sum function. It computes the same result (15) as the standard version, but can handle very large lists without stack overflow."}],difficulty:"Intermediate"},{id:"continuations",title:"Continuations",content:['Continuations represent "the rest of the computation" at a given point in a program. Scheme provides first-class continuations through the call-with-current-continuation (call/cc) procedure.',"This powerful feature enables advanced control flow patterns like non-local exits, exception handling, coroutines, and even backtracking algorithms. Continuations are one of the most powerful and unique features of Scheme."],codeExamples:[{description:"Simple single-list for-each procedure:",code:`;; A simpler version of for-each for a single list.
-;; Applies proc to each element of lst for side effects.
 (define (simple-for-each proc lst)
   (if (not (null? lst)) ; Check if the list is not empty
       (begin
         (proc (car lst)) ; Apply proc to the first element
         (simple-for-each proc (cdr lst))))) ; Recurse on the rest of the list
-  ;; Implicitly returns an unspecified value when the list is empty
-)`,explanation:"This is a simplified version of for-each that only handles a single list. It applies the procedure `proc` to each element for its side effect and stops when the list is empty. It's suitable for cases like the `find-first` example where multi-list capability isn't needed."},{description:"Early return with call/cc:",code:`
+`,explanation:"This is a simplified version of for-each that only handles a single list. It applies the procedure `proc` to each element for its side effect and stops when the list is empty. It's suitable for cases like the `find-first` example where multi-list capability isn't needed."},{description:"Early return with call/cc:",code:`
  ; Find first even number in a list
 (define (find-first pred lst)
   (call/cc
