@@ -7509,6 +7509,8 @@ var wasmImports = {
   /** @export */
   invoke_iiiiij,
   /** @export */
+  invoke_iij,
+  /** @export */
   invoke_j,
   /** @export */
   invoke_ji,
@@ -7756,6 +7758,17 @@ function invoke_viiiii(index,a1,a2,a3,a4,a5) {
 }
 
 function invoke_dii(index,a1,a2) {
+  var sp = stackSave();
+  try {
+    return getWasmTableEntry(index)(a1,a2);
+  } catch(e) {
+    stackRestore(sp);
+    if (!(e instanceof EmscriptenEH)) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_iij(index,a1,a2) {
   var sp = stackSave();
   try {
     return getWasmTableEntry(index)(a1,a2);

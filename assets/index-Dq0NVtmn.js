@@ -549,7 +549,8 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
       (set! i (+ i 1)))
     result))
 
-(factorial 5)`,explanation:"This example implements the factorial function using a while loop instead of recursion. We initialize result to 1 and i to 1, then multiply result by i for each value from 1 to n. The factorial of 5 is 120."}],difficulty:"Beginner"},{id:"list-iteration",title:"Iterating Over Lists",content:["Scheme excels at list processing, and its functional nature provides elegant ways to operate on lists. However, sometimes a more imperative style of iteration can be clearer, especially for those coming from other programming paradigms.","In this section, we'll explore macros that provide convenient syntax for iterating over lists, including for loops with various configurations and specialized iterators that expose element indices."],codeExamples:[{description:"The for loop:",code:`Simple list of numbers
+(factorial 5)`,explanation:"This example implements the factorial function using a while loop instead of recursion. We initialize result to 1 and i to 1, then multiply result by i for each value from 1 to n. The factorial of 5 is 120."}],difficulty:"Beginner"},{id:"list-iteration",title:"Iterating Over Lists",content:["Scheme excels at list processing, and its functional nature provides elegant ways to operate on lists. However, sometimes a more imperative style of iteration can be clearer, especially for those coming from other programming paradigms.","In this section, we'll explore macros that provide convenient syntax for iterating over lists, including for loops with various configurations and specialized iterators that expose element indices."],codeExamples:[{description:"The for loop:",code:`
+; Simple list of numbers
 (define numbers '(1 2 3 4 5))
 
 ; Square each number using for
@@ -558,14 +559,14 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
 ; Using the alternative "as" syntax
 (for numbers as x
   (* x x))`,explanation:'The for macro supports an alternative syntax where the list comes first, followed by "as" and the element variable. This can be more readable in some cases, especially with complex list expressions. The result is the same: (1 4 9 16 25).'},{description:"The for-each-with-index macro:",code:`
- Print each element with its index
+; Print each element with its index
 (for-each-with-index (element index) in '(a b c d e)
   (display "Element at index ")
   (display index)
   (display ": ")
   (display element)
   (newline))`,explanation:"The for-each-with-index macro iterates over a list, providing both the current element and its index for each iteration. Unlike for, it does not collect return values, making it suitable for side effects like displaying output."},{description:"Processing list elements:",code:`
-Find the sum and product of a list
+; Find the sum and product of a list
 (define (sum-and-product numbers)
   (let ((sum 0)
         (product 1))
@@ -577,8 +578,7 @@ Find the sum and product of a list
 (sum-and-product '(1 2 3 4 5))`,explanation:"This example uses for-each-with-index to calculate both the sum and product of a list of numbers. We use _ as a placeholder for the index since we don't need it. The result is (15 120), representing the sum and product of 1 through 5."}],difficulty:"Beginner"},{id:"numeric-iteration",title:"Numeric Iteration Patterns",content:["Many algorithms involve iterating over ranges of numbers. While this can be done with basic loops and manual counters, dedicated numeric iteration constructs make the code more concise and readable.","This section covers various forms of numeric iteration, including range-based loops, repeat loops for fixed-count iteration, and loops with custom step sizes."],codeExamples:[{description:"The repeat macro:",code:`;Display "Hello" 3 times
 (repeat 3
   (display "Hello")
-  (newline))`,explanation:`The repeat macro executes its body a fixed number of times. It's useful when you need to perform an operation repeatedly without needing a loop variable. Here, it displays "Hello" three times.`},{description:"The for-range macro:",code:`
-Display numbers from 1 to 5
+  (newline))`,explanation:`The repeat macro executes its body a fixed number of times. It's useful when you need to perform an operation repeatedly without needing a loop variable. Here, it displays "Hello" three times.`},{description:"The for-range macro:",code:`; Display numbers from 1 to 5
 (for-range i 1 5
   (display i)
   (display " "))`,explanation:"The for-range macro provides a convenient way to iterate over a range of numbers. It takes a variable name, starting value, and ending value (inclusive). This example displays the numbers 1 through 5."},{description:"The iterate macro with custom step:",code:`;Display even numbers from 2 to 10
