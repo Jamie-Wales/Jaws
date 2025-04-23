@@ -473,7 +473,7 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
            (loop (+ var 1) (+ result expr)))))))
 
 ; Calculate the sum of squares from 1 to 5
-(sum i from 1 to 5 (* i i))`,explanation:"This example creates a DSL for mathematical summations. The sum macro takes a variable, a range, and an expression to evaluate for each value in the range. It transforms this high-level notation into an efficient iterative computation. In this example, we calculate the sum of squares from 1 to 5, which is 1²+2²+3²+4²+5² = 55."},{description:"A DSL for pattern matching:",code:`; Define a pattern matching DSL
+(sum i from 1 to 5 (* i i))`,explanation:"This example creates a DSL for mathematical summations. The sum macro takes a variable, a range, and an expression to evaluate for each value in the range. It transforms this high-level notation into an efficient iterative computation. In this example, we calculate the sum of squares from 1 to 5, which is 1²+2²+3²+4²+5² = 55."},{description:"A DSL for pattern matching:",code:`
 (define-syntax match
   (syntax-rules (else)
     ((match value
@@ -494,33 +494,43 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
         ((equal? val pattern2) expr2) ...
         (else default-expr))))))
 
-; Use our pattern matching DSL
-(define (factorial n)
-  (match n
-    (0 1)
-    (1 1)
-    (else (* n (factorial (- n 1))))))
+(define data "test")
+(display (and (validate data is string)
+              (validate data length > 2)
+              (validate data length < 10)))
 
-; Call the factorial function
-(factorial 5)`,explanation:"This example creates a DSL for pattern matching, a common feature in functional languages. The match macro takes a value and a series of pattern-expression pairs, matching the value against each pattern in turn. This allows for clear, declarative code. We use it to implement factorial with explicit base cases, then call it with the value 5 to calculate 5! = 120."},{description:"A DSL for data validation:",code:`; Define a data validation DSL
-(define-syntax validate
-  (syntax-rules (is length > <)
+`,explanation:"This example creates a DSL for pattern matching, a common feature in functional languages. The match macro takes a value and a series of pattern-expression pairs, matching the value against each pattern in turn. This allows for clear, declarative code. We use it to implement factorial with explicit base cases, then call it with the value 5 to calculate 5! = 120."},{description:"A DSL for data validation:",code:`
+                        (define-syntax validate
+  (syntax-rules (is length > < number string)
+    ;; Type validation rules - now number and string are literal identifiers
     ((validate value is number)
      (number? value))
     ((validate value is string)
      (string? value))
+    
+    ;; Length comparison rules
     ((validate value length > min)
-     (and (or (string? value) (list? value) (vector? value))
-          (> (length value) min)))
+     (cond
+       ((string? value) (> (string-length value) min))
+       ((list? value) (> (length value) min))
+       ((vector? value) (> (vector-length value) min))
+       (else #f)))
     ((validate value length < max)
-     (and (or (string? value) (list? value) (vector? value))
-          (< (length value) max)))))
+     (cond
+       ((string? value) (< (string-length value) max))
+       ((list? value) (< (length value) max))
+       ((vector? value) (< (vector-length value) max))
+       (else #f)))))
 
-; Test our validation DSL
-(define data "test")
-(and (validate data is string)
-     (validate data length > 2)
-     (validate data length < 10))`,explanation:"This example creates a DSL for data validation. The validate macro provides a readable syntax for common validation tasks. It transforms these high-level descriptions into the appropriate Scheme predicates. In this example, we check if data is a string between 3 and 9 characters long."}],difficulty:"Advanced"}]},{id:"loop-constructs",title:"Loop Constructs",description:"Explore various looping mechanisms and iteration patterns in Scheme",sections:[{id:"basic-loops",title:"Basic Looping Constructs",content:["While Scheme is primarily a functional language that encourages recursion, looping constructs can make certain algorithmic patterns more readable and intuitive. Scheme's macro system allows us to define custom loop constructs that provide convenient syntactic forms for common iteration patterns.","In this section, we'll explore basic looping constructs like while, until, and do-while, which mirror similar constructs in other programming languages but with Scheme's distinctive syntax and semantics."],codeExamples:[{description:"The while loop:",code:`; Define a counter
+(define fruit "apple")
+
+(display
+  (match fruit
+    ("banana" "Yellow and sweet")
+    ("orange" "Round and citrusy")
+    ("apple" "Crisp and juicy")
+    ("grape" "Small and grows in bunches")))
+                        `,explanation:"This example creates a DSL for data validation. The validate macro provides a readable syntax for common validation tasks. It transforms these high-level descriptions into the appropriate Scheme predicates. In this example, we check if data is a string between 3 and 9 characters long."}],difficulty:"Advanced"}]},{id:"loop-constructs",title:"Loop Constructs",description:"Explore various looping mechanisms and iteration patterns in Scheme",sections:[{id:"basic-loops",title:"Basic Looping Constructs",content:["While Scheme is primarily a functional language that encourages recursion, looping constructs can make certain algorithmic patterns more readable and intuitive. Scheme's macro system allows us to define custom loop constructs that provide convenient syntactic forms for common iteration patterns.","In this section, we'll explore basic looping constructs like while, until, and do-while, which mirror similar constructs in other programming languages but with Scheme's distinctive syntax and semantics."],codeExamples:[{description:"The while loop:",code:`; Define a counter
 (define counter 1)
 
 ; Count from 1 to 5 using while
