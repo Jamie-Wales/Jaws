@@ -499,6 +499,15 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
               (validate data length > 2)
               (validate data length < 10)))
 
+(define fruit "apple")
+
+(display
+  (match fruit
+    ("banana" "Yellow and sweet")
+    ("orange" "Round and citrusy")
+    ("apple" "Crisp and juicy")
+    ("grape" "Small and grows in bunches")))
+
 `,explanation:"This example creates a DSL for pattern matching, a common feature in functional languages. The match macro takes a value and a series of pattern-expression pairs, matching the value against each pattern in turn. This allows for clear, declarative code. We use it to implement factorial with explicit base cases, then call it with the value 5 to calculate 5! = 120."},{description:"A DSL for data validation:",code:`
                         (define-syntax validate
   (syntax-rules (is length > < number string)
@@ -522,14 +531,6 @@ v2`,explanation:"The vector-set! function changes an element in a vector at a sp
        ((vector? value) (< (vector-length value) max))
        (else #f)))))
 
-(define fruit "apple")
-
-(display
-  (match fruit
-    ("banana" "Yellow and sweet")
-    ("orange" "Round and citrusy")
-    ("apple" "Crisp and juicy")
-    ("grape" "Small and grows in bunches")))
                         `,explanation:"This example creates a DSL for data validation. The validate macro provides a readable syntax for common validation tasks. It transforms these high-level descriptions into the appropriate Scheme predicates. In this example, we check if data is a string between 3 and 9 characters long."}],difficulty:"Advanced"}]},{id:"loop-constructs",title:"Loop Constructs",description:"Explore various looping mechanisms and iteration patterns in Scheme",sections:[{id:"basic-loops",title:"Basic Looping Constructs",content:["While Scheme is primarily a functional language that encourages recursion, looping constructs can make certain algorithmic patterns more readable and intuitive. Scheme's macro system allows us to define custom loop constructs that provide convenient syntactic forms for common iteration patterns.","In this section, we'll explore basic looping constructs like while, until, and do-while, which mirror similar constructs in other programming languages but with Scheme's distinctive syntax and semantics."],codeExamples:[{description:"The while loop:",code:`; Define a counter
 (define counter 1)
 
