@@ -193,12 +193,10 @@ std::optional<SchemeValue> values(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
 {
-    // Create a MultiValue object to hold the arguments
     auto multiValue = std::make_shared<MultiValue>(args);
     return SchemeValue(multiValue);
 }
 
-// Implementation of call-with-values
 std::optional<SchemeValue> callWithValues(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args)
@@ -214,29 +212,23 @@ std::optional<SchemeValue> callWithValues(
         throw InterpreterError("call-with-values: both arguments must be procedures");
     }
 
-    // Call the producer with no arguments
     std::vector<SchemeValue> noArgs;
     auto producerResult = interpret::executeProcedure(state, producer, noArgs);
 
     if (!producerResult) {
-        // If producer returns no values, pass empty args to consumer
         return interpret::executeProcedure(state, consumer, noArgs);
     }
 
-    // Extract values from the producer result
     std::vector<SchemeValue> consumerArgs;
 
     if (producerResult->isMultiValue()) {
-        // If the result is a MultiValue object, unpack it
         auto multiValue = producerResult->asMultiValue();
         consumerArgs = multiValue->values;
     } else {
-        // If it's a single value, pass it as the only argument
         consumerArgs.push_back(*producerResult);
     }
 
-    // Call the consumer with the extracted values
     return interpret::executeProcedure(state, consumer, consumerArgs);
 }
 
-} // namespace jaws_hof
+}

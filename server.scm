@@ -1,4 +1,4 @@
-(import base)
+(import (base))
 
 (define (run-server port)
   (display "Starting server on port ")

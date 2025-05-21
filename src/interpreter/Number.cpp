@@ -303,7 +303,6 @@ Number Number::operator-(const Number& other) const
                               return ComplexType(aVal - b.real(), -b.imag());
                           },
 
-                          // Double combinations
                           [](double a, int b) -> Number {
                               return a - static_cast<double>(b);
                           },

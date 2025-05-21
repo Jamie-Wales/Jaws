@@ -344,6 +344,41 @@ std::optional<SchemeValue> socketWrite(interpret::InterpreterState& state, const
     }
 }
 
+std::optional<SchemeValue> readline(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args)
+{
+    if (args.size() > 1) {
+        throw InterpreterError("readline accepts at most 1 argument");
+    }
+
+    // Get input stream
+    std::istream* input = &std::cin;
+    if (!args.empty()) {
+        auto val = args[0].ensureValue();
+        const auto* port = std::get_if<Port>(&val.value);
+        if (!port || port->type != PortType::Input || !port->isOpen()) {
+            throw InterpreterError("readline argument must be an open input port");
+        }
+        input = port->get();
+    }
+
+    // Read a single line
+    std::string line;
+    if (!std::getline(*input, line)) {
+        // Handle end-of-file or read error
+        if (input->eof()) {
+            // Return EOF object (this could be customized based on system conventions)
+            return SchemeValue(std::string("")); // Empty string to indicate EOF
+        } else {
+            throw InterpreterError("readline: Error reading from input");
+        }
+    }
+
+    // Return the line as a string
+    return SchemeValue(line);
+}
+
 std::optional<SchemeValue> socketClose(interpret::InterpreterState& state, const std::vector<SchemeValue>& args)
 {
     if (args.size() != 1) {

@@ -93,7 +93,7 @@ std::optional<SchemeValue> isList(
     if (args.size() != 1) {
         throw InterpreterError("list?: expected 1 argument");
     }
-    return SchemeValue(args[0].isList());
+    return SchemeValue(args[0].ensureValue().isList());
 }
 
 std::optional<SchemeValue> isVector(
@@ -103,7 +103,7 @@ std::optional<SchemeValue> isVector(
     if (args.size() != 1) {
         throw InterpreterError("vector?: expected 1 argument");
     }
-    return SchemeValue(std::holds_alternative<std::shared_ptr<std::vector<SchemeValue>>>(args[0].value));
+    return SchemeValue(std::holds_alternative<std::shared_ptr<std::vector<SchemeValue>>>(args[0].ensureValue().value));
 }
 
 std::optional<SchemeValue> isSymbol(
@@ -114,7 +114,7 @@ std::optional<SchemeValue> isSymbol(
         throw InterpreterError("symbol?: expected 1 argument");
     }
 
-    return SchemeValue(args[0].ensureValue().isSymbol());
+    return SchemeValue(args[0].ensureValue().ensureValue().isSymbol());
 }
 
 std::optional<SchemeValue> isNumber(

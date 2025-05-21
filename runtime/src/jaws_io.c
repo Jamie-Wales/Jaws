@@ -20,7 +20,6 @@ void display(SchemeObject *obj) {
   int masked_type = raw_type & 0x7F;
   printf("DEBUG: Masked type: %d\n", masked_type);
 
-  // Now directly access the value based on type
   printf("DEBUG: About to access value based on type %d\n", masked_type);
 
   switch (masked_type) {
@@ -71,7 +70,6 @@ void display(SchemeObject *obj) {
   printf("DEBUG: Exiting scheme_display()\n");
 }
 
-// Return type should be SchemeObject*, not int64_t
 SchemeObject *plus(SchemeObject *a, SchemeObject *b) {
   int64_t result = a->value.number + b->value.number;
   return allocate(TYPE_NUMBER, result);

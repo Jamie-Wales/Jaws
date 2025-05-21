@@ -14,6 +14,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+
 // #define DEBUG_LOGGING
 static int transform_depth = 0;
 struct TransformTracer {
@@ -197,7 +198,6 @@ bool isPatternVariable(const Token& token,
         return false;
     }
 
-    // FIX: Only consider identifiers as pattern variables
     bool result = (token.type == Tokentype::IDENTIFIER);
 
     DEBUG_LOG("isPatternVariable: Token '" << token.lexeme << "' isIdentifier=" << (token.type == Tokentype::IDENTIFIER) << ", isLiteral=false, isKeyword=false, isDot=false, isWildcard=false. Result: " << result); // Optional log
@@ -227,8 +227,6 @@ std::shared_ptr<MacroExpression> fromExpr(const std::shared_ptr<Expression>& exp
                                           if (!processed.empty()) {
                                               processed.back()->isVariadic = true;
                                               continue;
-                                          } else {
-                                              throw std::runtime_error("Invalid ellipsis placement near line " + std::to_string(elem->line));
                                           }
                                       }
                                   }
@@ -772,7 +770,6 @@ void setupIterationEnvironment(
     }
 }
 
-// Expand a group of variadic patterns that belong together
 void expandVariadicPatternGroup(
     const std::vector<std::shared_ptr<MacroExpression>>& pattern_group,
     MatchEnv& env,
@@ -782,7 +779,6 @@ void expandVariadicPatternGroup(
 {
     DEBUG_LOG("  Processing variadic pattern group with " << pattern_group.size() << " elements");
 
-    // Collect all variables in this pattern group
     std::set<std::string> all_vars;
     std::map<std::string, size_t> var_match_counts;
 
@@ -791,7 +787,6 @@ void expandVariadicPatternGroup(
         collectVariables(non_variadic, env, all_vars, var_match_counts);
     }
 
-    // Skip the pattern if any ellipsis variables have zero matches
     for (const auto& var : all_vars) {
         if (pattern_info.ellipsis_vars.count(var) > 0 && var_match_counts[var] == 0) {
             DEBUG_LOG("  Skipping variadic pattern - ellipsis variable '" << var << "' has zero matches");
@@ -799,7 +794,6 @@ void expandVariadicPatternGroup(
         }
     }
 
-    // Determine expansion count
     size_t max_match_count = 0;
     bool expansion_count_determined = false;
 
@@ -823,15 +817,12 @@ void expandVariadicPatternGroup(
 
     DEBUG_LOG("  Generating " << max_match_count << " expansions for variadic pattern group");
 
-    // Generate expansions
     for (size_t k = 0; k < max_match_count; k++) {
         DEBUG_LOG("    Expansion iteration k = " << k);
 
-        // Create iteration environment
         MatchEnv iter_env;
         setupIterationEnvironment(env, iter_env, k);
 
-        // Expand each element in the pattern group
         for (const auto& elem : pattern_group) {
             auto non_variadic = createNonVariadicCopy(elem);
 
@@ -915,7 +906,6 @@ std::shared_ptr<MacroExpression> transformTemplate(
                               }
                           },
 
-                          // New list transformation with improved variadic handling
                           [&](const MacroList& list) -> std::shared_ptr<MacroExpression> {
                               DEBUG_LOG("  List Template: " << template_expr->toString());
 
@@ -934,12 +924,10 @@ std::shared_ptr<MacroExpression> transformTemplate(
                                   if (current_element->isVariadic) {
                                       DEBUG_LOG("  Found start of potential variadic sequence at index " << i);
 
-                                      // Identify separate variadic pattern groups
                                       size_t group_start = i;
                                       std::vector<std::shared_ptr<MacroExpression>> current_group;
                                       std::set<std::string> current_controlling_vars;
 
-                                      // Find controlling variables for the first variadic element
                                       auto non_variadic_elem = createNonVariadicCopy(current_element);
                                       findControllingVariables(non_variadic_elem, env, current_controlling_vars);
                                       current_group.push_back(current_element);
@@ -953,7 +941,6 @@ std::shared_ptr<MacroExpression> transformTemplate(
                                                  return ss.str();
                                              }());
 
-                                      // Group consecutive variadic elements by controlling variables
                                       while (i < list.elements.size() && list.elements[i] && list.elements[i]->isVariadic) {
                                           std::set<std::string> next_controlling_vars;
                                           auto next_non_variadic = createNonVariadicCopy(list.elements[i]);
@@ -967,13 +954,11 @@ std::shared_ptr<MacroExpression> transformTemplate(
                                                      return ss.str();
                                                  }());
 
-                                          // Check if this element belongs to the same pattern group
                                           if (!sameControllingPattern(current_controlling_vars, next_controlling_vars, env)) {
                                               DEBUG_LOG("  Detected new pattern group, breaking");
                                               break;
                                           }
 
-                                          // Add to current group
                                           current_group.push_back(list.elements[i]);
                                           i++;
                                       }
@@ -981,18 +966,15 @@ std::shared_ptr<MacroExpression> transformTemplate(
                                       DEBUG_LOG("  Variadic group contains " << current_group.size()
                                                                              << " elements from indices [" << group_start << ", " << i << ")");
 
-                                      // Process this variadic pattern group
                                       std::vector<std::shared_ptr<MacroExpression>> group_expansion;
                                       expandVariadicPatternGroup(current_group, env, macroContext, pattern_info, group_expansion);
 
-                                      // Add expanded elements to result
                                       transformed_elements.insert(
                                           transformed_elements.end(),
                                           group_expansion.begin(),
                                           group_expansion.end());
 
                                   } else {
-                                      // Non-variadic element
                                       DEBUG_LOG("  Transforming non-variadic element at index " << i << ": " << current_element->toString());
                                       transformed_elements.push_back(transformTemplate(current_element, env, macroContext, pattern_info));
                                       i++;
@@ -1126,6 +1108,8 @@ std::shared_ptr<Expression> convertBegin(const macroexp::MacroList& ml, int line
         }
         values.push_back(datum);
     }
+
+    wrapLastBodyExpression(values);
     return std::make_shared<Expression>(BeginExpression { std::move(values) }, line);
 }
 
@@ -1546,4 +1530,4 @@ std::vector<std::shared_ptr<Expression>> expandMacros(
     }
     return finalExpandedExprs;
 }
-} // namespace macroexp
+}

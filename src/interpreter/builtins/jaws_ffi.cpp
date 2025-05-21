@@ -85,4 +85,4 @@ std::optional<SchemeValue> registerWrapper(
     return std::nullopt;
 }
 
-} // namespace jaws_ffi
+}

@@ -114,7 +114,7 @@ std::optional<SchemeValue> vectorSet(
 
 std::optional<SchemeValue> vectorFill(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) // Assuming const args okay due to shared_ptr
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() != 2) {
         throw InterpreterError("vector-fill! requires exactly 2 arguments");
@@ -204,7 +204,7 @@ std::optional<SchemeValue> vectorCopy(
 
 std::optional<SchemeValue> vectorCopyTo(
     interpret::InterpreterState& state,
-    const std::vector<SchemeValue>& args) // Assuming const args okay due to shared_ptr
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() < 3 || args.size() > 5) {
         throw InterpreterError("vector-copy! requires 3 to 5 arguments");
@@ -270,4 +270,4 @@ std::optional<SchemeValue> vectorCopyTo(
     return std::nullopt;
 }
 
-} // namespace jaws_vec
+}

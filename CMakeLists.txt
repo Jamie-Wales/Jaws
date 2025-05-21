@@ -3,8 +3,6 @@ project(jaws)
 
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
-set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 include(CTest)
 enable_testing()
@@ -22,9 +20,6 @@ FetchContent_MakeAvailable(googletest)
 
 find_program(AS_PATH as)
 find_program(LD_PATH ld)
-if (NOT AS_PATH OR NOT LD_PATH)
-    message(FATAL_ERROR "Could not find assembler (as) or linker (ld). Make sure Xcode Command Line Tools are installed.")
-endif ()
 
 file(GLOB_RECURSE COMPILER_SOURCES
     "${PROJECT_SOURCE_DIR}/src/compiler/*.cpp"

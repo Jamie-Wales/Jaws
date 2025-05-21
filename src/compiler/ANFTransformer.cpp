@@ -18,12 +18,10 @@ std::shared_ptr<ANF> flattenLets(std::shared_ptr<ANF> expr)
                               return expr;
                           },
                           [&](Let& l) -> std::shared_ptr<ANF> {
-                              // First check if binding exists
                               if (!l.binding) {
                                   throw std::runtime_error("Let binding is null");
                               }
 
-                              // Recursively flatten the binding and body
                               l.binding = flattenLets(l.binding);
                               if (l.body) {
                                   l.body = flattenLets(l.body);
@@ -87,27 +85,55 @@ std::shared_ptr<ANF> flattenLets(std::shared_ptr<ANF> expr)
         expr->term);
 }
 
-std::vector<std::shared_ptr<TopLevel>> ANFtransform(const std::vector<std::shared_ptr<Expression>>& expressions)
-{
-    size_t currentNumber = 0;
-    std::vector<std::shared_ptr<TopLevel>> output;
-    output.reserve(expressions.size());
-
-    for (const auto& expression : expressions) {
-        if (!expression)
-            continue;
-        auto transformed = transformTop(expression, currentNumber);
-        if (transformed && *transformed) {
-            output.push_back(*transformed);
-        }
-    }
-
-    return output;
-}
-
 std::shared_ptr<ANF> Aatom(const AtomExpression& e)
 {
     return std::make_shared<ANF>(Atom { e.value.token });
+}
+
+std::shared_ptr<ANF> ABegin(const BeginExpression& begin, size_t& currentNumber)
+{
+    if (begin.values.empty()) {
+        throw std::runtime_error("Empty begin expression encountered during ANF transform");
+    }
+
+    std::shared_ptr<ANF> body = nullptr;
+    for (const auto& expr : std::ranges::reverse_view(begin.values)) {
+        auto transformed_opt = transform(expr, currentNumber);
+        if (!transformed_opt) {
+            throw std::runtime_error("Failed to transform expression within begin");
+        }
+        auto transformed = *transformed_opt;
+
+        if (!body) {
+            body = transformed;
+        } else {
+            body = std::make_shared<ANF>(Let {
+                std::nullopt,
+                transformed,
+                body });
+        }
+    }
+
+    if (!body) {
+        throw std::logic_error("Internal error: Begin transformation resulted in null body");
+    }
+
+    return body;
+}
+
+std::shared_ptr<ANF> AQuasiQuote(const QuasiQuoteExpression& qqe, size_t& currentNumber)
+{
+    return std::make_shared<ANF>(Quote { qqe.value });
+}
+
+std::optional<std::shared_ptr<ANF>> AUnquote(const UnquoteExpression& uqe, size_t& currentNumber)
+{
+    return transform(uqe.value, currentNumber);
+}
+
+std::optional<std::shared_ptr<ANF>> ASplice(const SpliceExpression& se, size_t& currentNumber)
+{
+    return transform(se.value, currentNumber);
 }
 
 std::shared_ptr<ANF> ALet(const LetExpression& l, size_t& currentNumber)
@@ -378,70 +404,109 @@ std::shared_ptr<ANF> AQuote(const QuoteExpression& qe, size_t& currentNumber)
 
 std::optional<std::shared_ptr<ANF>> transform(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)
 {
+    if (!toTransform) { // Add null check for safety
+        return std::nullopt;
+    }
     return std::visit(overloaded {
-                          [&](const AtomExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return Aatom(e);
+                          [&](const AtomExpression& e) -> std::optional<std::shared_ptr<ANF>> { return Aatom(e); },
+                          [&](const sExpression& e) -> std::optional<std::shared_ptr<ANF>> { return ASExpr(e, currentNumber); },
+                          [&](const DefineExpression& e) -> std::optional<std::shared_ptr<ANF>> { return ADefine(e, currentNumber); },
+                          [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<ANF>> { return ADefineProcedure(e, currentNumber); },
+                          [&](const LambdaExpression& e) -> std::optional<std::shared_ptr<ANF>> { return ALambda(e, currentNumber); },
+                          [&](const IfExpression& e) -> std::optional<std::shared_ptr<ANF>> { return AIf(e, currentNumber); },
+                          [&](const QuoteExpression& e) -> std::optional<std::shared_ptr<ANF>> { return AQuote(e, currentNumber); },
+                          [&](const VectorExpression& e) -> std::optional<std::shared_ptr<ANF>> { return AVector(e, currentNumber); },
+                          [&](const TailExpression& e) -> std::optional<std::shared_ptr<ANF>> { return transform(e.expression, currentNumber); },
+                          [&](const LetExpression& e) -> std::optional<std::shared_ptr<ANF>> { return ALet(e, currentNumber); },
+                          [&](const SetExpression& e) -> std::optional<std::shared_ptr<ANF>> { return ASet(e, currentNumber); },
+                          [&](const BeginExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return ABegin(e, currentNumber);
                           },
-                          [&](const ListExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
-                          [&](const sExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return ASExpr(e, currentNumber);
+                          [&](const QuasiQuoteExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return AQuasiQuote(e, currentNumber);
                           },
-                          [&](const DefineExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return ADefine(e, currentNumber);
+                          [&](const UnquoteExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return AUnquote(e, currentNumber);
                           },
-                          [&](const DefineSyntaxExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
-                          [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return ADefineProcedure(e, currentNumber);
+                          [&](const SpliceExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return ASplice(e, currentNumber);
                           },
-                          [&](const LambdaExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return ALambda(e, currentNumber);
-                          },
-                          [&](const IfExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return AIf(e, currentNumber);
-                          },
-                          [&](const QuoteExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return AQuote(e, currentNumber);
-                          },
-                          [&](const VectorExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return AVector(e, currentNumber);
-                          },
-                          [&](const TailExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return transform(e.expression, currentNumber);
-                          },
-                          [&](const LetExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return ALet(e, currentNumber);
-                          },
-                          [&](const ImportExpression& e) -> std::optional<std::shared_ptr<ANF>> { return std::nullopt; },
-                          [&](const SetExpression& e) -> std::optional<std::shared_ptr<ANF>> {
-                              return ASet(e, currentNumber);
-                          },
-                          [&](const auto& e) -> std::optional<std::shared_ptr<ANF>> {
-                              throw std::runtime_error("Unknown expression type");
-                          },
-                      },
-        toTransform->as);
-};
-
-std::optional<std::shared_ptr<TopLevel>> transformTop(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)
-{
-    return std::visit(overloaded {
-                          [&](const DefineExpression& e) -> std::optional<std::shared_ptr<TopLevel>> {
-                              // Fix: Use the full DefineExpression and extract Token from HygienicSyntax
-                              auto anf_value = ADefine(e, currentNumber);
-                              return std::make_shared<TopLevel>(TDefine {
-                                  e.name.token, flattenLets(anf_value) });
-                          },
-                          [&](const DefineSyntaxExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; },
-                          [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<TopLevel>> {
-                              return std::make_shared<TopLevel>(TDefine { e.name.token, flattenLets(ADefineProcedure(e, currentNumber)) });
-                          },
-                          [&](const auto& _) -> std::optional<std::shared_ptr<TopLevel>> {
-                              if (const auto ele = transform(toTransform, currentNumber)) {
-                                  return std::make_shared<TopLevel>(flattenLets(*ele));
-                              }
+                          [&](const DefineSyntaxExpression& e) -> std::optional<std::shared_ptr<ANF>> {
                               return std::nullopt;
                           },
-                      },
+                          [&](const DefineLibraryExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return std::nullopt;
+                          },
+                          [&](const ImportExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return std::nullopt;
+                          },
+                          [&](const SyntaxRulesExpression& e) -> std::optional<std::shared_ptr<ANF>> {
+                              return std::nullopt;
+                          },
+                          [&](const auto& e) -> std::optional<std::shared_ptr<ANF>> {
+                              throw std::runtime_error("Unknown or unhandled expression type encountered during ANF transformation.");
+                          } },
+        toTransform->as);
+};
+std::optional<std::shared_ptr<TopLevel>> transformTop(const std::shared_ptr<Expression>& toTransform, size_t& currentNumber)
+{
+    if (!toTransform) { // Add null check
+        return std::nullopt;
+    }
+    return std::visit(overloaded {
+                          [&](const DefineExpression& e) -> std::optional<std::shared_ptr<TopLevel>> {
+                              auto anf_value_opt = ADefine(e, currentNumber);
+                              if (!anf_value_opt) {
+                                  std::cerr << "Warning: Failed to transform definition value for " << e.name.token.lexeme << std::endl;
+                                  return std::nullopt;
+                              }
+                              return std::make_shared<TopLevel>(TDefine { e.name.token, flattenLets(anf_value_opt) });
+                          },
+                          [&](const DefineProcedure& e) -> std::optional<std::shared_ptr<TopLevel>> {
+                              auto anf_proc_opt = ADefineProcedure(e, currentNumber);
+                              if (!anf_proc_opt) {
+                                  std::cerr << "Warning: Failed to transform procedure definition for " << e.name.token.lexeme << std::endl;
+                                  return std::nullopt;
+                              }
+                              return std::make_shared<TopLevel>(TDefine { e.name.token, flattenLets(anf_proc_opt) });
+                          },
+                          [&](const DefineSyntaxExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; }, // Handled pre-ANF
+                          [&](const DefineLibraryExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; }, // Module level
+                          [&](const ImportExpression& _) -> std::optional<std::shared_ptr<TopLevel>> { return std::nullopt; }, // Module level
+
+                          [&](const auto& _) -> std::optional<std::shared_ptr<TopLevel>> {
+                              auto transformed_expr_opt = transform(toTransform, currentNumber);
+                              if (transformed_expr_opt && *transformed_expr_opt) {
+                                  return std::make_shared<TopLevel>(flattenLets(*transformed_expr_opt));
+                              } else {
+                                  return std::nullopt;
+                              }
+                          } },
         toTransform->as);
 }
+
+std::vector<std::shared_ptr<TopLevel>> ANFtransform(const std::vector<std::shared_ptr<Expression>>& expressions)
+{
+    size_t currentNumber = 0;
+    std::vector<std::shared_ptr<TopLevel>> output;
+
+    for (const auto& expression : expressions) {
+        if (!expression) // Skip null expressions in the input vector
+            continue;
+
+        // transformTop now returns optional
+        auto transformed_opt = transformTop(expression, currentNumber);
+
+        if (transformed_opt) {
+            if (*transformed_opt) {
+                output.push_back(*transformed_opt);
+            } else {
+                std::cerr << "Warning: transformTop resulted in an engaged optional containing nullptr." << std::endl;
+            }
+        }
+    }
+
+    return output;
+}
+
 }

@@ -10,6 +10,7 @@
 #include "Error.h"
 #include "Import.h"
 #include "MacroTraits.h"
+#include "Procedure.h" // Make sure this includes the Continuation class
 #include "ThreeAC.h"
 #include "interpret.h"
 #include "optimise.h"
@@ -26,7 +27,7 @@ private:
     import::LibraryRegistry registry;
     std::stringstream ss;
     std::stringstream outputCapture;
-    bool librariesPreloaded = false; // Track whether libraries have been preloaded
+    bool librariesPreloaded = false;
 
     struct CompilationStages {
         std::vector<std::shared_ptr<Expression>> parsed;
@@ -53,8 +54,6 @@ private:
     CompilationStages compileStages(const std::string& input)
     {
         CompilationStages stages;
-
-        // Initial parsing
         auto tokens = scanner::tokenize(input);
         auto expressions = parse::parse(std::move(tokens));
         if (!expressions) {
@@ -62,11 +61,8 @@ private:
         }
         stages.parsed = *expressions;
 
-        // Process imports using registry
         import::ProcessedCode processedCode = import::processImports(stages.parsed, registry);
         stages.withImports = processedCode.remainingExpressions;
-
-        // Register syntax definitions in macro environment
         for (const auto& expr : stages.withImports) {
             if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
                 if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
@@ -75,21 +71,16 @@ private:
             }
         }
 
-        // Collect non-syntax expressions for expansion
         std::vector<std::shared_ptr<Expression>> expressionsToExpand;
         for (const auto& expr : stages.withImports) {
             if (expr && !std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
                 expressionsToExpand.push_back(expr);
             }
         }
-
-        // Expand macros with macro environment
         stages.expanded = macroexp::expandMacros(expressionsToExpand, macroEnv);
 
-        // Generate ANF - store the result directly
         stages.anf = ir::ANFtransform(stages.expanded);
 
-        // Optimize and get dependency graphs
         auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(stages.anf);
         stages.optimizedAnf = optimizedAnf;
         stages.preDependencyGraph = preGraph;
@@ -125,18 +116,15 @@ private:
         }
     }
 
-    // Helper to prepare interpreter environment with expanded imported values
     void prepareInterpreterEnvironment(const import::ProcessedCode& code)
     {
         for (const auto& libData : code.importedLibrariesData) {
             for (const auto& [name, binding] : libData.exportedBindings) {
                 if (binding.type == import::ExportedBinding::Type::VALUE && binding.definition) {
                     try {
-                        // Expand macros in the binding definition
                         std::vector<std::shared_ptr<Expression>> toExpand = { binding.definition };
                         auto expanded = macroexp::expandMacros(toExpand, macroEnv);
 
-                        // Interpret the expanded definition
                         if (!expanded.empty() && expanded[0]) {
                             interpret::interpret(state, expanded[0]);
                         }
@@ -158,13 +146,13 @@ public:
 
     emscripten::val evaluate(const std::string& input)
     {
+        std::streambuf* oldBuf = nullptr;
+
         try {
-            // Ensure libraries are loaded (only happens once)
             ensureLibrariesPreloaded();
 
-            auto oldBuf = redirectStdout();
+            oldBuf = redirectStdout();
 
-            // Parse code
             auto tokens = scanner::tokenize(input);
             auto expressionsOpt = parse::parse(std::move(tokens));
             if (!expressionsOpt) {
@@ -174,8 +162,6 @@ public:
                 return retVal;
             }
             auto parsedExpressions = *expressionsOpt;
-
-            // Process imports
             import::ProcessedCode processedCode;
             try {
                 processedCode = import::processImports(parsedExpressions, registry);
@@ -186,7 +172,6 @@ public:
                 return retVal;
             }
 
-            // First register all syntax definitions from user code in the macro environment
             for (const auto& expr : processedCode.remainingExpressions) {
                 if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
                     if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
@@ -195,10 +180,8 @@ public:
                 }
             }
 
-            // Prepare interpreter environment with expanded imported values
             prepareInterpreterEnvironment(processedCode);
 
-            // Collect non-syntax expressions for expansion
             std::vector<std::shared_ptr<Expression>> expressionsToExpand;
             for (const auto& expr : processedCode.remainingExpressions) {
                 if (expr && !std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
@@ -206,10 +189,8 @@ public:
                 }
             }
 
-            // Expand macros in user code
             auto finalExpressions = macroexp::expandMacros(expressionsToExpand, macroEnv);
 
-            // Evaluate using expanded form
             std::string result;
             auto val = interpret::interpret(state, finalExpressions);
             if (val) {
@@ -218,12 +199,32 @@ public:
 
             std::string stdoutCapture = outputCapture.str();
             restoreStdout(oldBuf);
+            oldBuf = nullptr;
 
             emscripten::val retVal = emscripten::val::object();
             retVal.set("result", result);
             retVal.set("stdout", stdoutCapture);
             return retVal;
+        } catch (const ContinuationInvocationException& e) {
+            if (oldBuf) {
+                restoreStdout(oldBuf);
+                oldBuf = nullptr;
+            }
+
+            state = e.state;
+
+            std::string result = e.value.toString();
+
+            emscripten::val retVal = emscripten::val::object();
+            retVal.set("result", result);
+            retVal.set("stdout", "");
+            return retVal;
         } catch (const std::exception& e) {
+            if (oldBuf) {
+                restoreStdout(oldBuf);
+                oldBuf = nullptr;
+            }
+
             emscripten::val retVal = emscripten::val::object();
             retVal.set("error", std::string("Error: ") + e.what());
             return retVal;
@@ -233,7 +234,6 @@ public:
     emscripten::val getAllStages(const std::string& input)
     {
         try {
-            // Ensure libraries are loaded (only happens once)
             ensureLibrariesPreloaded();
 
             auto tokens = scanner::tokenize(input);
@@ -245,7 +245,6 @@ public:
             }
             auto parsedExpressions = *expressionsOpt;
 
-            // Convert AST to string
             resetStream();
             std::string astStr;
             for (const auto& expr : parsedExpressions) {
@@ -253,7 +252,6 @@ public:
             }
             astStr = ss.str();
 
-            // Process imports
             import::ProcessedCode processedCode;
             try {
                 processedCode = import::processImports(parsedExpressions, registry);
@@ -263,7 +261,6 @@ public:
                 return retVal;
             }
 
-            // First register all syntax definitions in the macro environment
             for (const auto& expr : processedCode.remainingExpressions) {
                 if (const auto* de = std::get_if<DefineSyntaxExpression>(&expr->as)) {
                     if (de->rule && std::holds_alternative<SyntaxRulesExpression>(de->rule->as)) {
@@ -272,7 +269,6 @@ public:
                 }
             }
 
-            // Collect non-syntax expressions for expansion
             std::vector<std::shared_ptr<Expression>> expressionsToExpand;
             for (const auto& expr : processedCode.remainingExpressions) {
                 if (expr && !std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
@@ -280,10 +276,8 @@ public:
                 }
             }
 
-            // Expand macros in user code
             auto expandedExpressions = macroexp::expandMacros(expressionsToExpand, macroEnv);
 
-            // Convert expanded code to string
             resetStream();
             std::string macroStr;
             for (const auto& expr : expandedExpressions) {
@@ -291,10 +285,8 @@ public:
             }
             macroStr = ss.str();
 
-            // Generate ANF
             auto anf = ir::ANFtransform(expandedExpressions);
 
-            // Convert ANF to string
             resetStream();
             std::string anfStr;
             for (const auto& expr : anf) {
@@ -302,10 +294,8 @@ public:
             }
             anfStr = ss.str();
 
-            // Optimize and get dependency graphs
             auto [optimizedAnf, preGraph, postGraph] = optimise::optimise(anf);
 
-            // Convert optimized ANF to string
             resetStream();
             std::string optAnfStr;
             for (const auto& expr : optimizedAnf) {
@@ -313,11 +303,8 @@ public:
             }
             optAnfStr = ss.str();
 
-            // Generate Three-AC from optimized ANF
             auto threeAC = tac::anfToTac(optimizedAnf);
             std::string threeACStr = threeAC.toString();
-
-            // Return all stages at once
             emscripten::val retVal = emscripten::val::object();
             retVal.set("ast", astStr);
             retVal.set("macroExpanded", macroStr);
@@ -326,6 +313,11 @@ public:
             retVal.set("threeAC", threeACStr);
             retVal.set("preDependencyGraph", preGraph);
             retVal.set("postDependencyGraph", postGraph);
+            return retVal;
+        } catch (const ContinuationInvocationException& e) {
+            state = e.state;
+            emscripten::val retVal = emscripten::val::object();
+            retVal.set("error", "Continuation invoked during compilation analysis");
             return retVal;
         } catch (const std::exception& e) {
             emscripten::val retVal = emscripten::val::object();

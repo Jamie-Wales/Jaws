@@ -66,17 +66,8 @@ export function LearnScheme() {
             return `Interpreter error: ${jawsInterpreter.error}`;
         }
 
-        const result = jawsInterpreter.evaluate(command);
-
-        if (typeof result === 'string' &&
-            (result.startsWith("Error:") ||
-                result.startsWith("Parse Error:") ||
-                result.startsWith("Interpreter Error:") ||
-                result.startsWith("[Import Error]"))) {
-            console.warn("Interpreter returned error:", result);
-        }
-
-        return result;
+        const result = jawsInterpreter.evaluate(command); // result = "Error: Continuation..."
+        return result; // Returns the error string
     };
 
     const toggleMenu = () => {

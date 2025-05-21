@@ -1,3 +1,5 @@
-(define (sum x) (+ x x))
 
-(display (sum 10))
+(define (x y) (+ y y))
+
+
+(display (x 10))

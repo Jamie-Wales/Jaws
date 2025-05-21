@@ -2,7 +2,6 @@
 #include "Error.h"
 #include "Syntax.h"
 
-// #define DEBUG_LOGGING
 #ifdef DEBUG_LOGGING
 #define DEBUG_LOG(x) std::cerr << "(ENV) " << x << "\n"
 #else
@@ -37,25 +36,21 @@ void Environment::set(const HygienicSyntax& name, const SchemeValue& value)
         return;
     }
 
-    // Look for compatible variable to set
     for (auto& [bindingSyntax, storedValue] : variables) {
         if (bindingSyntax.token.lexeme == name.token.lexeme) {
-            // CASE 1: Global unmarked binding can always be set
+
             if (!parent && bindingSyntax.context.marks.empty()) {
                 DEBUG_LOG("  Global unmarked binding can be set");
                 storedValue = value;
                 return;
             }
 
-            // CASE 2: Unmarked identifiers can set any binding with the same name
             if (name.context.marks.empty()) {
                 DEBUG_LOG("  Unmarked identifier can set any binding with same name");
                 storedValue = value;
                 return;
             }
 
-            // CASE 3: Regular hygienic variable access
-            // Check if identifier's marks contain all of binding's marks
             bool containsAllMarks = true;
             for (const auto& bindingMark : bindingSyntax.context.marks) {
                 if (name.context.marks.find(bindingMark) == name.context.marks.end()) {
@@ -83,7 +78,7 @@ void Environment::set(const HygienicSyntax& name, const SchemeValue& value)
     DEBUG_LOG("  Error: Variable '" << name.token.lexeme << "' not found in any environment");
     throw InterpreterError("Unbound variable " + name.token.lexeme);
 }
-// Helper to check if one set of marks contains all marks from another
+
 bool containsAllMarks(const std::set<ScopeID>& container, const std::set<ScopeID>& contained)
 {
     for (const auto& mark : contained) {
@@ -105,24 +100,19 @@ std::optional<SchemeValue> Environment::get(const HygienicSyntax& id) const
         return it->second;
     }
 
-    // Look for compatible bindings
     for (const auto& [bindingSyntax, value] : variables) {
         if (bindingSyntax.token.lexeme == id.token.lexeme) {
-            // CASE 1: Global unmarked binding is always accessible
+
             if (!parent && bindingSyntax.context.marks.empty()) {
                 DEBUG_LOG("  Global unmarked binding is accessible");
                 return value;
             }
 
-            // CASE 2: If the identifier has no marks, it should be able to access any binding
-            // with the same name regardless of marks (for variables defined by macros)
             if (id.context.marks.empty()) {
                 DEBUG_LOG("  Unmarked identifier can access any binding with same name");
                 return value;
             }
 
-            // CASE 3: Regular hygienic variable access
-            // Check if looking-up identifier contains all marks from binding
             bool hasAllBindingMarks = true;
             for (const auto& mark : bindingSyntax.context.marks) {
                 if (id.context.marks.find(mark) == id.context.marks.end()) {
@@ -141,7 +131,6 @@ std::optional<SchemeValue> Environment::get(const HygienicSyntax& id) const
         }
     }
 
-    // If not found, check parent environment
     if (parent) {
         DEBUG_LOG("  No compatible match in current Env @ " << this);
         DEBUG_LOG("  Checking parent @ " << parent.get());

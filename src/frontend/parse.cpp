@@ -1,9 +1,9 @@
 #include "parse.h"
 #include "Token.h"
-#include <iterator> // For std::make_move_iterator
+#include <iterator>
 #include <memory>
 #include <optional>
-#include <utility> // For std::move, std::pair
+#include <utility>
 #include <vector>
 
 namespace parse {
@@ -112,6 +112,7 @@ std::shared_ptr<Expression> parseBegin(ParserState& state)
     while (!check(state, Tokentype::RIGHT_PAREN)) {
         body.push_back(parseExpression(state));
     }
+
     consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after begin body");
     return std::make_shared<Expression>(Expression { BeginExpression { body }, previousToken(state).line });
 }
@@ -214,6 +215,8 @@ std::shared_ptr<Expression> parseAtom(ParserState& state)
     case Tokentype::BACKQUOTE:
     case Tokentype::CHAR:
     case Tokentype::SYNTAX_RULE:
+    case Tokentype::LET:
+    case Tokentype::DEFINE:
         return std::make_shared<Expression>(Expression { AtomExpression { token }, token.line });
     default:
         throw ParseError("Unexpected token in atom " + token.lexeme, token, "");
@@ -241,29 +244,39 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
         int line = name.line;
         std::vector<Token> parameters;
         bool isVariadic = false;
-        while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
-            if (match(state, Tokentype::DOT)) {
-                parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
-                isVariadic = true;
-                break;
+
+        // Check if we have an empty parameter list
+        if (!check(state, Tokentype::RIGHT_PAREN)) {
+            // Non-empty parameter list
+            while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
+                if (match(state, Tokentype::DOT)) {
+                    parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name after dot"));
+                    isVariadic = true;
+                    break;
+                }
+                parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
             }
-            parameters.push_back(consume(state, Tokentype::IDENTIFIER, "Expected parameter name"));
         }
+
+        // Consume the closing parenthesis of the parameter list
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after parameter list");
+
         std::vector<std::shared_ptr<Expression>> body;
         while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
             body.push_back(parseExpression(state));
         }
+
         if (!body.empty()) {
             auto lastBodyExpr = body.back();
             body.back() = std::make_shared<Expression>(
                 Expression { TailExpression { lastBodyExpr }, lastBodyExpr->line });
         }
+
         consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after function body");
+
         return std::make_shared<Expression>(Expression {
             DefineProcedure { name, std::move(parameters), std::move(body), isVariadic },
             line });
-
     } else {
         Token name = consume(state, Tokentype::IDENTIFIER, "Expected variable name");
         auto value = parseExpression(state);
@@ -273,7 +286,6 @@ std::shared_ptr<Expression> parseDefine(ParserState& state)
             name.line });
     }
 }
-
 std::shared_ptr<Expression> parseLambda(ParserState& state)
 {
     std::vector<Token> parameters;
@@ -537,7 +549,7 @@ std::vector<ImportExpression::ImportSpec> parseImportSpecifications(ParserState&
                 advance(state);
             continue;
         }
-        advance(state); // Consume '(' of the import set
+        advance(state);
 
         if (match(state, Tokentype::ONLY)) {
             auto lib = parseLibraryName(state, false);
@@ -637,13 +649,11 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
 {
     int line = previousToken(state).line;
 
-    // Parse library name
     std::vector<std::shared_ptr<Expression>> libraryName = parseLibraryName(state);
     std::vector<HygienicSyntax> exports;
     std::vector<ImportExpression::ImportSpec> imports;
     std::vector<std::shared_ptr<Expression>> body;
 
-    // Main loop to process export, import, and begin clauses
     while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
         if (!check(state, Tokentype::LEFT_PAREN)) {
             errorAt(state, peek(state), "Expected '(' to start library declaration clause (export, import, or begin)");
@@ -652,13 +662,11 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
             continue;
         }
 
-        advance(state); // Consume the '('
+        advance(state);
 
         if (match(state, Tokentype::EXPORT)) {
-            // Improved export parsing
             while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
                 if (check(state, Tokentype::LEFT_PAREN)) {
-                    // Handle complex export forms like (rename ...) if needed
                     errorAt(state, peek(state), "Complex export forms not yet supported");
                     advance(state);
                     int parenLevel = 1;
@@ -688,9 +696,6 @@ std::shared_ptr<Expression> parseDefineLibrary(ParserState& state)
             consume(state, Tokentype::RIGHT_PAREN, "Expected ')' after import declaration clause");
 
         } else if (match(state, Tokentype::BEGIN)) {
-            // NO advance here - BEGIN token was already consumed by match()
-
-            // Parse expressions in the begin block
             while (!check(state, Tokentype::RIGHT_PAREN) && !isAtEnd(state)) {
                 body.push_back(parseExpression(state));
             }
@@ -731,4 +736,4 @@ std::shared_ptr<Expression> parseImport(ParserState& state)
         Expression { ImportExpression { std::move(specs) }, line });
 }
 
-} // namespace parse
+}

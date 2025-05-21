@@ -47,21 +47,15 @@ void print_heap() {
   size_t count = 0;
   uintptr_t current_heap_end = (uintptr_t)heap + used;
   while ((uintptr_t)current < current_heap_end) {
-    // Check type validity before printing to avoid crashing on potential
-    // garbage
     SchemeType base_type = current->type & ~GC_MARK_BIT;
     bool is_marked = (current->type & GC_MARK_BIT) != 0;
     const char *type_str = "<INVALID>";
-    // Simple type check based on known enum values (adjust if needed)
     if (base_type >= TYPE_NUMBER && base_type <= TYPE_BOOL) {
-      type_str = to_string(current); // Use existing to_string
+      type_str = to_string(current);
     }
     printf("\nObject %zu at %p: Type=%d%s Value=%s", count++, (void *)current,
            (int)base_type, is_marked ? " (M)" : "", type_str);
-    if (type_str != current->value.symbol &&
-        base_type != TYPE_SYMBOL) { // Avoid double free if to_string returns
-                                    // internal symbol pointer
-      // free(type_str); // Only free if to_string allocates fresh memory
+    if (type_str != current->value.symbol && base_type != TYPE_SYMBOL) {
     }
     current = (SchemeObject *)((char *)current + sizeof(SchemeObject));
   }
@@ -69,8 +63,7 @@ void print_heap() {
 }
 
 static void try_shrink_heap() {
-  size_t min_required =
-      used > 0 ? used * 2 : MIN_HEAP_SIZE; // Ensure minimum size
+  size_t min_required = used > 0 ? used * 2 : MIN_HEAP_SIZE;
   if (min_required < MIN_HEAP_SIZE)
     min_required = MIN_HEAP_SIZE;
 
@@ -80,7 +73,7 @@ static void try_shrink_heap() {
            heap_size, min_required, used);
 #endif
     void *new_heap = realloc(heap, min_required);
-    if (new_heap || min_required == 0) { // realloc(ptr, 0) is like free(ptr)
+    if (new_heap || min_required == 0) {
       heap = new_heap;
       heap_size = min_required;
 #ifdef DEBUG_GC
@@ -145,14 +138,12 @@ SchemeObject *alloc_object() {
 }
 
 SchemeObject *allocate(SchemeType type, int64_t immediate) {
-  // printf("DEBUG: Entering allocate(type=%d, immediate=%lld)\n", type,
-  // immediate);
   SchemeObject *obj = alloc_object();
   if (!obj) {
     fprintf(stderr, "ERROR: alloc_object returned NULL in allocate!\n");
     return NULL;
   }
-  obj->type = type & ~GC_MARK_BIT; // Ensure type is clean on allocation
+  obj->type = type & ~GC_MARK_BIT;
   switch (obj->type) {
   case TYPE_NUMBER:
     obj->value.number = immediate;
@@ -179,7 +170,6 @@ SchemeObject *allocate(SchemeType type, int64_t immediate) {
     fprintf(stderr, "ERROR: Invalid type %d passed to allocate\n", obj->type);
     return NULL;
   }
-  // printf("DEBUG: Exiting allocate(), returning object at %p\n", obj);
   return obj;
 }
 SchemeObject *allocate_pair(SchemeObject *car, SchemeObject *cdr) {
@@ -193,7 +183,6 @@ SchemeObject *allocate_pair(SchemeObject *car, SchemeObject *cdr) {
 }
 
 void debug_check_struct_sizes() {
-  // ... (same as before) ...
   printf("\nDEBUG: STRUCT SIZE INFORMATION...\n");
   printf("DEBUG: sizeof(SchemeObject) = %zu\n", sizeof(SchemeObject));
   printf("DEBUG: Heap address: %p\n", heap);
@@ -225,7 +214,6 @@ void init_runtime() {
 }
 
 void cleanup_runtime() {
-  // destroy_symbol_table(); // If implemented
   free(heap);
   heap = NULL;
   heap_size = 0;
@@ -249,9 +237,8 @@ void mark_object(SchemeObject *obj) {
   case TYPE_FUNCTION:
     mark_environment(obj->value.function.env);
     break;
-  // Add other types with heap pointers here (e.g., vectors)
   default:
-    break; // No heap pointers in number, bool, nil, symbol (string is malloc'd)
+    break;
   }
 }
 
@@ -262,13 +249,13 @@ void mark_environment(SchemeEnvironment *env) {
       for (size_t i = 0; i < current_env->bindings->capacity; i++) {
         Entry *entry = current_env->bindings->entries[i];
         while (entry != NULL) {
-          mark_object(entry->key);   // Mark symbol
-          mark_object(entry->value); // Mark value
+          mark_object(entry->key);
+          mark_object(entry->value);
           entry = entry->next;
         }
       }
     }
-    current_env = current_env->enclosing; // Move to enclosing scope
+    current_env = current_env->enclosing;
   }
 }
 
@@ -322,10 +309,8 @@ void mark_roots() {
 #endif
 }
 
-// --- Helper function to look up the new address of an object ---
 SchemeObject *get_forwarding_address(ForwardingInfo *map, size_t map_size,
                                      SchemeObject *old_addr) {
-  // Simple linear search for demonstration; use hash map for better performance
   for (size_t i = 0; i < map_size; ++i) {
     if (map[i].old_address == old_addr) {
       return map[i].new_address;
@@ -334,7 +319,6 @@ SchemeObject *get_forwarding_address(ForwardingInfo *map, size_t map_size,
   return old_addr;
 }
 
-// --- REVISED sweep_compact with 3 Passes ---
 void sweep_compact() {
   uintptr_t scan_ptr = (uintptr_t)heap;
   uintptr_t write_ptr = (uintptr_t)heap;
@@ -352,7 +336,7 @@ void sweep_compact() {
       }
       scan_ptr += sizeof(SchemeObject);
     }
-    return; // Exit sweep_compact
+    return;
   }
 
 #ifdef DEBUG_GC
@@ -366,8 +350,7 @@ void sweep_compact() {
       forwarding_map[live_count].old_address = current_obj;
       forwarding_map[live_count].new_address = (SchemeObject *)write_ptr;
       live_count++;
-      write_ptr +=
-          sizeof(SchemeObject); // Advance write pointer for next live object
+      write_ptr += sizeof(SchemeObject);
     }
     scan_ptr += sizeof(SchemeObject);
   }
@@ -380,19 +363,14 @@ void sweep_compact() {
   printf("DEBUG: Sweep/Compact Pass 2: Updating pointers...\n");
 #endif
 
-  // Pass 2: Update internal pointers using the forwarding map
-  // Iterate through the *live* objects using the map we just built
   for (size_t i = 0; i < live_count; ++i) {
-    SchemeObject *current_obj =
-        forwarding_map[i].old_address; // Get object from old location
+    SchemeObject *current_obj = forwarding_map[i].old_address;
     SchemeType base_type = current_obj->type & ~GC_MARK_BIT;
 
     switch (base_type) {
     case TYPE_PAIR: {
       SchemeObject *old_car = current_obj->value.pair.car;
       SchemeObject *old_cdr = current_obj->value.pair.cdr;
-      // Only update if pointer is non-null and within heap bounds (before
-      // compaction)
       if (old_car && (uintptr_t)old_car >= (uintptr_t)heap &&
           (uintptr_t)old_car < current_heap_end) {
         current_obj->value.pair.car =
@@ -407,48 +385,28 @@ void sweep_compact() {
     }
     case TYPE_FUNCTION: {
       SchemeEnvironment *old_env = current_obj->value.function.env;
-      // Environments themselves aren't GC'd here, but we need to update
-      // pointers *within* them This is tricky. Let's assume env pointers don't
-      // need updating *by the compactor* unless SchemeEnvironment structs are
-      // ALSO on the Scheme heap. If they are malloc'd separately (as they are
-      // now), their address doesn't change. We *do* need to update pointers
-      // *inside* the environment bindings, but mark_environment -> mark_object
-      // -> recursive marking handles reachability. The update pass needs to fix
-      // pointers *to* heap objects *from* heap objects. Pointers from malloc'd
-      // envs to heap objects don't need updating here. Pointers *within*
-      // closures (the env field) pointing to *other heap objects* would need
-      // updating if SchemeEnvironment itself was heap-allocated by our GC.
-      // Let's assume for now env pointers don't point to objects that move
-      // *within this heap*.
       break;
     }
-    // Add cases for other types with heap pointers (e.g., vectors)
     default:
-      break; // No pointers to update in numbers, bools, symbols, nil
+      break;
     }
-    // We can unmark here or in Pass 3
-    // current_obj->type &= ~GC_MARK_BIT;
   }
 
 #ifdef DEBUG_GC
   printf("DEBUG: Sweep/Compact Pass 3: Moving objects...\n");
 #endif
 
-  // Pass 3: Move objects to their new locations
   for (size_t i = 0; i < live_count; ++i) {
     SchemeObject *old_addr = forwarding_map[i].old_address;
     SchemeObject *new_addr = forwarding_map[i].new_address;
 
-    // Unmark the object (if not done in pass 2)
     old_addr->type &= ~GC_MARK_BIT;
 
-    // Move if necessary (memmove handles overlapping regions)
     if (old_addr != new_addr) {
       memmove(new_addr, old_addr, sizeof(SchemeObject));
     }
   }
 
-  // Update heap usage
   size_t new_used = live_count * sizeof(SchemeObject);
 
 #ifdef DEBUG_GC
@@ -460,10 +418,8 @@ void sweep_compact() {
 
   used = new_used;
 
-  // Free the temporary map
   free(forwarding_map);
 
-  // Try shrinking if utilization is low
   if (heap_size > MIN_HEAP_SIZE &&
       (double)used / heap_size < HEAP_SHRINK_THRESHOLD) {
     try_shrink_heap();
@@ -485,7 +441,7 @@ void gc() {
   printf("--- Marking Complete ---\n");
 #endif
 
-  sweep_compact(); // Use the new 3-pass compacting version
+  sweep_compact();
 
 #ifdef DEBUG_GC
   printf("--- GC Complete ---\n");

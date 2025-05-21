@@ -60,33 +60,27 @@ struct SyntaxContext {
 
     bool isCompatibleWith(const SyntaxContext& binding_context) const
     {
-        // If we're looking up an identifier with marks
         if (!marks.empty()) {
-            // And the binding is local (has marks)
             if (!binding_context.marks.empty()) {
                 // They must match exactly for hygiene
                 bool matches = marks == binding_context.marks;
                 DEBUG_LOG("Both have marks - checking exact match: " << (matches ? "true" : "false"));
                 return matches;
             }
-            // Binding is global, that's okay
             DEBUG_LOG("Identifier has marks but binding is global - allowing access");
             return true;
         }
 
-        // If we're looking up an identifier without marks
         if (marks.empty()) {
-            // And the binding has marks
             if (!binding_context.marks.empty()) {
                 DEBUG_LOG("Unmarked identifier cannot access marked binding");
                 return false;
             }
-            // Neither has marks
             DEBUG_LOG("Neither has marks - allowing access");
             return true;
         }
 
-        return false; // Shouldn't reach here
+        return false;
     }
     std::string toString() const
     {
@@ -170,4 +164,4 @@ struct hash<HygienicSyntax> {
     }
 };
 
-} // namespace std
+}

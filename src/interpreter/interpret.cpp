@@ -80,6 +80,8 @@ InterpreterState createInterpreter()
     define(identifier("list?"), jaws_eq::isList);
     define(identifier("vector?"), jaws_eq::isVector);
     define(identifier("socket-server"), jaws_io::socketServer);
+
+    define(identifier("read-line"), jaws_io::readline);
     define(identifier("socket-connect"), jaws_io::socketConnect);
     define(identifier("socket-accept"), jaws_io::socketAccept);
     define(identifier("socket-read"), jaws_io::socketRead);

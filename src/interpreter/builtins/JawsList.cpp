@@ -193,10 +193,8 @@ std::optional<SchemeValue> setCdr(
         throw InterpreterError("set-cdr!: cannot set cdr of empty list or null");
     }
 
-    // Save the first element of the list
     SchemeValue firstElement = list->front();
 
-    // Clear the list and add the first element back
     list->clear();
     list->push_back(firstElement);
     if (newCdr.isList()) {
@@ -208,7 +206,7 @@ std::optional<SchemeValue> setCdr(
         list->push_back(newCdr);
     }
 
-    return std::nullopt; // set-cdr! returns unspecified value
+    return std::nullopt;
 }
 
 std::optional<SchemeValue> listRef(
@@ -246,7 +244,7 @@ std::optional<SchemeValue> listRef(
 
 std::optional<SchemeValue> listSet(
     interpret::InterpreterState&,
-    const std::vector<SchemeValue>& args) // Assuming const args okay due to shared_ptr
+    const std::vector<SchemeValue>& args)
 {
     if (args.size() != 3) {
         throw InterpreterError("list-set!: requires exactly 3 arguments");
@@ -276,7 +274,7 @@ std::optional<SchemeValue> listSet(
 
     auto it = list_ptr->begin();
     std::advance(it, idx);
-    *it = new_element; // Modify element within the shared list
+    *it = new_element;
 
     return std::nullopt;
 }
@@ -289,8 +287,8 @@ std::optional<SchemeValue> member(
         throw InterpreterError("member: requires exactly 2 arguments");
     }
 
-    const auto& item = args[0].ensureValue(); // Item to find
-    auto list_sv = args[1].ensureValue(); // List to search in
+    const auto& item = args[0].ensureValue();
+    auto list_sv = args[1].ensureValue();
     if (!list_sv.isList()) {
         throw InterpreterError("member: second argument must be a list");
     }
@@ -325,7 +323,6 @@ std::optional<SchemeValue> assq(
     }
     auto list_ptr = list_sv.asList();
     if (!list_ptr) {
-        // Assq on null list is false
         return SchemeValue(false);
     }
 

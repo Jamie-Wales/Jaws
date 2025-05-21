@@ -1,31 +1,19 @@
-(define (simple-for-each proc lst)
-  (if (not (null? lst)) ; Check if the list is not empty
-      (begin
-        (proc (car lst)) ; Apply proc to the first element
-        (simple-for-each proc (cdr lst)))))
-(define (find-first pred lst)
-  (call/cc
-   (lambda (return)
-     (simple-for-each
-      (lambda (x)
-        (if (pred x)
-            (return x)))
-      lst)
-     #f)))
+(define-syntax swap
+  (syntax-rules ()
+    ((_ var1 var2)
+     (let ((temp var1)) 
+       (set! var1 var2)  
+       (set! var2 temp))))) 
 
-(find-first even? '(1 3 5 6 7 8 9))
 
-(define (divide a b)
-  (call/cc
-   (lambda (k)
-     (if (= b 0)
-         (k '(error "Division by zero"))
-         (k `(ok ,(/ a b)))))))
-(define (handle-result result)
-  (if (eq? (car result) 'error)
-      (cadr result)
-      (cadr result)))
+(define a 10)
+(define b 20)
 
-(handle-result (divide 10 2))
+(define temp 99)
 
-(handle-result (divide 10 0))
+(display "Before swap:\n")
+(display "  a = ") (display a) (newline)
+(display "  b = ") (display b) (newline)
+(display "  temp = ") (display temp) (newline)
+
+(swap a b)

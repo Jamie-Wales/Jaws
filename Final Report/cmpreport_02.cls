@@ -215,8 +215,6 @@
 \AtEndDocument{\ifdefined\there@is@a@figure\label{fig:was:used:in:doc}\fi} 
 \AtEndDocument{\ifdefined\there@is@a@table\label{tab:was:used:in:doc}\fi} 
 %
-\newcommand{\conditionalLoF}{\@ifundefined{r@fig:was:used:in:doc}{}{\listoffigures}}%
-\newcommand{\conditionalLoT}{\@ifundefined{r@tab:was:used:in:doc}{}{\listoftables}}%
 %
 \newif\if@list
 \@listtrue

@@ -1,4 +1,4 @@
-(import base)
+(import (list-utils))
 
 (define (run-client host port)
   (display "Attempting to connect to ")

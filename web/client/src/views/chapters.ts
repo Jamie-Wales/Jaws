@@ -431,14 +431,12 @@ export const CURRICULUM: Chapter[] = [
                         description: 'Simple single-list for-each procedure:',
                         code:
                             `;; A simpler version of for-each for a single list.
-;; Applies proc to each element of lst for side effects.
 (define (simple-for-each proc lst)
   (if (not (null? lst)) ; Check if the list is not empty
       (begin
         (proc (car lst)) ; Apply proc to the first element
         (simple-for-each proc (cdr lst))))) ; Recurse on the rest of the list
-  ;; Implicitly returns an unspecified value when the list is empty
-)`, // Note: Using template literal for easier multiline code
+`,
                         explanation: 'This is a simplified version of for-each that only handles a single list. It applies the procedure `proc` to each element for its side effect and stops when the list is empty. It\'s suitable for cases like the `find-first` example where multi-list capability isn\'t needed.'
                     },
                     {
@@ -519,141 +517,6 @@ export const CURRICULUM: Chapter[] = [
                     }
                 ],
                 difficulty: 'Intermediate'
-            }
-        ]
-    },
-    {
-        id: 'io-operations',
-        title: 'Input/Output Operations',
-        description: 'Learn how to handle input and output in Scheme programs',
-        sections: [
-            {
-                id: 'basic-io',
-                title: 'Basic Input and Output',
-                content: [
-                    'Scheme provides a set of procedures for basic input and output operations. These procedures allow you to read from the keyboard, write to the screen, and interact with files.',
-                    'The most common I/O procedures include display, write, newline for output and read for input. Understanding these basic operations is essential for creating interactive Scheme programs.'
-                ],
-                codeExamples: [
-                    {
-                        description: 'Writing to the console:',
-                        code: '; Display a string\n(display "Hello, world!")\n(newline)',
-                        explanation: 'The display procedure outputs its argument to the console. When displaying strings, the quotes aren\'t shown in the output. The newline procedure starts a new line, similar to pressing Enter.'
-                    },
-                    {
-                        description: 'Writing with write:',
-                        code: '; Using write instead of display\n(write "Hello, world!")\n(newline)',
-                        explanation: 'The write procedure is similar to display, but it outputs values in a form that can be read back by the Scheme reader. For strings, this means including the quotation marks in the output.'
-                    },
-                    {
-                        description: 'Reading from the console:',
-                        code: '; Read a Scheme expression\n(define user-input (read))\n; After entering (+ 2 3), user-input contains 5',
-                        explanation: 'The read procedure reads a complete Scheme expression from the input and returns it. If the user enters (+ 2 3), Scheme evaluates this to 5 before assigning it to user-input.'
-                    },
-                    {
-                        description: 'Reading a line of text:',
-                        code: '; Read a full line of text\n(define line (read-line))',
-                        explanation: 'The read-line procedure reads characters until it reaches a newline. Unlike read, it doesn\'t evaluate what the user enters, but returns it as a string.'
-                    }
-                ],
-                difficulty: 'Beginner'
-            },
-            {
-                id: 'file-io',
-                title: 'File Input and Output',
-                content: [
-                    'Scheme allows you to read from and write to files using ports. A port is an object that represents a connection to a file or another device.',
-                    'You can open a file for reading or writing, perform operations on the port, and then close it when you\'re done. Proper file handling is important for data persistence and processing larger datasets.'
-                ],
-                codeExamples: [
-                    {
-                        description: 'Opening a file for output:',
-                        code: '; Open a file for writing\n(define out-port (open-output-file "example.txt"))',
-                        explanation: 'The open-output-file procedure opens a file for writing and returns an output port. If the file already exists, it will typically be overwritten (though the exact behavior may depend on the Scheme implementation).'
-                    },
-                    {
-                        description: 'Writing to a file:',
-                        code: '; Write data to the file\n(display "Hello, file!" out-port)\n(newline out-port)',
-                        explanation: 'The display procedure can take an optional second argument specifying the output port. Here, we\'re writing to our file port instead of the default console. The newline works similarly.'
-                    },
-                    {
-                        description: 'Closing an output file:',
-                        code: '; Close the output port\n(close-output-port out-port)',
-                        explanation: 'After writing to a file, it\'s important to close the port with close-output-port. This ensures all data is properly flushed to the file and system resources are released.'
-                    },
-                    {
-                        description: 'Opening a file for input:',
-                        code: '; Open a file for reading\n(define in-port (open-input-file "example.txt"))',
-                        explanation: 'The open-input-file procedure opens a file for reading and returns an input port. The file must exist, or an error will be raised.'
-                    },
-                    {
-                        description: 'Reading from a file:',
-                        code: '; Read a line from the file\n(define file-line (read-line in-port))',
-                        explanation: 'Read operations like read-line can also take an optional port argument. Here, we\'re reading a line of text from the file instead of from the console.'
-                    },
-                    {
-                        description: 'Closing an input file:',
-                        code: '; Close the input port\n(close-input-port in-port)',
-                        explanation: 'After reading from a file, it\'s important to close the port with close-input-port to release system resources.'
-                    },
-                    {
-                        description: 'Reading an entire file:',
-                        code: '; Function to read entire file contents\n(define (read-file filename)\n  (let ((p (open-input-file filename)))\n    (let ((content (read-all p)))\n      (close-input-port p)\n      content)))\n\n; Helper function to read all expressions\n(define (read-all port)\n  (let ((data (read port)))\n    (if (eof-object? data)\n        \'()\n        (cons data (read-all port)))))',
-                        explanation: 'This example defines a function to read the entire contents of a file. It opens the file, reads all expressions until reaching the end-of-file (EOF), closes the port, and returns the content as a list.'
-                    }
-                ],
-                difficulty: 'Intermediate'
-            },
-            {
-                id: 'string-manipulation',
-                title: 'String Manipulation',
-                content: [
-                    'String manipulation is essential for many programming tasks, especially when dealing with text processing or user input. Scheme provides a set of procedures for creating, combining, and extracting parts of strings.',
-                    'These operations allow you to build complex string processing functions for tasks like parsing, formatting, or generating text output.'
-                ],
-                codeExamples: [
-                    {
-                        description: 'Creating a string:',
-                        code: '; Creating strings\n(define greeting "Hello")\n(define name "World")',
-                        explanation: 'Strings in Scheme are enclosed in double quotes. Here, we define two string variables for use in our examples.'
-                    },
-                    {
-                        description: 'Getting string length:',
-                        code: '; Find the length of a string\n(string-length greeting)',
-                        explanation: 'The string-length procedure returns the number of characters in a string. In this case, "Hello" has 5 characters.'
-                    },
-                    {
-                        description: 'Concatenating strings:',
-                        code: '; Combining strings\n(string-append greeting ", " name "!")',
-                        explanation: 'The string-append procedure joins multiple strings together. This example combines "Hello", ", ", "World", and "!" to create "Hello, World!".'
-                    },
-                    {
-                        description: 'Accessing characters in a string:',
-                        code: '; Get a character from a string\n(string-ref greeting 1)',
-                        explanation: 'The string-ref procedure accesses a specific character in a string by index (starting from 0). string-ref greeting 1 returns the character at index 1 in "Hello", which is #\\e.'
-                    },
-                    {
-                        description: 'Creating a string from characters:',
-                        code: '; Create a string from individual characters\n(string #\\S #\\c #\\h #\\e #\\m #\\e)',
-                        explanation: 'The string procedure creates a new string from individual characters. Characters in Scheme are written with the #\\ prefix. This example creates the string "Scheme".'
-                    },
-                    {
-                        description: 'Extracting a substring:',
-                        code: '; Get part of a string\n(substring "Scheme Programming" 0 6)',
-                        explanation: 'The substring procedure extracts a portion of a string. It takes three arguments: the string, the start index (inclusive), and the end index (exclusive). This example returns "Scheme".'
-                    },
-                    {
-                        description: 'Converting case:',
-                        code: '; Convert to uppercase and lowercase\n(string-upcase "Hello")\n(string-downcase "WORLD")',
-                        explanation: 'The string-upcase and string-downcase procedures convert a string to uppercase or lowercase. They return "HELLO" and "world" respectively.'
-                    },
-                    {
-                        description: 'Checking string equality:',
-                        code: '; Compare strings\n(string=? "Scheme" "scheme")\n(string-ci=? "Scheme" "scheme")',
-                        explanation: 'The string=? procedure checks if two strings are exactly equal (case-sensitive). string-ci=? performs a case-insensitive comparison. The first returns #f (false) while the second returns #t (true).'
-                    }
-                ],
-                difficulty: 'Beginner'
             }
         ]
     },
@@ -759,12 +622,70 @@ export const CURRICULUM: Chapter[] = [
                     },
                     {
                         "description": "A DSL for pattern matching:",
-                        "code": "; Define a pattern matching DSL\n(define-syntax match\n  (syntax-rules (else)\n    ((match value\n       (pattern1 expr1)\n       (pattern2 expr2) ...)\n     (let ((val value))\n       (cond\n        ((equal? val pattern1) expr1)\n        ((equal? val pattern2) expr2) ...)))\n    \n    ((match value\n       (pattern1 expr1)\n       (pattern2 expr2) ...\n       (else default-expr))\n     (let ((val value))\n       (cond\n        ((equal? val pattern1) expr1)\n        ((equal? val pattern2) expr2) ...\n        (else default-expr))))))\n\n; Use our pattern matching DSL\n(define (factorial n)\n  (match n\n    (0 1)\n    (1 1)\n    (else (* n (factorial (- n 1))))))\n\n; Call the factorial function\n(factorial 5)",
+                        "code": `
+(define-syntax match
+  (syntax-rules (else)
+    ((match value
+       (pattern1 expr1)
+       (pattern2 expr2) ...)
+     (let ((val value))
+       (cond
+        ((equal? val pattern1) expr1)
+        ((equal? val pattern2) expr2) ...)))
+    
+    ((match value
+       (pattern1 expr1)
+       (pattern2 expr2) ...
+       (else default-expr))
+     (let ((val value))
+       (cond
+        ((equal? val pattern1) expr1)
+        ((equal? val pattern2) expr2) ...
+        (else default-expr))))))
+
+(define data "test")
+(display (and (validate data is string)
+              (validate data length > 2)
+              (validate data length < 10)))
+
+(define fruit "apple")
+
+(display
+  (match fruit
+    ("banana" "Yellow and sweet")
+    ("orange" "Round and citrusy")
+    ("apple" "Crisp and juicy")
+    ("grape" "Small and grows in bunches")))
+
+`,
                         "explanation": "This example creates a DSL for pattern matching, a common feature in functional languages. The match macro takes a value and a series of pattern-expression pairs, matching the value against each pattern in turn. This allows for clear, declarative code. We use it to implement factorial with explicit base cases, then call it with the value 5 to calculate 5! = 120."
                     },
                     {
                         description: 'A DSL for data validation:',
-                        code: '; Define a data validation DSL\n(define-syntax validate\n  (syntax-rules (is length > <)\n    ((validate value is number)\n     (number? value))\n    ((validate value is string)\n     (string? value))\n    ((validate value length > min)\n     (and (or (string? value) (list? value) (vector? value))\n          (> (length value) min)))\n    ((validate value length < max)\n     (and (or (string? value) (list? value) (vector? value))\n          (< (length value) max)))))\n\n; Test our validation DSL\n(define data "test")\n(and (validate data is string)\n     (validate data length > 2)\n     (validate data length < 10))',
+                        code: `
+                        (define-syntax validate
+  (syntax-rules (is length > < number string)
+    ;; Type validation rules - now number and string are literal identifiers
+    ((validate value is number)
+     (number? value))
+    ((validate value is string)
+     (string? value))
+    
+    ;; Length comparison rules
+    ((validate value length > min)
+     (cond
+       ((string? value) (> (string-length value) min))
+       ((list? value) (> (length value) min))
+       ((vector? value) (> (vector-length value) min))
+       (else #f)))
+    ((validate value length < max)
+     (cond
+       ((string? value) (< (string-length value) max))
+       ((list? value) (< (length value) max))
+       ((vector? value) (< (vector-length value) max))
+       (else #f)))))
+
+                        `,
                         explanation: 'This example creates a DSL for data validation. The validate macro provides a readable syntax for common validation tasks. It transforms these high-level descriptions into the appropriate Scheme predicates. In this example, we check if data is a string between 3 and 9 characters long.'
                     }
                 ],
@@ -818,7 +739,7 @@ export const CURRICULUM: Chapter[] = [
                 codeExamples: [
                     {
                         description: 'The for loop:',
-                        code: 'Simple list of numbers\n(define numbers \'(1 2 3 4 5))\n\n; Square each number using for\n(for x in numbers\n  (* x x))',
+                        code: '\n; Simple list of numbers\n(define numbers \'(1 2 3 4 5))\n\n; Square each number using for\n(for x in numbers\n  (* x x))',
                         explanation: 'The for macro provides a simple way to iterate over a list. Here we square each number in the list. Note that for is implemented using map, so it returns a new list containing the results of applying the body expression to each element. The result is (1 4 9 16 25).'
                     },
                     {
@@ -828,12 +749,12 @@ export const CURRICULUM: Chapter[] = [
                     },
                     {
                         description: 'The for-each-with-index macro:',
-                        code: '\n Print each element with its index\n(for-each-with-index (element index) in \'(a b c d e)\n  (display "Element at index ")\n  (display index)\n  (display ": ")\n  (display element)\n  (newline))',
+                        code: '\n; Print each element with its index\n(for-each-with-index (element index) in \'(a b c d e)\n  (display "Element at index ")\n  (display index)\n  (display ": ")\n  (display element)\n  (newline))',
                         explanation: 'The for-each-with-index macro iterates over a list, providing both the current element and its index for each iteration. Unlike for, it does not collect return values, making it suitable for side effects like displaying output.'
                     },
                     {
                         description: 'Processing list elements:',
-                        code: '\nFind the sum and product of a list\n(define (sum-and-product numbers)\n  (let ((sum 0)\n        (product 1))\n    (for-each-with-index (num _) in numbers\n      (set! sum (+ sum num))\n      (set! product (* product num)))\n    (list sum product)))\n\n(sum-and-product \'(1 2 3 4 5))',
+                        code: '\n; Find the sum and product of a list\n(define (sum-and-product numbers)\n  (let ((sum 0)\n        (product 1))\n    (for-each-with-index (num _) in numbers\n      (set! sum (+ sum num))\n      (set! product (* product num)))\n    (list sum product)))\n\n(sum-and-product \'(1 2 3 4 5))',
                         explanation: 'This example uses for-each-with-index to calculate both the sum and product of a list of numbers. We use _ as a placeholder for the index since we don\'t need it. The result is (15 120), representing the sum and product of 1 through 5.'
                     }
                 ],
@@ -854,7 +775,7 @@ export const CURRICULUM: Chapter[] = [
                     },
                     {
                         description: 'The for-range macro:',
-                        code: '\nDisplay numbers from 1 to 5\n(for-range i 1 5\n  (display i)\n  (display " "))',
+                        code: '; Display numbers from 1 to 5\n(for-range i 1 5\n  (display i)\n  (display " "))',
                         explanation: 'The for-range macro provides a convenient way to iterate over a range of numbers. It takes a variable name, starting value, and ending value (inclusive). This example displays the numbers 1 through 5.'
                     },
                     {

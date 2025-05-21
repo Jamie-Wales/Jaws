@@ -36,19 +36,16 @@ static char *to_string_pair(SchemeObject *pair, int *depth) {
   return result;
 }
 
-SchemeObject *make_closure(void *code) // code is the function pointer from QBE
-{
-  // Capture the *current* environment when the closure is created
+SchemeObject *make_closure(void *code) {
   SchemeEnvironment *captured_env = current_environment;
 
-  // Use alloc_object which calls the fixed allocate indirectly
   SchemeObject *obj = alloc_object();
   if (!obj)
     return NULL;
 
   obj->type = TYPE_FUNCTION;
-  obj->value.function.code = code;        // Store the code pointer
-  obj->value.function.env = captured_env; // Store the captured env
+  obj->value.function.code = code;
+  obj->value.function.env = captured_env;
 
   printf("DEBUG: Created closure %p with code %p and captured env %p\n",
          (void *)obj, code, (void *)captured_env);
@@ -74,7 +71,6 @@ char *to_string(SchemeObject *object) {
   char buffer[1024];
   char *result;
 
-  // need to mask out marked bit
   switch (object->type & 0x7F) {
   case TYPE_NUMBER:
     snprintf(buffer, sizeof(buffer), "%lld", object->value.number);

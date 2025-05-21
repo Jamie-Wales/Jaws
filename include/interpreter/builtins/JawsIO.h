@@ -6,6 +6,9 @@
 
 namespace jaws_io {
 
+std::optional<SchemeValue> readline(
+    interpret::InterpreterState& state,
+    const std::vector<SchemeValue>& args);
 std::optional<SchemeValue> openOutputFile(
     interpret::InterpreterState& state,
     const std::vector<SchemeValue>& args);

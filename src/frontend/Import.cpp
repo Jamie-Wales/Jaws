@@ -29,10 +29,10 @@ namespace import {
 void populateInterpreterStateFromRegistry(
     const LibraryRegistry& registry,
     interpret::InterpreterState& state,
-    std::shared_ptr<pattern::MacroEnvironment> macroEnv) // Use shared_ptr
+    std::shared_ptr<pattern::MacroEnvironment> macroEnv)
 {
     for (const auto& [libNameStr, libData] : registry) {
-        for (const auto& definitionExpr : libData.bodyExpressions) { // Iterate body in order
+        for (const auto& definitionExpr : libData.bodyExpressions) {
             if (!definitionExpr)
                 continue;
 

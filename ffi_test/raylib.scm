@@ -16,7 +16,6 @@
 (register-function "snake_bridge" "bridge_render_game_over" "render-game-over" "void")
 (register-function "snake_bridge" "bridge_close_game" "close-game" "void")
 
-;; Main snake game logic - controlled from Scheme
 (define (run-snake-game)
   (display "Starting Snake Game\n")
   (if (= (init-game 800 600 "Snake Game - Scheme & Raylib") 0)

@@ -23,16 +23,13 @@ void prepareInterpreterEnvironment(
     interpret::InterpreterState& state,
     std::shared_ptr<pattern::MacroEnvironment> macroEnv)
 {
-    // Process value bindings from imported libraries with macro expansion
     for (const auto& libData : code.importedLibrariesData) {
         for (const auto& [name, binding] : libData.exportedBindings) {
             if (binding.type == import::ExportedBinding::Type::VALUE && binding.definition) {
                 try {
-                    // Expand macros in the binding definition
                     std::vector<std::shared_ptr<Expression>> toExpand = { binding.definition };
                     auto expanded = macroexp::expandMacros(toExpand, macroEnv);
 
-                    // Interpret the expanded definition
                     if (!expanded.empty() && expanded[0]) {
                         interpret::interpret(state, expanded[0]);
                     }
@@ -223,7 +220,6 @@ void evaluate(
         }
     }
 
-    // Register all syntax definitions from the current code in the macro environment
     for (const auto& expr : processedCode.remainingExpressions) {
         if (expr && std::holds_alternative<DefineSyntaxExpression>(expr->as)) {
             const auto& de = std::get<DefineSyntaxExpression>(expr->as);
@@ -233,7 +229,6 @@ void evaluate(
         }
     }
 
-    // Prepare the interpreter environment with expanded values
     prepareInterpreterEnvironment(processedCode, state, macroEnv);
 
     // Collect non-syntax expressions for expansion
@@ -244,7 +239,6 @@ void evaluate(
         }
     }
 
-    // Expand macros in the user code
     std::vector<std::shared_ptr<Expression>> finalExpressions;
     try {
         finalExpressions = macroexp::expandMacros(expressionsToExpand, macroEnv);
@@ -257,7 +251,7 @@ void evaluate(
         ss_print_buffer.str("");
         ss_print_buffer.clear();
         for (const auto& expression : finalExpressions) {
-            if (expression) { // Add null check
+            if (expression) {
                 ss_print_buffer << expression->toString() << "\n";
             }
         }
@@ -268,7 +262,7 @@ void evaluate(
     if (opts.printAST && (opts.printMacro || opts.prettyPrint)) {
         std::cout << "\n<| AST After Macro Expansion |>\n";
         for (const auto& expression : finalExpressions) {
-            if (expression) { // Add null check
+            if (expression) {
                 std::cout << expression->ASTToString() << "\n";
             }
         }
@@ -333,7 +327,6 @@ void evaluate(
                 std::cerr << "ANF transformation resulted in empty output." << std::endl;
             }
         } else {
-            // Interpret the expanded user code
             auto val = interpret::interpret(state, finalExpressions);
             if (val) {
                 std::cout << val->toString() << std::endl;

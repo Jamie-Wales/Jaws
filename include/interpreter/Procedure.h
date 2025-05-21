@@ -23,8 +23,8 @@ public:
 
     const char* what() const noexcept override { return "Continuation invoked"; }
 
-    interpret::InterpreterState state; // The state to restore
-    SchemeValue value; // The value to return
+    interpret::InterpreterState state;
+    SchemeValue value;
 };
 class Procedure {
 public:
@@ -42,7 +42,6 @@ public:
     using Func = std::function<std::optional<SchemeValue>(
         interpret::InterpreterState&, const std::vector<SchemeValue>&)>;
 
-    // Constructor now only takes the function
     explicit BuiltInProcedure(Func f)
         : func(std::move(f))
     {
@@ -61,7 +60,6 @@ public:
 
 private:
     Func func;
-    // Removed: bool modifiesFirstArg = false;
 };
 
 class UserProcedure : public Procedure {
