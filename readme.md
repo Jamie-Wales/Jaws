@@ -22,7 +22,7 @@ Jaws is an **R7RS Scheme** implementation written in C++ and compiled to WebAsse
 * **Optimization**: Includes optimization passes like Dead Code Elimination and Constant Folding.
 * **Multiple Backends (Potential)**: Code includes generators for QBE intermediate representation and x86-64 Assembly, suggesting potential compilation targets beyond the WASM interpreter.
 * **FFI**: Includes a Foreign Function Interface (FFI) for calling C functions.
-* **Web Client** 🌐: A web interface built with React and Vite for interacting with the WASM interpreter. Includes Doxygen documentation integration.
+* **Web Client** 🌐: A web interface built with React and Vite for interacting with the WASM interpreter.
 * **Runtime System**: Includes a basic C runtime with garbage collection for natively compiled executables.
 
 ## Technology Stack 🛠️
@@ -34,7 +34,6 @@ Jaws is an **R7RS Scheme** implementation written in C++ and compiled to WebAsse
 * **Testing**: GoogleTest
 * **Native Backends**: QBE, Clang (for assembly and linking)
 * **Web Client**: JavaScript/TypeScript, Vite, React, Tailwind CSS, Radix UI, CodeMirror.
-* **Documentation**: Doxygen
 
 ## Project Structure 📁
 
@@ -48,7 +47,7 @@ Jaws is an **R7RS Scheme** implementation written in C++ and compiled to WebAsse
   * `CMakeLists.txt`: CMake file for building the WASM module.
   * `JawsWrapper.cpp`: C++ wrapper using Embind for interfacing WASM with JavaScript.
   * `client/`: Contains the source code for the web interface (React, Vite).
-    * `vite.config.js` (or `.ts`): Configuration for the Vite build tool, including custom plugins for handling WASM and Doxygen documentation.
+    * `vite.config.js` (or `.ts`): Configuration for the Vite build tool, including custom plugins for handling WASM.
     * `package.json`: Node.js project file defining scripts and dependencies.
 * `lib/`: Contains Scheme library files (`.scm`) used by the import system (e.g., `base.scm`, `list-utils.scm`).
 * `runtime/`: Contains C source code for the runtime system (e.g., `gc.c`, `types.c`) needed for natively compiled Scheme programs.
@@ -101,11 +100,9 @@ When compiling Scheme code to a native executable (using the `--compile` option,
 ### Dependencies
 
 * **CMake**: Version 3.14 or higher.
-* **C++ Compiler**: Supporting C++20 (e.g., Clang, GCC). *Currently targets macOS arm64 only.*
-* **Xcode Command Line Tools**: Required on macOS for `as` and `ld`.
+* **C++ Compiler**: Supporting C++20 (e.g., Clang, GCC).
 * **Emscripten SDK**: Required *only* for building the WebAssembly version. ([Installation Guide](https://emscripten.org/docs/getting_started/downloads.html))
 * **Node.js and npm**: Required *only* for building and running the web client.
-* **Doxygen**: Required by the web client build scripts. ([Doxygen Website](https://www.doxygen.nl/))
 * **QBE**: Required *only* if using the native compilation (`--compile`) feature. ([QBE Compiler Backend](https://c9x.me/qbe/))
 
 ### Build Process (CMake)
@@ -150,27 +147,14 @@ The project uses CMake for building both the native components and the WebAssemb
 #### Web Client 🌐
 
 1. **Build WASM**: Ensure the `jaws_wasm` target has been built successfully (which copies `jaws.js` and `jaws.wasm` to `web/client/public/wasm/`).
-2. **Generate Doxygen Docs**: Run `doxygen` from the project root (or use `npm run docs` inside `web/client`). The web client build scripts require the documentation to exist in `docs/html`.
-
-    ```bash
-    # From project root
-    doxygen
-    # OR from web/client
-    # npm run docs
-    ```
-
 3. **Navigate**: `cd web/client`.
 4. **Install Dependencies**: `npm install`.
 5. **Run Development Server**: `npm run dev`.
-    * This script first ensures Doxygen docs are generated.
     * It then starts the Vite development server.
     * The `wasmPlugin` in `vite.config.js` copies `jaws.js` and `jaws.wasm` from `public/wasm` to `public/javascript` for development access.
-    * The `docsPlugin` copies Doxygen docs from `../../docs/html` to `public/docs`.
     * Access the URL provided by Vite (usually `http://localhost:5173` or similar).
 6. **Build for Production**: `npm run build`.
-    * This script ensures Doxygen docs are generated, runs `tsc` for type checking, and then runs `vite build`.
     * The `wasmPlugin` copies `jaws.js` and `jaws.wasm` from `public/wasm` to `dist/javascript`.
-    * The `docsPlugin` copies Doxygen docs from `../../docs/html` to `dist/docs`.
     * The production-ready static files will be in `web/client/dist`.
 7. **Preview Production Build**: `npm run preview`.
 8. **Deploy to GitHub Pages**: `npm run deploy` (uses `gh-pages` to push the `dist` directory).
