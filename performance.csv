@@ -1,0 +1,40 @@
+Timestamp,File Path,Arguments,Execution Time (s),Return Code
+2025-05-31 10:58:39.187,build/build/scheme_program,,0.0166,0
+2025-05-31 11:00:39.522,build/jaws,--script tailrecursive.scm,0.0335,0
+2025-05-31 11:05:01.645,build/jaws,--script tailrecursive.scm,2.4179,0
+2025-05-31 11:17:48.294,/opt/homebrew/opt/chicken/bin/chicken,--script tailrecursive.scm,0.1672,0
+2025-05-31 11:05:12.779,build/build/scheme_program,,0.1648,0
+2025-05-31 11:12:41.294,countdown.py,,0.1667,0
+2025-05-31 11:19:16.847,/opt/homebrew/bin/racket,--script tailrecursive.scm,0.3324,0
+2025-05-31 11:15:30.151,/opt/homebrew/bin/chez,--script tailrecursive.scm,0.0572,0
+2025-05-31 14:28:52.308,build/build/scheme_program,,0.1195,0
+2025-05-31 14:29:14.644,build/build/scheme_program,,0.1257,0
+2025-05-31 14:29:19.988,build/build/scheme_program,,0.1278,0
+2025-05-31 14:29:28.860,build/build/scheme_program,,0.1243,0
+2025-05-31 14:29:30.888,build/build/scheme_program,,0.1211,0
+2025-05-31 14:29:32.966,build/build/scheme_program,,0.1245,0
+2025-05-31 14:37:22.303,/opt/homebrew/bin/chicken,tailrecursive.scm,0.0389,0
+2025-05-31 16:06:20.264,/opt/homebrew/bin/chicken,tailrecursive.scm,0.0547,0
+2025-05-31 16:06:30.652,/opt/homebrew/bin/chicken,tailrecursive.scm,0.0387,0
+2025-05-31 16:06:57.097,/opt/homebrew/bin/chicken,tailrecursive.scm,0.0398,0
+2025-05-31 16:07:00.873,/opt/homebrew/bin/chicken,tailrecursive.scm,0.0385,0
+2025-05-31 16:07:15.958,/opt/homebrew/bin/racket,--script tailrecursive.scm,0.3214,0
+2025-05-31 16:07:44.680,/opt/homebrew/bin/chicken,--script tailrecursive.scm,0.0388,0
+2025-05-31 16:08:33.963,/opt/homebrew/opt/chicken/bin/chicken,--script tailrecursive.scm,0.0387,0
+2025-05-31 16:08:51.900,/opt/homebrew/bin/chicken,tailrecursive.scm,0.0389,0
+2025-05-31 16:09:24.069,build/build/scheme_program,,0.1319,0
+2025-05-31 19:05:19.285,tailrecursive,,0.0020,-2
+2025-05-31 19:05:34.873,./tailrecursive,,0.1525,0
+2025-05-31 19:06:50.237,build/build/scheme_program,,0.1860,0
+2025-05-31 19:15:43.349,./tailrecursive,,4.4189,0
+2025-05-31 19:16:02.579,build/tailrecursive,,4.8517,0
+2025-05-31 19:17:16.305,build/build/scheme_program,,11.9597,0
+2025-05-31 19:18:08.960,build/tailrecursive,,4.8996,0
+2025-05-31 19:19:18.897,/opt/homebrew/bin/racket,--script tailrecursive.scm,0.2367,0
+2025-05-31 19:19:34.762,/opt/homebrew/bin/racket,tailrecursive.scm,4.2037,0
+2025-05-31 19:21:14.179,build/tailrecursive,,4.6213,0
+2025-05-31 19:22:00.471,build/tailrecursive,,4.3924,0
+2025-05-31 19:22:11.559,build/tailrecursive,,4.4381,0
+2025-05-31 19:22:44.406,build/tailrecursive,,4.3470,0
+2025-05-31 19:24:50.400,build/tailrecursive,,487.2096,0
+2025-05-31 19:33:20.214,build/build/scheme_program,,1200.7758,-9

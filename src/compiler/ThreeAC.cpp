@@ -11,6 +11,19 @@
 
 namespace tac {
 
+static const std::unordered_map<std::string, std::string> PRIMITIVE_MAP = {
+    { "+", "$plus" },
+    { "-", "$minus" },
+    { "*", "$multiply" },
+    { "/", "$divide" },
+    { "display", "$display" },
+    { "newline", "$newline" },
+    { "cons", "$cons" },
+    { "car", "$car" },
+    { "cdr", "$cdr" },
+    { "=", "$equal" }
+};
+
 struct FunctionToProcess {
     std::string label;
     std::vector<Token> params;
@@ -61,10 +74,19 @@ std::string operationToString(Operation op)
         return "FUNC_BEGIN";
     case Operation::FUNC_END:
         return "FUNC_END";
+    case Operation::ENV_LOOKUP:
+        return "ENV_LOOKUP";
+    case Operation::PRIMITIVE_CALL:
+        return "PRIMITIVE_CALL";
+    case Operation::TAIL_CALL:
+        return "TAIL_CALL";
+    case Operation::TAIL_CALL_SELF:
+        return "TAIL_CALL_SELF";
     }
     return "UNKNOWN";
 }
 
+// 2. Update ThreeACInstruction::toString() - add these cases in the switch:
 std::string ThreeACInstruction::toString() const
 {
     auto ss = std::stringstream();
@@ -139,6 +161,18 @@ std::string ThreeACInstruction::toString() const
             ss << *arg1;
         ss << " COPY";
         break;
+    case Operation::TAIL_CALL:
+        ss << "TAIL_CALL ";
+        if (arg1)
+            ss << *arg1;
+        if (arg2)
+            ss << " (" << *arg2 << " args)";
+        break;
+    case Operation::TAIL_CALL_SELF:
+        ss << "TAIL_CALL_SELF";
+        if (arg1)
+            ss << " (" << *arg1 << " args)";
+        break;
     default:
         if (result)
             ss << *result << " = ";
@@ -176,7 +210,9 @@ void convertANF(
     ThreeAddressModule& module,
     std::string& result,
     std::vector<FunctionToProcess>& functionsToGenerate,
-    bool valueNeeded = true);
+    bool valueNeeded = true,
+    bool isTailPosition = false,
+    const std::string& currentFunctionLabel = "");
 
 void generateFunctionTacBody(
     const FunctionToProcess& funcInfo,
@@ -200,7 +236,9 @@ void convertANF(
     ThreeAddressModule& module,
     std::string& result,
     std::vector<FunctionToProcess>& functionsToGenerate,
-    bool valueNeeded)
+    bool valueNeeded,
+    bool isTailPosition,
+    const std::string& currentFunctionLabel)
 {
     if (!anf) {
         result = "()";
@@ -210,61 +248,119 @@ void convertANF(
     std::visit(overloaded {
                    [&](const ir::Let& let) {
                        std::string bindingResult;
-                       convertANF(let.binding, module, bindingResult, functionsToGenerate, let.name.has_value());
+                       // Bindings are never in tail position
+                       convertANF(let.binding, module, bindingResult, functionsToGenerate,
+                           let.name.has_value(), false, currentFunctionLabel);
 
                        if (let.name) {
                            module.addInstr({ Operation::STORE, {}, let.name->lexeme, bindingResult });
-                           convertANF(let.body, module, result, functionsToGenerate, valueNeeded);
+                           convertANF(let.body, module, result, functionsToGenerate,
+                               valueNeeded, isTailPosition, currentFunctionLabel);
                        } else {
-                           convertANF(let.body, module, result, functionsToGenerate, valueNeeded);
+                           convertANF(let.body, module, result, functionsToGenerate,
+                               valueNeeded, isTailPosition, currentFunctionLabel);
                        }
                    },
 
                    [&](const ir::Atom& atom) {
                        if (valueNeeded) {
-
                            if (!isTempVariable(atom.atom.lexeme) && !isLiteral(atom.atom.lexeme)) {
                                result = generateTemp();
                                module.addInstr({ Operation::LOAD, result, atom.atom.lexeme, {} });
                            } else {
-
                                result = atom.atom.lexeme;
                            }
                        } else {
-
                            result = "()";
                        }
                    },
 
                    [&](const ir::App& app) {
+                       // Evaluate all arguments first
                        std::vector<std::string> paramSources;
                        paramSources.reserve(app.params.size());
                        for (const auto& param_token : app.params) {
                            std::string paramResult;
-
-                           convertANF(std::make_shared<ir::ANF>(ir::Atom { param_token }), module, paramResult, functionsToGenerate, true);
+                           convertANF(std::make_shared<ir::ANF>(ir::Atom { param_token }),
+                               module, paramResult, functionsToGenerate, true, false, currentFunctionLabel);
                            paramSources.push_back(paramResult);
                        }
 
+                       // Emit PARAM instructions
                        for (const auto& source_name : paramSources) {
                            module.addInstr({ Operation::PARAM, {}, source_name, {} });
                        }
 
-                       std::string funcTarget = app.name.lexeme;
+                       std::string originalFuncName = app.name.lexeme;
+                       auto primitive_it = PRIMITIVE_MAP.find(originalFuncName);
 
-                       if (!isTempVariable(funcTarget) && funcTarget.find('$') != 0 && funcTarget.find('L') != 0) {
-                           std::string loadedFunc = generateTemp();
-                           module.addInstr({ Operation::LOAD, loadedFunc, funcTarget, {} });
-                           funcTarget = loadedFunc;
-                       }
-
-                       if (valueNeeded) {
-                           result = generateTemp();
-                           module.addInstr({ Operation::CALL, result, funcTarget, std::to_string(paramSources.size()) });
+                       if (primitive_it != PRIMITIVE_MAP.end()) {
+                           // Primitive call - never a tail call
+                           std::string primitiveTargetSymbol = primitive_it->second;
+                           if (valueNeeded) {
+                               result = generateTemp();
+                               module.addInstr({ Operation::PRIMITIVE_CALL, result, primitiveTargetSymbol,
+                                   std::to_string(paramSources.size()) });
+                           } else {
+                               module.addInstr({ Operation::PRIMITIVE_CALL, {}, primitiveTargetSymbol,
+                                   std::to_string(paramSources.size()) });
+                               result = "()";
+                           }
                        } else {
+                           // Non-primitive call (closure call)
+                           // IMPORTANT: Don't create unnecessary LOAD instructions for simple identifiers
+                           // This preserves function names for tail call optimization
 
-                           module.addInstr({ Operation::CALL, {}, funcTarget, std::to_string(paramSources.size()) });
-                           result = "()";
+                           std::string funcTargetSchemeObjectReg = originalFuncName;
+
+                           // Only create a LOAD if we absolutely need to
+                           // (i.e., it's already a temp variable or a literal)
+                           bool needsLoad = false;
+
+                           if (isTempVariable(originalFuncName) || originalFuncName.rfind("temp", 0) == 0 || originalFuncName[0] == '$' || isLiteral(originalFuncName)) {
+                               // These are already resolved, no LOAD needed
+                               funcTargetSchemeObjectReg = originalFuncName;
+                           } else {
+                               // For regular identifiers, we'll let the code generator handle the lookup
+                               // This preserves the function name for tail call detection
+                               funcTargetSchemeObjectReg = originalFuncName;
+                               needsLoad = true;
+                           }
+
+                           // Check if this is a tail call
+                           if (app.is_tail && isTailPosition) {
+                               // Check if it's a self-call
+                               bool is_self_call = (!currentFunctionLabel.empty() && originalFuncName == currentFunctionLabel);
+
+                               if (is_self_call) {
+                                   module.addInstr({ Operation::TAIL_CALL_SELF, {},
+                                       std::to_string(paramSources.size()), {} });
+                               } else {
+                                   // For tail calls, we pass the original function name
+                                   // This allows the code generator to optimize known function calls
+                                   module.addInstr({ Operation::TAIL_CALL, {}, originalFuncName,
+                                       std::to_string(paramSources.size()) });
+                               }
+                               result = ""; // Empty string indicates tail call - no value produced
+                           } else {
+                               // Normal call
+                               if (needsLoad) {
+                                   // For normal calls, we do need to load the function
+                                   std::string loadedFunc = generateTemp();
+                                   module.addInstr({ Operation::LOAD, loadedFunc, originalFuncName, {} });
+                                   funcTargetSchemeObjectReg = loadedFunc;
+                               }
+
+                               if (valueNeeded) {
+                                   result = generateTemp();
+                                   module.addInstr({ Operation::CALL, result, funcTargetSchemeObjectReg,
+                                       std::to_string(paramSources.size()) });
+                               } else {
+                                   module.addInstr({ Operation::CALL, {}, funcTargetSchemeObjectReg,
+                                       std::to_string(paramSources.size()) });
+                                   result = "()";
+                               }
+                           }
                        }
                    },
 
@@ -274,32 +370,61 @@ void convertANF(
                        std::string endLabel = generateLabel();
 
                        std::string condResult;
-
-                       convertANF(std::make_shared<ir::ANF>(ir::Atom { ifExpr.cond }), module, condResult, functionsToGenerate, true);
+                       convertANF(std::make_shared<ir::ANF>(ir::Atom { ifExpr.cond }), module, condResult,
+                           functionsToGenerate, true, false, currentFunctionLabel);
 
                        module.addInstr({ Operation::JUMP_IF_NOT, {}, condResult, elseLabel });
 
+                       // Then branch
                        std::string thenResult;
-                       convertANF(ifExpr.then, module, thenResult, functionsToGenerate, valueNeeded);
-                       std::string ifResultTemp = "()";
-                       if (valueNeeded) {
-                           ifResultTemp = generateTemp();
-                           module.addInstr({ Operation::COPY, ifResultTemp, thenResult, {} });
+                       convertANF(ifExpr.then, module, thenResult, functionsToGenerate,
+                           valueNeeded, isTailPosition, currentFunctionLabel);
+
+                       bool thenIsTailCall = thenResult.empty(); // Empty result means tail call
+
+                       if (!thenIsTailCall) {
+                           if (valueNeeded && !isTailPosition) {
+                               std::string ifResultTemp = generateTemp();
+                               module.addInstr({ Operation::COPY, ifResultTemp, thenResult, {} });
+                               result = ifResultTemp;
+                           } else {
+                               result = thenResult;
+                           }
+                           module.addInstr({ Operation::JUMP, {}, endLabel, {} });
                        }
-                       module.addInstr({ Operation::JUMP, {}, endLabel, {} });
 
                        module.addInstr({ Operation::LABEL, {}, elseLabel, {} });
+
+                       // Else branch
                        std::string elseResult = "()";
                        if (ifExpr._else && *ifExpr._else) {
-                           convertANF(*ifExpr._else, module, elseResult, functionsToGenerate, valueNeeded);
-                       }
-                       if (valueNeeded) {
-
-                           module.addInstr({ Operation::COPY, ifResultTemp, elseResult, {} });
+                           convertANF(*ifExpr._else, module, elseResult, functionsToGenerate,
+                               valueNeeded, isTailPosition, currentFunctionLabel);
                        }
 
-                       module.addInstr({ Operation::LABEL, {}, endLabel, {} });
-                       result = ifResultTemp;
+                       bool elseIsTailCall = elseResult.empty(); // Empty result means tail call
+
+                       if (!elseIsTailCall) {
+                           if (valueNeeded && !isTailPosition && !thenIsTailCall) {
+                               // Only copy to the result temp if then branch didn't already create it
+                               if (result.empty() || result == "()") {
+                                   result = generateTemp();
+                               }
+                               module.addInstr({ Operation::COPY, result, elseResult, {} });
+                           } else if (!thenIsTailCall) {
+                               result = elseResult;
+                           }
+                       }
+
+                       // Only emit end label if at least one branch didn't tail call
+                       if (!thenIsTailCall || !elseIsTailCall) {
+                           module.addInstr({ Operation::LABEL, {}, endLabel, {} });
+                       }
+
+                       // If both branches tail called, we have no result
+                       if (thenIsTailCall && elseIsTailCall) {
+                           result = "";
+                       }
                    },
 
                    [&](const ir::Lambda& lambda) {
@@ -330,6 +455,7 @@ void convertANF(
         anf->term);
 }
 
+// Also update generateFunctionTacBody to handle empty results
 void generateFunctionTacBody(
     const FunctionToProcess& funcInfo,
     ThreeAddressModule& module,
@@ -352,9 +478,14 @@ void generateFunctionTacBody(
     module.addInstr({ Operation::FUNC_BEGIN, {}, funcInfo.label, paramNamesStr });
 
     std::string bodyResult;
-    convertANF(funcInfo.body_anf, module, bodyResult, functionsToGenerate, true);
+    convertANF(funcInfo.body_anf, module, bodyResult, functionsToGenerate,
+        true, true, funcInfo.label);
 
-    module.addInstr({ Operation::RETURN, {}, bodyResult, {} });
+    // Only generate RETURN if we didn't generate a tail call (indicated by empty result)
+    if (!bodyResult.empty()) {
+        module.addInstr({ Operation::RETURN, {}, bodyResult, {} });
+    }
+
     module.addInstr({ Operation::FUNC_END, {}, funcInfo.label, {} });
 }
 
@@ -373,12 +504,12 @@ ThreeAddressModule anfToTac(const std::vector<std::shared_ptr<ir::TopLevel>>& to
         std::visit(overloaded {
                        [&](const ir::TDefine& define) {
                            std::string valueResult;
-                           convertANF(define.body, module, valueResult, functionsToGenerate, true);
+                           convertANF(define.body, module, valueResult, functionsToGenerate, true, false, "");
                            module.addInstr({ Operation::STORE, {}, define.name.lexeme, valueResult });
                        },
                        [&](const std::shared_ptr<ir::ANF>& expr) {
                            std::string result_temp;
-                           convertANF(expr, module, result_temp, functionsToGenerate, false);
+                           convertANF(expr, module, result_temp, functionsToGenerate, false, false, "");
                        } },
             top->decl);
     }
@@ -390,4 +521,4 @@ ThreeAddressModule anfToTac(const std::vector<std::shared_ptr<ir::TopLevel>>& to
     return module;
 }
 
-} // namespace tac
+}

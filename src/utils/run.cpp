@@ -317,7 +317,8 @@ void evaluate(
                     throw std::runtime_error("QBE compilation failed");
                 }
                 std::cout << "Compiling assembly to executable: " << exeFile << std::endl;
-                std::string linkCmd = "clang -o " + exeFile + " " + asmFile + " ../runtime/build/libruntime.a";
+                std::string linkCmd = "clang -O3 -o " + exeFile + " " + asmFile + " ../runtime/build/libruntime.a";
+
                 if (system(linkCmd.c_str()) != 0) {
                     throw std::runtime_error("Linking failed");
                 }

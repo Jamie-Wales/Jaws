@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern SchemeObject nil_obj = {TYPE_NIL};
+extern SchemeObject true_obj = {TYPE_BOOL, .value.boolean = true};
+extern SchemeObject false_obj = {TYPE_BOOL, .value.boolean = false};
+
 static char *to_string_pair(SchemeObject *pair, int *depth) {
   if (*depth > 100)
     return strdup("...");
@@ -37,7 +41,7 @@ static char *to_string_pair(SchemeObject *pair, int *depth) {
 }
 
 SchemeObject *make_closure(void *code) {
-  SchemeEnvironment *captured_env = current_environment;
+  SchemeEnvironment *captured_env = g_current_environment;
 
   SchemeObject *obj = alloc_object();
   if (!obj)
@@ -100,6 +104,15 @@ char *to_string(SchemeObject *object) {
     return strdup("<unknown-type>");
   }
 }
+SchemeObject *make_string(const char *str) {
+  SchemeObject *obj = alloc_object();
+  if (!obj)
+    return NULL;
+  obj->type = TYPE_STRING;
+  obj->value.string = strdup(str);
+  return obj;
+}
+
 int is_nil(SchemeObject *obj) { return obj == SCHEME_NIL || obj == NULL; }
 /* #TODO: Implement this function */
 void call_closure(SchemeObject *func, SchemeObject **args, int arg_count) {

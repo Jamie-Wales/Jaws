@@ -1,10 +1,8 @@
+#lang scheme
 (define (countdown n)
-    (if (= n 0) 
+    (if (= n 1000000000) 
         0
-        (begin 
-            (display n) 
-            (newline) 
-            (countdown (- n 1)))))
+            (begin (display n) (countdown (+ n 1)))))
 
 
-(countdown 100000)
+(countdown 0)

@@ -10,3 +10,6 @@ extern void gc();
 extern SchemeObject* alloc_object();
 extern SchemeObject* allocate(SchemeType type, int64_t immediate);
 extern SchemeObject* allocate_pair(SchemeObject* car, SchemeObject* cdr);
+void* getCodePointer(SchemeObject* obj);
+SchemeEnvironment* setup_call_environment(SchemeObject* closure_obj);
+void restore_call_environment(SchemeEnvironment* active_call_env_from_setup);

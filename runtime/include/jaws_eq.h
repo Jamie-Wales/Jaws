@@ -7,3 +7,5 @@ SchemeObject* is_null(SchemeObject* obj);
 SchemeObject is_pair(SchemeObject* obj);
 SchemeObject is_symbol(SchemeObject* obj);
 SchemeObject is_number(SchemeObject* obj);
+SchemeObject* s_true();
+SchemeObject* s_false();

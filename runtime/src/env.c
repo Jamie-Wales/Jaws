@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Add this line (or compile with -DDEBUG_ENV) to enable debug prints
+// #define DEBUG_ENV
+
 #define INITIAL_CAPACITY 16
 #define TABLE_MAX_LOAD 0.75f
 
@@ -92,52 +95,145 @@ static SchemeObject *hashmap_get(HashMap *map, SchemeObject *key) {
   }
   return NULL;
 }
+
 static void hashmap_put(HashMap *map, SchemeObject *key, SchemeObject *value) {
+#ifdef DEBUG_ENV
+  printf("DEBUG_HP_PUT: ENTERED. map: %p, key: %p (type: %d), value: %p (type: "
+         "%d)\n",
+         (void *)map, (void *)key, key ? (int)(key->type & ~0x80) : -1,
+         (void *)value, value ? (int)(value->type & ~0x80) : -1);
+  if (key && (key->type & ~0x80) == TYPE_SYMBOL) {
+    printf("DEBUG_HP_PUT: key is SYMBOL: \"%s\"\n",
+           key->value.symbol ? key->value.symbol : "NULL_STR_IN_KEY");
+  }
+  fflush(stdout);
+#endif
+
   if (!map || !key) {
-    fprintf(stderr,
-            "ERROR: hashmap_put called with NULL map (%p) or key (%p).\n",
+    fprintf(stderr, "ERROR_HP_PUT: map or key is NULL. map: %p, key: %p.\n",
             (void *)map, (void *)key);
-    if (!key)
-      fprintf(stderr, "       (Value being put was: %p)\n", (void *)value);
+    fflush(stderr);
     return;
   }
+
   if ((float)(map->count + 1) / map->capacity >= TABLE_MAX_LOAD) {
+#ifdef DEBUG_ENV
+    printf("DEBUG_HP_PUT: Resizing hashmap %p from capacity %zu for key %s\n",
+           (void *)map, map->capacity, key->value.symbol);
+    fflush(stdout);
+#endif
     hashmap_resize(map, map->capacity * 2);
-    uint32_t hash_after_resize = hash_symbol_ptr(key) % map->capacity;
-    Entry *entry_after_resize = map->entries[hash_after_resize];
-    while (entry_after_resize != NULL) {
-      if (entry_after_resize->key == key) {
-        entry_after_resize->value = value;
-        return;
-      }
-      entry_after_resize = entry_after_resize->next;
-    }
+#ifdef DEBUG_ENV
+    printf("DEBUG_HP_PUT: Resize complete for hashmap %p, new capacity %zu\n",
+           (void *)map, map->capacity);
+    fflush(stdout);
+#endif
   }
-  uint32_t hash = hash_symbol_ptr(key) % map->capacity;
-  Entry *entry = map->entries[hash];
+
+  uint32_t hash_val = hash_symbol_ptr(key) % map->capacity;
+#ifdef DEBUG_ENV
+  printf("DEBUG_HP_PUT: Calculated hash: %u for key %s (%p)\n", hash_val,
+         key->value.symbol, (void *)key);
+  fflush(stdout);
+#endif
+
+  Entry *entry = map->entries[hash_val];
+#ifdef DEBUG_ENV
+  printf("DEBUG_HP_PUT: Initial entry for bucket %u: %p\n", hash_val,
+         (void *)entry);
+  fflush(stdout);
+#endif
+
+  int loop_iter = 0;
   while (entry != NULL) {
+#ifdef DEBUG_ENV
+    printf("DEBUG_HP_PUT: Loop iter %d, current entry: %p\n", loop_iter,
+           (void *)entry);
+    fflush(stdout);
+#endif
+
+    if (entry == (void *)0x2) {
+      fprintf(
+          stderr,
+          "FATAL_HP_PUT: 'entry' pointer is 0x2 before dereferencing key!\n");
+      fflush(stderr);
+      exit(EXIT_FAILURE);
+    }
+    if (!entry->key) {
+      fprintf(stderr, "FATAL_HP_PUT: entry %p has NULL key!\n", (void *)entry);
+      fflush(stderr);
+      exit(EXIT_FAILURE);
+    }
+#ifdef DEBUG_ENV
+    printf("DEBUG_HP_PUT: Comparing entry->key: %p (name: %s) with target key: "
+           "%p (name: %s)\n",
+           (void *)entry->key,
+           (entry->key->value.symbol ? entry->key->value.symbol
+                                     : "NULL_STR_IN_ENTRY_KEY"),
+           (void *)key,
+           (key->value.symbol ? key->value.symbol : "NULL_STR_IN_TARGET_KEY"));
+    fflush(stdout);
+#endif
+
     if (entry->key == key) {
+#ifdef DEBUG_ENV
+      printf("DEBUG_HP_PUT: Key found. Updating value.\n");
+      fflush(stdout);
+#endif
       entry->value = value;
       return;
     }
+
+    if (entry->next == (void *)0x2) {
+      fprintf(stderr, "FATAL_HP_PUT: 'entry->next' pointer is 0x2 before "
+                      "'entry = entry->next'!\n");
+      fflush(stderr);
+      exit(EXIT_FAILURE);
+    }
+#ifdef DEBUG_ENV
+    printf("DEBUG_HP_PUT: Moving to entry->next: %p\n", (void *)entry->next);
+    fflush(stdout);
+#endif
     entry = entry->next;
+    loop_iter++;
   }
-  Entry *new_entry = malloc(sizeof(Entry));
+
+#ifdef DEBUG_ENV
+  printf("DEBUG_HP_PUT: Key NOT found. Allocating new entry.\n");
+  fflush(stdout);
+#endif
+  Entry *new_entry = (Entry *)malloc(sizeof(Entry));
+#ifdef DEBUG_ENV
+  printf("DEBUG_HP_PUT: malloc for new_entry returned: %p\n",
+         (void *)new_entry);
+  fflush(stdout);
+#endif
+
   if (!new_entry) {
-    fprintf(stderr, "ERROR: Failed to allocate hashmap entry\n");
+    fprintf(stderr, "ERROR_HP_PUT: Failed to malloc new_entry\n");
+    fflush(stderr);
     return;
   }
   new_entry->key = key;
   new_entry->value = value;
-  new_entry->next = map->entries[hash];
-  map->entries[hash] = new_entry;
+  new_entry->next = map->entries[hash_val];
+  map->entries[hash_val] = new_entry;
   map->count++;
+#ifdef DEBUG_ENV
+  printf("DEBUG_HP_PUT: New entry %p (key=%s, val=%p, next=%p) added to bucket "
+         "%u. Count=%zu\n",
+         (void *)new_entry, key->value.symbol, (void *)value,
+         (void *)new_entry->next, hash_val, map->count);
+  fflush(stdout);
+#endif
 }
 
 void init_symbol_table() {
   if (!global_symbol_table) {
     global_symbol_table = hashmap_new();
+#ifdef DEBUG_ENV
     printf("DEBUG: Global symbol table initialized.\n");
+#endif
   } else {
     printf("WARN: Symbol table already initialized.\n");
   }
@@ -145,7 +241,9 @@ void init_symbol_table() {
 void destroy_symbol_table() {
   if (!global_symbol_table)
     return;
+#ifdef DEBUG_ENV
   printf("DEBUG: Destroying global symbol table.\n");
+#endif
   for (size_t i = 0; i < global_symbol_table->capacity; i++) {
     Entry *entry = global_symbol_table->entries[i];
     while (entry != NULL) {
@@ -163,6 +261,10 @@ void destroy_symbol_table() {
   global_symbol_table = NULL;
 }
 SchemeObject *intern_symbol(const char *name) {
+#ifdef DEBUG_ENV
+  printf("interning %s\n", name);
+  fflush(stdout);
+#endif
   if (!global_symbol_table) {
     fprintf(stderr, "ERROR: Symbol table not initialized! Call "
                     "init_symbol_table() first.\n");
@@ -172,7 +274,7 @@ SchemeObject *intern_symbol(const char *name) {
     fprintf(stderr, "ERROR: Attempted to intern NULL symbol name.\n");
     return SCHEME_NIL;
   }
-  for (size_t i = 0; i < global_symbol_table->capacity; ++i) {
+  for (size_t i = 0; i < global_symbol_table->capacity; i++) {
     Entry *entry = global_symbol_table->entries[i];
     while (entry != NULL) {
       if (entry->key && entry->key->type == TYPE_SYMBOL &&
@@ -194,6 +296,8 @@ SchemeObject *intern_symbol(const char *name) {
   if (!name_copy) {
     fprintf(stderr, "ERROR: Failed to duplicate string for symbol '%s'\n",
             name);
+    // Note: new_symbol is allocated from GC heap, will be collected if not
+    // used.
     return SCHEME_NIL;
   }
   new_symbol->value.symbol = name_copy;
@@ -202,7 +306,8 @@ SchemeObject *intern_symbol(const char *name) {
 }
 
 SchemeEnvironment *new_environment(SchemeEnvironment *enclosing) {
-  SchemeEnvironment *env = malloc(sizeof(SchemeEnvironment));
+  SchemeEnvironment *env =
+      (SchemeEnvironment *)malloc(sizeof(SchemeEnvironment));
   if (!env) {
     fprintf(stderr, "Failed to allocate environment\n");
     exit(1);
@@ -228,6 +333,7 @@ SchemeObject *env_lookup(SchemeEnvironment *env, SchemeObject *symbol) {
     current = current->enclosing;
   }
   if (symbol && symbol->value.symbol) {
+    // This is a runtime condition, not necessarily a debug print, so kept it.
     fprintf(stderr, "WARN: Unbound variable: %s\n", symbol->value.symbol);
   } else {
     fprintf(stderr, "WARN: Unbound variable: (invalid symbol object %p)\n",
@@ -257,7 +363,8 @@ void init_runtime_environment_and_symbols() {
 }
 void init_global_environment(void) {
   if (current_environment) {
-    printf("WARN: Global environment already initialized?\n");
+    printf("WARN: Global environment already initialized?\n"); // This is a
+                                                               // WARN, kept.
     return;
   }
   if (!global_symbol_table) {
@@ -268,20 +375,25 @@ void init_global_environment(void) {
   }
 
   current_environment = new_environment(NULL);
+#ifdef DEBUG_ENV
   printf("DEBUG: Global environment created at %p.\n",
          (void *)current_environment);
+#endif
 
   g_current_environment = current_environment;
+#ifdef DEBUG_ENV
   printf("DEBUG: Set g_current_environment (at %p) to %p\n",
          (void *)&g_current_environment, (void *)g_current_environment);
 
   printf("DEBUG: Defining primitives in global environment...\n");
+#endif
 
   extern SchemeObject *plus(SchemeObject * a, SchemeObject * b);
   extern SchemeObject *multiply(SchemeObject * a, SchemeObject * b);
   extern void display(SchemeObject * obj);
   extern void newline(void);
   extern SchemeObject *make_function(void *code, SchemeEnvironment *env);
+  extern SchemeObject *equal(SchemeObject * a, SchemeObject * b);
   env_define(current_environment, intern_symbol("+"),
              make_function((void *)&plus, NULL));
   env_define(current_environment, intern_symbol("*"),
@@ -290,8 +402,12 @@ void init_global_environment(void) {
              make_function((void *)&display, NULL));
   env_define(current_environment, intern_symbol("newline"),
              make_function((void *)&newline, NULL));
+  env_define(current_environment, intern_symbol("="),
+             make_function((void *)&equal, NULL));
 
+#ifdef DEBUG_ENV
   printf("DEBUG: Global environment initialization complete.\n");
+#endif
 }
 void cleanup_environment(SchemeEnvironment *env) {
   if (!env)

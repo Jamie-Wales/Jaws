@@ -36,6 +36,7 @@ set_target_properties(runtime PROPERTIES
 if(APPLE)
     target_compile_options(runtime PRIVATE
         -Wall
+        -O3
         -Wextra
         -Wpedantic
     )

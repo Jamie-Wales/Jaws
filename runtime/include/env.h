@@ -25,7 +25,7 @@ typedef struct SchemeEnvironment {
     HashMap* bindings; // Binds SchemeObject* symbols to SchemeObject* values
 } SchemeEnvironment;
 
-extern SchemeEnvironment* g_current_environtment;
+extern SchemeEnvironment* g_current_environment;
 extern SchemeEnvironment* current_environment;
 extern HashMap* global_symbol_table;
 
@@ -43,3 +43,5 @@ SchemeObject* intern_symbol(const char* name);
 SchemeEnvironment* new_environment(SchemeEnvironment* enclosing);
 SchemeObject* env_lookup(SchemeEnvironment* env, SchemeObject* symbol);
 void env_define(SchemeEnvironment* env, SchemeObject* symbol, SchemeObject* value);
+SchemeEnvironment* setup_call_environment(SchemeObject* closure_obj);
+void restore_call_environment(SchemeEnvironment* active_call_env_from_setup);

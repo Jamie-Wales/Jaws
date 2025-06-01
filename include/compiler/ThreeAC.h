@@ -26,7 +26,9 @@ enum class Operation {
     RETURN,
     FUNC_BEGIN,
     FUNC_END,
-    ENV_LOOKUP
+    ENV_LOOKUP,
+    PRIMITIVE_CALL,
+    TAIL_CALL,
 };
 
 std::string operationToString(Operation op);

@@ -3,13 +3,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 typedef enum {
     TYPE_NUMBER,
     TYPE_PAIR,
     TYPE_SYMBOL,
     TYPE_NIL,
     TYPE_FUNCTION,
-    TYPE_BOOL
+    TYPE_BOOL,
+    TYPE_STRING
 } SchemeType;
 
 typedef struct {
@@ -27,11 +29,14 @@ typedef struct SchemeObject {
             struct SchemeObject* cdr;
         } pair;
         const char* symbol;
+        const char* string;
         SchemeFunction function;
     } value;
 } SchemeObject;
 
-static SchemeObject nil_obj = { TYPE_NIL };
+extern SchemeObject nil_obj;
+extern SchemeObject true_obj;
+extern SchemeObject false_obj;
 #define SCHEME_NIL (&nil_obj)
 
 char* to_string(SchemeObject* object);

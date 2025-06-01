@@ -1,4 +1,6 @@
+(define (make-adder x) (lambda (y) (+ y x)))
 
-(if #t (display "hello"))
 
-(+ 2 3 4 5 6)
+(define add5 (make-adder 5))
+
+(display (add5 3))

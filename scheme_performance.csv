@@ -1,0 +1,13 @@
+Timestamp,Interpreter/Program,Arguments,Execution Time (s),Return Code,Label
+2025-05-31 14:35:53.259,/opt/homebrew/bin/racket,--script tailrecursive.scm,0.3404,0,Racket
+2025-05-31 14:35:53.600,/opt/homebrew/bin/csi,--script tailrecursive.scm,0.0460,70,CHICKEN
+2025-05-31 14:35:53.646,/opt/homebrew/bin/chez,--script tailrecursive.scm,0.0675,0,Chez Scheme
+2025-05-31 14:35:53.714,/Users/jamie/Dev/jaws/build/build/scheme_program,--script tailrecursive.scm,0.1153,0,Custom Build
+2025-05-31 14:36:15.367,/opt/homebrew/bin/racket,--script tailrecursive.scm,0.2450,0,Racket
+2025-05-31 14:36:15.613,/opt/homebrew/bin/csi,--script tailrecursive.scm,0.0058,70,CHICKEN
+2025-05-31 14:36:15.619,/opt/homebrew/bin/chez,--script tailrecursive.scm,0.0592,0,Chez Scheme
+2025-05-31 14:36:15.679,/Users/jamie/Dev/jaws/build/build/scheme_program,--script tailrecursive.scm,0.1169,0,Custom Build
+2025-05-31 14:39:01.880,/opt/homebrew/bin/racket,--script tailrecursive.scm,0.2461,0,Racket
+2025-05-31 14:39:02.126,/opt/homebrew/opt/chicken/bin/csi,-s tailrecursive.scm,0.0402,0,CHICKEN
+2025-05-31 14:39:02.167,/opt/homebrew/bin/chez,--script tailrecursive.scm,0.0597,0,Chez Scheme
+2025-05-31 14:39:02.227,/Users/jamie/Dev/jaws/build/build/scheme_program,--script tailrecursive.scm,0.1239,0,Custom Build
