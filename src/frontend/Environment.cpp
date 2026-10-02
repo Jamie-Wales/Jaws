@@ -1,6 +1,7 @@
 #include "Environment.h"
 #include "Error.h"
 #include "Syntax.h"
+#include <algorithm>
 
 #ifdef DEBUG_LOGGING
 #define DEBUG_LOG(x) std::cerr << "(ENV) " << x << "\n"
@@ -20,6 +21,42 @@ Environment::Environment(std::shared_ptr<Environment> parent)
     DEBUG_LOG("Created child Environment @ " << this << " with parent @ " << parent.get());
 }
 
+namespace {
+
+bool isSubset(const std::set<ScopeID>& subset, const std::set<ScopeID>& superset)
+{
+    return std::includes(superset.begin(), superset.end(), subset.begin(), subset.end());
+}
+
+// Sets-of-scopes resolution: a binding is a candidate when its scopes are a
+// subset of the reference's, and the candidate with the most scopes wins.
+template <typename Map>
+auto resolveInFrame(Map& variables, const HygienicSyntax& id) -> decltype(&variables.begin()->second)
+{
+    decltype(&variables.begin()->second) best = nullptr;
+    size_t bestSize = 0;
+    bool ambiguous = false;
+
+    for (auto& [binding, value] : variables) {
+        if (binding.token.lexeme != id.token.lexeme || !isSubset(binding.context.marks, id.context.marks))
+            continue;
+        size_t size = binding.context.marks.size();
+        if (!best || size > bestSize) {
+            best = &value;
+            bestSize = size;
+            ambiguous = false;
+        } else if (size == bestSize) {
+            ambiguous = true;
+        }
+    }
+
+    if (ambiguous)
+        throw InterpreterError("Ambiguous reference to " + id.token.lexeme);
+    return best;
+}
+
+}
+
 void Environment::define(const HygienicSyntax& name, const SchemeValue& value)
 {
     std::lock_guard<std::mutex> lock(mutex);
@@ -36,37 +73,9 @@ void Environment::set(const HygienicSyntax& name, const SchemeValue& value)
         return;
     }
 
-    for (auto& [bindingSyntax, storedValue] : variables) {
-        if (bindingSyntax.token.lexeme == name.token.lexeme) {
-
-            if (!parent && bindingSyntax.context.marks.empty()) {
-                DEBUG_LOG("  Global unmarked binding can be set");
-                storedValue = value;
-                return;
-            }
-
-            if (name.context.marks.empty()) {
-                DEBUG_LOG("  Unmarked identifier can set any binding with same name");
-                storedValue = value;
-                return;
-            }
-
-            bool containsAllMarks = true;
-            for (const auto& bindingMark : bindingSyntax.context.marks) {
-                if (name.context.marks.find(bindingMark) == name.context.marks.end()) {
-                    containsAllMarks = false;
-                    break;
-                }
-            }
-
-            if (containsAllMarks) {
-                DEBUG_LOG("  Identifier contains all binding marks, updating value");
-                storedValue = value;
-                return;
-            }
-
-            DEBUG_LOG("  Marks not compatible, continuing search");
-        }
+    if (auto* binding = resolveInFrame(variables, name)) {
+        *binding = value;
+        return;
     }
 
     if (parent) {
@@ -79,67 +88,22 @@ void Environment::set(const HygienicSyntax& name, const SchemeValue& value)
     throw InterpreterError("Unbound variable " + name.token.lexeme);
 }
 
-bool containsAllMarks(const std::set<ScopeID>& container, const std::set<ScopeID>& contained)
-{
-    for (const auto& mark : contained) {
-        if (container.find(mark) == container.end()) {
-            return false;
-        }
-    }
-    return true;
-}
-
 std::optional<SchemeValue> Environment::get(const HygienicSyntax& id) const
 {
-    DEBUG_LOG("Environment::get searching for '" << id.token.lexeme << "' with marks [");
     std::lock_guard<std::mutex> lock(mutex);
 
     auto it = variables.find(id);
-    if (it != variables.end()) {
-        DEBUG_LOG("  Found exact match in current Env! Value: " << it->second.toString());
+    if (it != variables.end())
         return it->second;
-    }
 
-    for (const auto& [bindingSyntax, value] : variables) {
-        if (bindingSyntax.token.lexeme == id.token.lexeme) {
+    if (auto* binding = resolveInFrame(variables, id))
+        return *binding;
 
-            if (!parent && bindingSyntax.context.marks.empty()) {
-                DEBUG_LOG("  Global unmarked binding is accessible");
-                return value;
-            }
-
-            if (id.context.marks.empty()) {
-                DEBUG_LOG("  Unmarked identifier can access any binding with same name");
-                return value;
-            }
-
-            bool hasAllBindingMarks = true;
-            for (const auto& mark : bindingSyntax.context.marks) {
-                if (id.context.marks.find(mark) == id.context.marks.end()) {
-                    hasAllBindingMarks = false;
-                    DEBUG_LOG("    Missing mark " << mark << " from binding");
-                    break;
-                }
-            }
-
-            if (hasAllBindingMarks) {
-                DEBUG_LOG("  Access granted - identifier has all binding marks");
-                return value;
-            }
-
-            DEBUG_LOG("  Access denied - identifier missing required marks");
-        }
-    }
-
-    if (parent) {
-        DEBUG_LOG("  No compatible match in current Env @ " << this);
-        DEBUG_LOG("  Checking parent @ " << parent.get());
+    if (parent)
         return parent->get(id);
-    }
-
-    DEBUG_LOG("  Not found in any environment");
     return std::nullopt;
 }
+
 std::shared_ptr<Environment> Environment::extend()
 {
     DEBUG_LOG("Creating extended Environment from Env @ " << this);

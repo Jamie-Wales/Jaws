@@ -58,30 +58,6 @@ struct SyntaxContext {
         return next;
     }
 
-    bool isCompatibleWith(const SyntaxContext& binding_context) const
-    {
-        if (!marks.empty()) {
-            if (!binding_context.marks.empty()) {
-                // They must match exactly for hygiene
-                bool matches = marks == binding_context.marks;
-                DEBUG_LOG("Both have marks - checking exact match: " << (matches ? "true" : "false"));
-                return matches;
-            }
-            DEBUG_LOG("Identifier has marks but binding is global - allowing access");
-            return true;
-        }
-
-        if (marks.empty()) {
-            if (!binding_context.marks.empty()) {
-                DEBUG_LOG("Unmarked identifier cannot access marked binding");
-                return false;
-            }
-            DEBUG_LOG("Neither has marks - allowing access");
-            return true;
-        }
-
-        return false;
-    }
     std::string toString() const
     {
         std::stringstream ss;

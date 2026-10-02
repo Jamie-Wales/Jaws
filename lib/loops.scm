@@ -168,7 +168,7 @@
                ...)
              (select-case key rest ... (else ee ...))))
         ((select-case key ((v1 v2 ...) e1 ...) rest ... (else ee ...))
-         (if (memq key '(... v1 v2))
+         (if (memq key '(v1 v2 ...))
              (begin
                e1
                ...)
@@ -184,7 +184,7 @@
                ...)
              (select-case key rest ...)))
         ((select-case key ((v1 v2 ...) e1 ...) rest ...)
-         (if (memq key '(... v1 v2))
+         (if (memq key '(v1 v2 ...))
              (begin
                e1
                ...)

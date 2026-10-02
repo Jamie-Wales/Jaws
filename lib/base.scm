@@ -292,4 +292,9 @@
     ((println expr)
      (begin
       (display expr)
-      (newline)))))))
+      (newline)))
+    ((println expr rest ...)
+     (begin
+      (display expr)
+      (display " ")
+      (println rest ...)))))))
