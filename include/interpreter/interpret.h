@@ -39,6 +39,12 @@ std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::vector<std::shared_ptr<Expression>>& expr);
 
+// Like interpret, but a call in tail position is left pending for the
+// enclosing procedure body to run, so tail calls don't grow the stack.
+std::optional<SchemeValue> interpretInTailPosition(
+    InterpreterState& state,
+    const std::shared_ptr<Expression>& expr);
+
 struct ProcedureCall {
     SchemeValue procedure;
     std::vector<SchemeValue> arguments;

@@ -65,7 +65,7 @@ std::optional<SchemeValue> UserProcedure::executeBody(
             interpret::interpret(state, body[exprIdx]);
         }
         DEBUG_LOG("UserProc::executeBody: Interpreting LAST body expr");
-        lastResultOpt = interpret::interpret(state, body.back());
+        lastResultOpt = interpret::interpretInTailPosition(state, body.back());
         bool tailCallWasSet = state.isTailCallPending;
         DEBUG_LOG("UserProc::executeBody: After last expr: TCO pending = " << (tailCallWasSet ? "true" : "false") << ", lastResultOpt has value = " << (lastResultOpt.has_value() ? "true" : "false"));
         if (tailCallWasSet) {

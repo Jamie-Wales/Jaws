@@ -184,6 +184,29 @@ std::optional<SchemeValue> interpret(
     InterpreterState& state,
     const std::shared_ptr<Expression>& expr)
 {
+    auto result = interpretInTailPosition(state, expr);
+    if (!state.isTailCallPending)
+        return result;
+
+    // A TailExpression defers its call to the enclosing procedure body. When
+    // the value is needed here instead (an argument, a condition, a binding),
+    // run the deferred call now.
+    auto procedure = std::move(*state.pendingProcedure);
+    auto arguments = std::move(state.pendingArguments);
+    state.isTailCallPending = false;
+    state.pendingProcedure.reset();
+    state.pendingArguments.clear();
+
+    auto savedEnv = state.env;
+    result = executeProcedure(state, std::move(procedure), std::move(arguments));
+    state.env = savedEnv;
+    return result;
+}
+
+std::optional<SchemeValue> interpretInTailPosition(
+    InterpreterState& state,
+    const std::shared_ptr<Expression>& expr)
+{
     try {
         return std::visit(overloaded {
                               [&](const AtomExpression& e) -> std::optional<SchemeValue> {
@@ -246,11 +269,12 @@ std::optional<SchemeValue> interpret(
 
 std::optional<SchemeValue> interpretBegin(InterpreterState& state, const BeginExpression& begin)
 {
-    std::optional<SchemeValue> result = std::nullopt;
-    for (const auto& expr : begin.values) {
-        result = interpret(state, expr);
+    if (begin.values.empty())
+        return std::nullopt;
+    for (size_t i = 0; i + 1 < begin.values.size(); ++i) {
+        interpret(state, begin.values[i]);
     }
-    return result;
+    return interpretInTailPosition(state, begin.values.back());
 }
 std::optional<SchemeValue> interpretAtom(InterpreterState& state, const AtomExpression& atom)
 {
@@ -404,9 +428,9 @@ std::optional<SchemeValue> interpretIf(InterpreterState& state, const IfExpressi
         return std::nullopt;
 
     if (condition->isTrue()) {
-        return interpret(state, ifexpr.then);
+        return interpretInTailPosition(state, ifexpr.then);
     } else if (ifexpr.el) {
-        return interpret(state, *ifexpr.el);
+        return interpretInTailPosition(state, *ifexpr.el);
     }
     return std::nullopt;
 }
@@ -488,7 +512,7 @@ std::optional<SchemeValue> interpretTailCall(InterpreterState& state, const Tail
         }
 
     } else {
-        return interpret(state, innerExpr);
+        return interpretInTailPosition(state, innerExpr);
     }
 }
 
