@@ -30,19 +30,6 @@
         (loop))
        #f)))))
 
-(define (for-each proc . lists)
-  (define (loop current-lists)
-    (define (any-null? lists-to-check)
-      (cond
-        ((null? lists-to-check) #f) ; Base case: No lists left to check, so none were null.
-        ((null? (car lists-to-check)) #t) ; Found an empty list.
-        (else (any-null? (cdr lists-to-check))))) ; Recursively check the rest.
-    (if (not (any-null? current-lists))
-        (begin
-          (apply proc (map car current-lists))
-
-          (loop (map cdr current-lists)))))
-  )
 
   (define-syntax do-while
    (syntax-rules ()
@@ -90,6 +77,28 @@
       list
       body
       ...))))
+
+  (define-syntax for-each
+    (syntax-rules (in)
+      ((for-each element in list body ...)
+       (let loop ((current-list list))
+         (if (not (null? current-list))
+             (begin
+               (let ((element (car current-list)))
+                 body
+                 ...)
+               (loop (cdr current-list)))
+             #f)))
+      ((for-each proc first rest ...)
+       (let ((f proc))
+         (let loop ((lists (list first rest ...)))
+           (if (not (let any-null? ((ls lists))
+                      (cond ((null? ls) #f)
+                            ((null? (car ls)) #t)
+                            (else (any-null? (cdr ls))))))
+               (begin
+                 (apply f (map car lists))
+                 (loop (map cdr lists)))))))))
 
   (define-syntax for-each-in
    (syntax-rules (in)
@@ -171,7 +180,7 @@
        ...)
       (select-case key rest ... (else ee ...))))
     ((select-case key ((v1 v2 ...) e1 ...) rest ... (else ee ...))
-     (if (memq key '(... v1 v2))
+     (if (memq key '(v1 v2 ...))
       (begin
        e1
        ...)
@@ -187,7 +196,7 @@
        ...)
       (select-case key rest ...)))
     ((select-case key ((v1 v2 ...) e1 ...) rest ...)
-     (if (memq key '(... v1 v2))
+     (if (memq key '(v1 v2 ...))
       (begin
        e1
        ...)
